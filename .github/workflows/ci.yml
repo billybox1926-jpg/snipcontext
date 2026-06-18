@@ -5,15 +5,19 @@ on:
   push:
     branches:
       - main
+      - feature-update
 
 permissions:
   contents: read
 
 jobs:
-  quality:
-    uses: ./.github/workflows/reusable-quality.yml
-    with:
-      setup-node: false
-      run-format-check: false
-      run-lint: false
-      run-test: false
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -e '.[dev]'
+      - run: pytest -q
