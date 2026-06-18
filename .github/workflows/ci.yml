@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - feature-update
 
 permissions:
   contents: read
@@ -16,4 +17,5 @@ jobs:
       setup-node: false
       run-format-check: false
       run-lint: false
-      run-test: false
+      run-test: true
+      test-command: pytest
