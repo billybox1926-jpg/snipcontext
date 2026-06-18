@@ -1,1 +1,0 @@
-"""SnipContext CLI."""
