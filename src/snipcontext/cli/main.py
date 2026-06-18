@@ -520,135 +520,159 @@ def stats():
         title="SnipContext Stats",
         border_style="green",
     ))
-))
+
 
 # -- DEMO -----------------------------------------------------------
 
 @app.command()
 def demo():
-"""Run an interactive demo with sample snippets."""
-from snipcontext.core.models import Language, Snippet, SnippetMetadata
-from snipcontext.core.storage import StorageEngine
-from snipcontext.core.search import HybridSearch
+    """Run an interactive demo with sample snippets."""
+    from snipcontext.core.models import Language, Snippet, SnippetMetadata
+    from snipcontext.core.storage import StorageEngine
+    from snipcontext.core.search import HybridSearch
 
-config = get_config()
-storage = StorageEngine(config)
+    config = get_config()
+    storage = StorageEngine(config)
 
-# Do not overwrite existing data silently
-existing = storage.list_all()
-if existing:
-    console.print("[yellow]Demo mode: existing snippets detected.[/yellow]")
-    console.print("Run [bold]sc list[/bold] to see them, or clear your snippets dir to start fresh.")
-    return
+    # Do not overwrite existing data silently
+    existing = storage.list_all()
+    if existing:
+        console.print("[yellow]Demo mode: existing snippets detected.[/yellow]")
+        console.print("Run [bold]sc list[/bold] to see them, or clear your snippets dir to start fresh.")
+        return
 
-samples = [
-    (
-        "FastAPI dependency injection example",
-        "python",
-        ["fastapi", "di", "web"],
-        'from fastapi import Depends, FastAPI\n\napp = FastAPI()\n\ndef get_db():\n    db = {"key": "value"}\n    try:\n        yield db\n    finally:\n        db.close()\n\n@app.get("/")\ndef read_root(db: dict = Depends(get_db)):\n    return {"message": "Hello", "db": db}',
-    ),
-    (
-        "React useEffect data fetch hook",
-        "typescript",
-        ["react", "hooks", "fetch"],
-        'import { useEffect, useState } from "react";\n\ntype Post = { id: number; title: string };\n\nexport function usePosts(url: string) {\n  const [posts, setPosts] = useState<Post[]>([]);\n  const [loading, setLoading] = useState(true);\n\n  useEffect(() => {\n    let cancelled = false;\n    setLoading(true);\n\n    fetch(url)\n      .then((res) => res.json())\n      .then((data) => {\n        if (!cancelled) {\n          setPosts(data);\n          setLoading(false);\n        }\n      });\n\n    return () => {\n      cancelled = true;\n    };\n  }, [url]);\n\n  return { posts, loading };\n}',
-    ),
-    (
-        "Python requests with retry",
-        "python",
-        ["requests", "retry", "http"],
-        'import requests\nfrom requests.adapters import HTTPAdapter\nfrom urllib3.util.retry import Retry\n\ndef requests_session():\n    session = requests.Session()\n    retries = Retry(\n        total=4,\n        backoff_factor=0.5,\n        status_forcelist=[500, 502, 503, 504],\n    )\n    session.mount("https://", HTTPAdapter(max_retries=retries))\n    return session\n\nif __name__ == "__main__":\n    s = requests_session()\n    print(s.get("https://httpbin.org/get").status_code)',
-    ),
-    (
-        "SQLAlchemy async session factory",
-        "python",
-        ["sqlalchemy", "async", "database"],
-        'from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine\nfrom sqlalchemy.orm import sessionmaker\n\nDATABASE_URL = "sqlite+aiosqlite:///./app.db"\n\nengine = create_async_engine(DATABASE_URL, echo=False, future=True)\nAsyncSessionLocal = sessionmaker(\n    bind=engine,\n    class_=AsyncSession,\n    expire_on_commit=False,\n)\n\nasync def get_session() -> AsyncSession:\n    async with AsyncSessionLocal() as session:\n        yield session',
-    ),
-    (
-        "Go graceful shutdown HTTP server",
-        "go",
-        ["go", "http", "server"],
-        'package main\n\nimport (\n    "context"\n    "log"\n    "net/http"\n    "os"\n    "os/signal"\n    "syscall"\n    "time"\n)\n\nfunc main() {\n    srv := &http.Server{Addr: ":8080"}\n\n    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {\n        w.Write([]byte("ok"))\n    })\n\n    go func() {\n        if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {\n            log.Fatalf("listen: %v", err)\n        }\n    }()\n\n    quit := make(chan os.Signal, 1)\n    signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)\n    <-quit\n    log.Println("shutdown...")\n\n    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\n    defer cancel()\n    if err := srv.Shutdown(ctx); err != nil {\n        log.Fatalf("server forced to shutdown: %v", err)\n    }\n    log.Println("server exited")\n}',
-    ),
-    (
-        "TypeScript zod schema for user input",
-        "typescript",
-        ["zod", "validation", "typescript"],
-        'import { z } from "zod";\n\nexport const UserSchema = z.object({\n  id: z.string().uuid(),\n  email: z.string().email(),\n  role: z.enum(["admin", "member", "viewer"]).default("viewer"),\n  metadata: z.record(z.string()).optional(),\n});\n\nexport type User = z.infer<typeof UserSchema>;\n\nconst parsed = UserSchema.parse(input);',
-    ),
-    (
-        "Rust error handling with anyhow",
-        "rust",
-        ["rust", "error-handling"],
-        'use anyhow::{Context, Result};\n\nfn run() -> Result<()> {\n    let path = std::env::var("CONFIG_PATH")\n        .context("CONFIG_PATH must be set")?;\n\n    let text = std::fs::read_to_string(&path)\n        .with_context(|| format!("failed to read {path}"))?;\n\n    println!("{text}");\n    Ok(())\n}\n\nfn main() {\n    if let Err(err) = run() {\n        eprintln!("error: {err:#}");\n    }\n}',
-    ),
-    (
-        "Bash retry wrapper for flaky commands",
-        "bash",
-        ["bash", "retry", "shell"],
-        '#!/usr/bin/env bash\nset -euo pipefail\n\nretry() {\n  local max=${1:-3}\n  local delay=${2:-1}\n  local attempt=1\n  until "$@"; do\n    if (( attempt >= max )); then\n      echo "failed after ${attempt} attempts" >&2\n      return 1\n    fi\n    echo "attempt ${attempt} failed, retrying in ${delay}s..." >&2\n    sleep "${delay}"\n    ((attempt++))\n  done\n}\n\nretry 5 2 curl -fsS https://httpbin.org/get',
-    ),
-]
+    samples = [
+        (
+            "FastAPI dependency injection example",
+            "python",
+            ["fastapi", "di", "web"],
+            'from fastapi import Depends, FastAPI\n\napp = FastAPI()\n\ndef get_db():\n    db = {"key": "value"}\n    try:\n        yield db\n    finally:\n        db.close()\n\n@app.get("/")\ndef read_root(db: dict = Depends(get_db)):\n    return {"message": "Hello", "db": db}',
+        ),
+        (
+            "React useEffect data fetch hook",
+            "typescript",
+            ["react", "hooks", "fetch"],
+            'import { useEffect, useState } from "react";\n\ntype Post = { id: number; title: string };\n\nexport function usePosts(url: string) {\n  const [posts, setPosts] = useState<Post[]>([]);\n  const [loading, setLoading] = useState(true);\n\n  useEffect(() => {\n    let cancelled = false;\n    setLoading(true);\n\n    fetch(url)\n      .then((res) => res.json())\n      .then((data) => {\n        if (!cancelled) {\n          setPosts(data);\n          setLoading(false);\n        }\n      });\n\n    return () => {\n      cancelled = true;\n    };\n  }, [url]);\n\n  return { posts, loading };\n}',
+        ),
+        (
+            "Python requests with retry",
+            "python",
+            ["requests", "retry", "http"],
+            'import requests\nfrom requests.adapters import HTTPAdapter\nfrom urllib3.util.retry import Retry\n\ndef requests_session():\n    session = requests.Session()\n    retries = Retry(\n        total=4,\n        backoff_factor=0.5,\n        status_forcelist=[500, 502, 503, 504],\n    )\n    session.mount("https://", HTTPAdapter(max_retries=retries))\n    return session\n\nif __name__ == "__main__":\n    s = requests_session()\n    print(s.get("https://httpbin.org/get").status_code)',
+        ),
+        (
+            "SQLAlchemy async session factory",
+            "python",
+            ["sqlalchemy", "async", "database"],
+            'from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine\nfrom sqlalchemy.orm import sessionmaker\n\nDATABASE_URL = "sqlite+aiosqlite:///./app.db"\n\nengine = create_async_engine(DATABASE_URL, echo=False, future=True)\nAsyncSessionLocal = sessionmaker(\n    bind=engine,\n    class_=AsyncSession,\n    expire_on_commit=False,\n)\n\nasync def get_session() -> AsyncSession:\n    async with AsyncSessionLocal() as session:\n        yield session',
+        ),
+        (
+            "Go graceful shutdown HTTP server",
+            "go",
+            ["go", "http", "server"],
+            'package main\n\nimport (\n    "context"\n    "log"\n    "net/http"\n    "os"\n    "os/signal"\n    "syscall"\n    "time"\n)\n\nfunc main() {\n    srv := &http.Server{Addr: ":8080"}\n\n    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {\n        w.Write([]byte("ok"))\n    })\n\n    go func() {\n        if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {\n            log.Fatalf("listen: %v", err)\n        }\n    }()\n\n    quit := make(chan os.Signal, 1)\n    signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)\n    <-quit\n    log.Println("shutdown...")\n    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\n    defer cancel()\n    if err := srv.Shutdown(ctx); err != nil {\n        log.Fatalf("server forced to shutdown: %v", err)\n    }\n    log.Println("server exited")\n}',
+        ),
+        (
+            "TypeScript zod schema for user input",
+            "typescript",
+            ["zod", "validation", "typescript"],
+            'import { z } from "zod";\n\nexport const UserSchema = z.object({\n  id: z.string().uuid(),\n  email: z.string().email(),\n  role: z.enum(["admin", "member", "viewer"]).default("viewer"),\n  metadata: z.record(z.string()).optional(),\n});\n\nexport type User = z.infer<typeof UserSchema>;\n\nconst parsed = UserSchema.parse(input);',
+        ),
+        (
+            "Rust error handling with anyhow",
+            "rust",
+            ["rust", "error-handling"],
+            'use anyhow::{Context, Result};\n\nfn run() -> Result<()> {\n    let path = std::env::var("CONFIG_PATH")\n        .context("CONFIG_PATH must be set")?;\n\n    let text = std::fs::read_to_string(&path)\n        .with_context(|| format!("failed to read {path}"))?;\n\n    println!("{text}");\n    Ok(())\n}\n\nfn main() {\n    if let Err(err) = run() {\n        eprintln!("error: {err:#}");\n    }\n}',
+        ),
+        (
+            "Bash retry wrapper for flaky commands",
+            "bash",
+            ["bash", "retry", "shell"],
+            '#!/usr/bin/env bash\nset -euo pipefail\n\nretry() {\n  local max=${1:-3}\n  local delay=${2:-1}\n  local attempt=1\n  until "$@"; do\n    if (( attempt >= max )); then\n      echo "failed after ${attempt} attempts" >&2\n      return 1\n    fi\n    echo "attempt ${attempt} failed, retrying in ${delay}s..." >&2\n    sleep "${delay}"\n    ((attempt++))\n  done\n}\n\nretry 5 2 curl -fsS https://httpbin.org/get',
+        ),
+    ]
 
-snippets = []
-for title, language, tags, content in samples:
-    try:
-        lang_enum = Language(language)
-    except ValueError:
-        lang_enum = Language.UNKNOWN
-    snippets.append(
-        Snippet(
-            content=content,
-            metadata=SnippetMetadata(title=title, language=lang_enum),
-            tags=tags,
+    snippets = []
+    for title, language, tags, content in samples:
+        try:
+            lang_enum = Language(language)
+        except ValueError:
+            lang_enum = Language.UNKNOWN
+        snippets.append(
+            Snippet(
+                content=content,
+                metadata=SnippetMetadata(title=title, language=lang_enum),
+                tags=tags,
+            )
         )
-    )
 
-saved = []
-for snippet in snippets:
-    stored = storage.save(snippet)
-    saved.append(stored)
+    saved = []
+    for snippet in snippets:
+        stored = storage.save(snippet)
+        saved.append(stored)
 
-console.print(f"[green]Seeded {len(saved)} demo snippets.[/green]")
+    console.print(f"[green]Seeded {len(saved)} demo snippets.[/green]")
 
-console.print("\n[bold]Listing snippets:[/bold]")
-for s in saved:
-    console.print(f"  - [cyan]{s.metadata.title}[/cyan] [dim]({s.id[:6]})[/dim]")
+    console.print("\n[bold]Listing snippets:[/bold]")
+    for s in saved:
+        console.print(f"  - [cyan]{s.metadata.title}[/cyan] [dim]({s.id[:6]})[/dim]")
 
-console.print("\n[bold]Sample export (generic):[/bold]")
-try:
-    from snipcontext.plugins.base import PluginManager
-    pm = PluginManager()
-    pm.load_builtin_providers()
-    provider = pm.get_provider("generic")
-    console.print(Markdown(provider.export_batch(saved)))
-except Exception as exc:  # pragma: no cover - best-effort demo path
-    console.print(f"[yellow]Demo export skipped: {exc}[/yellow]")
+    console.print("\n[bold]Sample search (semantic):[/bold]")
+    try:
+        from snipcontext.core.search import HybridSearch
+        searcher = HybridSearch(config)
+        if searcher.load_indices():
+            query = "async python"
+            results = searcher.search(query, top_k=3)
+            if results:
+                console.print(f"[dim]Query:[/dim] [bold]'{query}'[/bold]")
+                for idx, result in enumerate(results, 1):
+                    _print_snippet(result.snippet, score=result.score, idx=idx)
+            else:
+                console.print("[yellow]Search returned no results.[/yellow]")
+        else:
+            console.print("[yellow]No search index available. Run [bold]sc build-index[/bold] after adding snippets.[/yellow]")
+    except Exception as exc:  # pragma: no cover - best-effort demo path
+        console.print(f"[yellow]Demo search skipped: {exc}[/yellow]")
+
+    console.print("\n[bold]Sample export (generic):[/bold]")
+    try:
+        from snipcontext.plugins.base import PluginManager
+        pm = PluginManager()
+        pm.load_builtin_providers()
+        provider = pm.get_provider("generic")
+        console.print(Markdown(provider.export_batch(saved)))
+    except Exception as exc:  # pragma: no cover - best-effort demo path
+        console.print(f"[yellow]Demo export skipped: {exc}[/yellow]")
+
+    console.print("\n[bold cyan]Next steps:[/bold cyan]")
+    console.print("  - [bold]sc list[/bold]              Review seeded snippets")
+    console.print("  - [bold]sc search DI in Python[/bold]  Try semantic search")
+    console.print("  - [bold]sc add[/bold] 'your code'...  Add your own")
+    console.print("  - [bold]sc build-index[/bold]           Enable semantic search")
 
 
 # -- PROVIDERS -------------------------------------------------------
 
 @app.command()
 def providers():
-"""List available export providers."""
-from snipcontext.plugins.base import PluginManager
+    """List available export providers."""
+    from snipcontext.plugins.base import PluginManager
 
-pm = PluginManager()
-pm.load_builtin_providers()
+    pm = PluginManager()
+    pm.load_builtin_providers()
 
-table = Table(title="Export Providers", show_header=True)
-table.add_column("Name", style="cyan")
-table.add_column("Description", style="white")
-table.add_column("Format", style="green")
+    table = Table(title="Export Providers", show_header=True)
+    table.add_column("Name", style="cyan")
+    table.add_column("Description", style="white")
+    table.add_column("Format", style="green")
 
-for name, desc in pm.list_providers().items():
-    fmt = pm._providers.get(name)
-    fmt_name = fmt.format if fmt and hasattr(fmt, "format") else "?"
-    table.add_row(name, desc, str(fmt_name))
+    for name, desc in pm.list_providers().items():
+        fmt = pm._providers.get(name)
+        fmt_name = fmt.format if fmt and hasattr(fmt, 'format') else "?"
+        table.add_row(name, desc, str(fmt_name))
 
-console.print(table)
+    console.print(table)
 
 
 # ---------------------------------------------------------------------------
