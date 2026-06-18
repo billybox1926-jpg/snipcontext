@@ -59,6 +59,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
+      - name: Cache Hugging Face models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-models-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            hf-models-${{ runner.os }}-${{ matrix.python-version }}-
+            hf-models-${{ runner.os }}-
+
       - name: Install dependencies
         run: pip install -e ".[dev]"
 

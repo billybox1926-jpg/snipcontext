@@ -111,6 +111,7 @@ class TestKeywordIndex:
 
 
 @pytest.mark.skipif(not SENTENCE_TRANSFORMERS_AVAILABLE, reason="sentence-transformers not installed")
+@pytest.mark.slow
 class TestEmbeddingEngine:
     """Tests for the embedding engine."""
 
@@ -152,6 +153,7 @@ class TestEmbeddingEngine:
 
 
 @pytest.mark.skipif(not SENTENCE_TRANSFORMERS_AVAILABLE, reason="sentence-transformers not installed")
+@pytest.mark.slow
 class TestVectorIndex:
     """Tests for FAISS vector index."""
 
@@ -180,6 +182,7 @@ class TestVectorIndex:
 
 
 @pytest.mark.skipif(not SENTENCE_TRANSFORMERS_AVAILABLE, reason="sentence-transformers not installed")
+@pytest.mark.slow
 class TestHybridSearch:
     """Integration tests for hybrid search."""
 
