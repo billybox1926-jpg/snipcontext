@@ -1,52 +1,47 @@
 # SnipContext
 
-**The open source AI-ready code snippet and context manager.**
+**AI-powered code snippet & context manager.**
 
-Stop rewriting the same boilerplate. Stop losing your best patterns. Stop feeding LLMs bad or outdated context.
+Save, search, tag, and instantly inject your best boilerplate, patterns, and context into any LLM (Claude, Cursor, Grok, Windsurf, etc.).
 
-**SnipContext** lets you:
-- Quickly save reusable code snippets with rich metadata (tags, language, project, version)
-- Search semantically (not just keywords) — powered by local embeddings
-- Export perfect context blocks for Claude, Cursor, Grok, Windsurf, or any other LLM
-- Version and share snippets across teams/projects
-- Build a personal/team "second brain" of high-quality code patterns
-
-Built to be **worked on by humans + AI agents together**.
+**Local-first • Open source • Built for humans + AI agents to collaborate.**
 
 ## Why SnipContext?
 
-Most snippet tools are either outdated desktop apps or closed AI products.  
-SnipContext is:
-- Local-first (your data stays yours)
-- LLM-native (designed from day one for AI coding workflows)
-- Open and extensible (easy to add new exporters, embeddings, or sync options)
-- Community-driven
+- Stop rewriting the same auth flows, component patterns, or utility functions.
+- Stop feeding LLMs messy or outdated code.
+- Build your personal/team "second brain" of high-quality, reusable code.
 
-## Features (MVP)
+## Key Features (Planned / In Progress)
 
-- CLI + Library (TypeScript / Python — contributions welcome in both)
-- Tagging + smart search
+- Rich snippet saving with tags, metadata, and versioning
+- Semantic search (local embeddings)
 - One-command export optimized for major LLMs
-- Local vector search (Chroma / LanceDB / etc.)
-- Markdown + JSON export formats
-- Git-friendly storage
+- CLI + Library support (TypeScript + Python welcome)
+- Plugin system for new providers and exporters
+- Git-friendly, local-first storage
 
 ## Quick Start
 
 ```bash
-# Coming soon - early version
+# TODO - coming very soon
 ```
+
+## Project Status
+
+This repository is brand new and currently in **bootstrap phase**.  
+We're intentionally building it in public so AI agents and contributors can help shape it from day one.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get involved.
 
 ## Contributing
 
-This project is intentionally open for **AI agents and humans** to collaborate on.
+We **love contributions** from both humans and AI coding agents!
 
-- See [CONTRIBUTING.md](CONTRIBUTING.md)
-- Open issues, suggest features, or just improve docs
-- AI agents: feel free to fork, make PRs, and iterate!
-
-Made with ❤️ for the developer community that ships with AI.
+- Open issues for features/bugs
+- Submit PRs (even small improvements to docs are welcome)
+- Feel free to use Cursor, Claude, Grok, etc. to implement issues
 
 ---
 
-**Star if you're tired of copying the same auth flow for the 50th time.**
+**Star this repo if you're tired of copying the same code for the 100th time.**
