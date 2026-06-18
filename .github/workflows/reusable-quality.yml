@@ -1,0 +1,94 @@
+name: Reusable Quality Checks
+
+on:
+  workflow_call:
+    inputs:
+      checkout-fetch-depth:
+        description: Git checkout fetch depth.
+        required: false
+        default: 0
+        type: number
+      run-hygiene-check:
+        description: Run generic repository hygiene checks.
+        required: false
+        default: true
+        type: boolean
+      setup-node:
+        description: Enable Node.js setup.
+        required: false
+        default: true
+        type: boolean
+      node-version:
+        description: Node.js version for JS/TS projects.
+        required: false
+        default: '20'
+        type: string
+      run-format-check:
+        description: Run formatting validation command.
+        required: false
+        default: true
+        type: boolean
+      format-command:
+        description: Command used for format validation.
+        required: false
+        default: npm run format:check --if-present
+        type: string
+      run-lint:
+        description: Run lint command.
+        required: false
+        default: true
+        type: boolean
+      lint-command:
+        description: Command used for lint validation.
+        required: false
+        default: npm run lint --if-present
+        type: string
+      run-test:
+        description: Run automated tests.
+        required: false
+        default: true
+        type: boolean
+      test-command:
+        description: Command used to run test suite.
+        required: false
+        default: npm test --if-present
+        type: string
+
+jobs:
+  quality:
+    name: Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ inputs.checkout-fetch-depth }}
+
+      - name: Repository hygiene
+        if: ${{ inputs.run-hygiene-check }}
+        shell: bash
+        run: bash scripts/hygiene.sh
+
+      - name: Set up Node.js
+        if: ${{ inputs.setup-node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        if: ${{ inputs.setup-node }}
+        run: npm ci
+
+      - name: Format check
+        if: ${{ inputs.run-format-check }}
+        run: ${{ inputs.format-command }}
+
+      - name: Lint
+        if: ${{ inputs.run-lint }}
+        run: ${{ inputs.lint-command }}
+
+      - name: Test
+        if: ${{ inputs.run-test }}
+        run: ${{ inputs.test-command }}
