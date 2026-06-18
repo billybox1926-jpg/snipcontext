@@ -1,10 +1,10 @@
-# OSS Repository Template
+# SnipContext
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](SECURITY.md)
 
-# SnipContext
+# 
 
 **AI-powered code snippet & context manager.**
 
