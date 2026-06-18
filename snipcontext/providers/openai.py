@@ -47,7 +47,7 @@ class OpenAIProvider(BaseProvider):
             f"{self._DIVIDER}{self._DIVIDER}",
             f"  {title}",
             f"  {len(snippets)} code snippets provided below",
-            f"  Use these as reference for your response.",
+            "  Use these as reference for your response.",
             f"{self._DIVIDER}{self._DIVIDER}",
             "",
         ]

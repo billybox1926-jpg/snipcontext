@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
+import tempfile
 
-import pytest
 from typer.testing import CliRunner
 
 from snipcontext.cli.main import app
-from snipcontext.config.settings import Config, StorageConfig, reset_config
 
 runner = CliRunner()
 
