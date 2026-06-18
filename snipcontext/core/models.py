@@ -10,7 +10,7 @@ import hashlib
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Literal
+from typing import Any, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -128,7 +128,7 @@ class Snippet(BaseModel):
         default_factory=list,
         description="Immutable version history",
     )
-    embedding: list[float] | None = Field(
+    embedding: Optional[List[float]] = Field(
         default=None,
         description="Dense vector embedding for semantic search",
         exclude=True,  # Don't serialize to JSON - stored in vector index

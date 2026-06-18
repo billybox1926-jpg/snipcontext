@@ -16,7 +16,6 @@ from rich.logging import RichHandler
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
 from snipcontext.config.settings import get_config
 
@@ -50,7 +49,7 @@ app.add_typer(config_app)
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _print_snippet(snippet, score: float | None = None, idx: int | None = None):
+def _print_snippet(snippet, score: Optional[float] = None, idx: Optional[int] = None):
     """Pretty-print a snippet with Rich."""
     from rich.syntax import Syntax
 
@@ -121,7 +120,7 @@ def add(
     title: str = typer.Option("", "--title", "-t", help="Snippet title"),
     description: str = typer.Option("", "--desc", "-d", help="Short description"),
     language: str = typer.Option("", "--lang", "-l", help="Programming language"),
-    tags: list[str] = typer.Option([], "--tag", help="Tags (repeatable)"),
+    tags: Optional[list[str]] = typer.Option(None, "--tag", help="Tags (repeatable)"),
     from_file: bool = typer.Option(False, "--file", "-f", help="Read content from file path"),
 ):
     """Add a new code snippet to your collection."""
@@ -129,6 +128,8 @@ def add(
     from snipcontext.core.storage import StorageEngine
 
     config = get_config()
+
+    tags = tags or []
 
     # Read content from file if requested
     if from_file:
@@ -328,8 +329,8 @@ def edit(
     content: Optional[str] = typer.Option(None, "--content", "-c", help="New code content"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="New title"),
     description: Optional[str] = typer.Option(None, "--desc", "-d", help="New description"),
-    add_tags: list[str] = typer.Option([], "--add-tag", help="Add tags"),
-    remove_tags: list[str] = typer.Option([], "--remove-tag", help="Remove tags"),
+    add_tags: Optional[list[str]] = typer.Option(None, "--add-tag", help="Add tags"),
+    remove_tags: Optional[list[str]] = typer.Option(None, "--remove-tag", help="Remove tags"),
     message: str = typer.Option("", "--message", "-m", help="Version bump message"),
 ):
     """Edit an existing snippet."""
@@ -337,6 +338,9 @@ def edit(
 
     config = get_config()
     storage = StorageEngine(config)
+
+    add_tags = add_tags or []
+    remove_tags = remove_tags or []
 
     try:
         snippet = storage.get(snippet_id)
@@ -400,7 +404,7 @@ def delete(
 @app.command()
 def export(
     query: Optional[str] = typer.Option(None, "--query", "-q", help="Export search results"),
-    ids: list[str] = typer.Option([], "--id", help="Export specific snippet IDs"),
+    ids: Optional[list[str]] = typer.Option(None, "--id", help="Export specific snippet IDs"),
     provider: str = typer.Option("generic", "--provider", "-p", help="Export format provider"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file (default: stdout)"),
     top_k: int = typer.Option(10, "--limit", "-n", help="Max results for query export"),
@@ -412,6 +416,8 @@ def export(
 
     config = get_config()
     storage = StorageEngine(config)
+
+    ids = ids or []
 
     pm = PluginManager()
     pm.load_builtin_providers()
