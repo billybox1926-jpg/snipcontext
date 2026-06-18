@@ -1,0 +1,21 @@
+[project]
+name = "snipcontext"
+version = "0.1.0"
+description = "AI-powered code snippet and context manager"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [{ name = "Billy", email = "billybox1926@gmail.com" }]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
