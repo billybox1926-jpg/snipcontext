@@ -6,8 +6,8 @@ if the dependency is not available.
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
+import tempfile
 
 import numpy as np
 import pytest
@@ -17,7 +17,7 @@ from snipcontext.core.models import Language, SearchMode, Snippet, SnippetMetada
 
 
 try:
-    from sentence_transformers import SentenceTransformer
+    import sentence_transformers  # noqa: F401
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
     SENTENCE_TRANSFORMERS_AVAILABLE = False
@@ -259,7 +259,7 @@ class TestHybridSearch:
         searcher = HybridSearch(temp_config)
         searcher.index_snippets([s])
 
-        results = searcher.search("test", mode=SearchMode.TAG)
+        searcher.search("test", mode=SearchMode.TAG)
         reloaded = storage.get(s.id)
         assert reloaded.access_count == 1
 
