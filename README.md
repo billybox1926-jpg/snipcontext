@@ -47,37 +47,66 @@ Save, search, tag, and instantly inject your best boilerplate, patterns, and con
 ### Installation
 
 ```bash
-# Install from source (after cloning)
+# From PyPI (recommended)
+pip install snipcontext
+
+# From source (after cloning)
 pip install -e ".[dev]"
 
 # Or install directly from GitHub
 pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 ```
 
+#### Windows Users: Use `snipcontext` instead of `sc`
+
+Windows has a built-in `sc.exe` (Service Control) that shadows the `sc` CLI entry point. Use the full command name instead:
+
+```bash
+snipcontext add "print('hello')" --title "Hello" --tag python
+snipcontext search "hello world"
+snipcontext list
+snipcontext stats
+```
+
+Or run via module:
+
+```bash
+python -m snipcontext add "print('hello')" --title "Hello" --tag python
+```
+
+#### Verify Installation
+
+```bash
+snipcontext --help          # or: python -m snipcontext --help
+snipcontext providers       # List available export providers
+```
+
 ### CLI Usage
+
+> **Note:** On Windows, use `snipcontext` instead of `sc` (see [Installation](#installation)).
 
 ```bash
 # Add a snippet
-sc add "def authenticate(token):\n    return jwt.decode(token, SECRET)" \
+snipcontext add "def authenticate(token):\\n    return jwt.decode(token, SECRET)" \
   --title "JWT Authentication" \
   --desc "Decode and verify JWT tokens" \
   --lang python \
   --tag auth --tag jwt --tag security
 
 # Search semantically
-sc search "how to validate auth tokens"
+snipcontext search "how to validate auth tokens"
 
 # Search by tag
-sc search "auth" --mode tag
+snipcontext search "auth" --mode tag
 
 # Export for Claude
-sc search "authentication" --provider claude --output context.xml
+snipcontext search "authentication" --provider claude --output context.xml
 
 # List all snippets
-sc list
+snipcontext list
 
 # Show stats
-sc stats
+snipcontext stats
 ```
 
 ### Library Usage
@@ -202,13 +231,13 @@ pre-commit install
 - [x] LLM-optimized export providers (Claude, Cursor, OpenAI, Generic)
 - [x] Rich CLI with Typer
 - [x] Plugin system with entry points
+- [x] Python library distribution (PyPI)
 - [ ] Real-time index updates (currently requires rebuild)
 - [ ] Import from GitHub Gists
 - [ ] Import from Git repositories
 - [ ] Snippet templates and scaffolding
 - [ ] Team sharing via git-sync
 - [ ] VS Code extension
-- [ ] Python library distribution (PyPI)
 
 ---
 
@@ -216,28 +245,31 @@ pre-commit install
 
 ```
 snipcontext/
-├── core/                    # Core engine (models, storage, search)
-│   ├── models.py           # Pydantic data models
-│   ├── storage.py          # Git-friendly JSON storage
-│   └── search.py           # Semantic + hybrid search
-├── providers/              # LLM export providers
-│   ├── base.py             # Provider interface
-│   ├── claude.py           # Anthropic Claude XML
-│   ├── cursor.py           # Cursor IDE format
-│   ├── openai.py           # OpenAI format
-│   └── generic.py          # Universal Markdown
-├── plugins/                # Plugin system
-│   └── base.py             # Plugin base + manager
-├── config/                 # Configuration
-│   └── settings.py         # Pydantic Settings
-├── cli/                    # Command-line interface
-│   └── main.py             # Typer CLI commands
-├── tests/                  # Comprehensive test suite
-├── docs/                   # Documentation
-│   ├── ARCHITECTURE.md     # Design docs
-│   └── API.md              # Python API reference
-├── pyproject.toml          # Modern Python packaging
-└── README.md               # This file
+├── snipcontext/              # Python package
+│   ├── __init__.py           # Package exports
+│   ├── __main__.py           # python -m snipcontext
+│   ├── core/                 # Core engine (models, storage, search)
+│   │   ├── models.py         # Pydantic data models
+│   │   ├── storage.py        # Git-friendly JSON storage
+│   │   └── search.py         # Semantic + hybrid search
+│   ├── providers/            # LLM export providers
+│   │   ├── base.py           # Provider interface
+│   │   ├── claude.py         # Anthropic Claude XML
+│   │   ├── cursor.py         # Cursor IDE format
+│   │   ├── openai.py         # OpenAI format
+│   │   └── generic.py        # Universal Markdown
+│   ├── plugins/              # Plugin system
+│   │   └── base.py           # Plugin base + manager
+│   ├── config/               # Configuration
+│   │   └── settings.py       # Pydantic Settings
+│   └── cli/                  # Command-line interface
+│       └── main.py           # Typer CLI commands
+├── tests/                    # Comprehensive test suite
+├── docs/                     # Documentation
+│   ├── ARCHITECTURE.md       # Design docs
+│   └── API.md                # Python API reference
+├── pyproject.toml            # Modern Python packaging
+└── README.md                 # This file
 ```
 
 ---
