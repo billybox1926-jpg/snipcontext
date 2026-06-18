@@ -1,0 +1,51 @@
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Editor and IDE directories
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Environment variables and local config
+.env
+.env.*
+*.local
+
+# Dependency directories
+node_modules/
+.vendor/
+
+# Build and distribution artifacts
+dist/
+build/
+out/
+coverage/
+*.tmp
+*.temp
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Java
+*.class
+
+# Go
+bin/
+
+# Rust
+target/
+
+# Package manager lockfiles for library templates (optional)
+# Uncomment as needed for application repos:
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml

@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    uses: ./.github/workflows/reusable-quality.yml
+    with:
+      setup-node: false
+      run-format-check: false
+      run-lint: false
+      run-test: false
