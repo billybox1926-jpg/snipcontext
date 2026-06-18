@@ -1,131 +1,155 @@
-# Architecture
+# SnipContext Architecture
 
-This repository is a reusable template, so the architecture intentionally defines conventions without assuming a specific runtime, framework, product, or deployment target.
+## Overview
 
-Use these folders as stable seams for future projects. Keep implementation code small, composable, and easy to replace.
+SnipContext is built as a layered architecture with clean separation between data, storage, search, and presentation layers. Every component is designed to be independently testable and replaceable.
 
-For a tiny dependency-free walkthrough of the intended `core -> providers -> plugins` pattern, see `docs/examples/MODULAR_REFERENCE.md`.
-
-## Layout
-
-```text
-core/
-providers/
-plugins/
-config/
-scripts/
-tests/
-docs/
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      CLI (Typer + Rich)                      │
+├─────────────────────────────────────────────────────────────┤
+│  add  │  search  │  get  │  list  │  export  │  delete      │
+├─────────────────────────────────────────────────────────────┤
+│                  Providers (LLM Exporters)                   │
+│   Claude (XML)  │  Cursor  │  OpenAI  │  Generic (MD)        │
+├─────────────────────────────────────────────────────────────┤
+│                    Search Engine                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────┐   │
+│  │   Semantic   │  │   Keyword    │  │    Hybrid      │   │
+│  │  (FAISS +    │  │  (TF-IDF +   │  │  (weighted     │   │
+│  │ embeddings)  │  │  scikit)     │  │  fusion)       │   │
+│  └──────────────┘  └──────────────┘  └────────────────┘   │
+├─────────────────────────────────────────────────────────────┤
+│                   Storage Engine                             │
+│     Git-friendly JSON files  +  FAISS vector index          │
+├─────────────────────────────────────────────────────────────┤
+│                    Data Models (Pydantic)                    │
+│         Snippet  │  SnippetMetadata  │  SnippetVersion       │
+├─────────────────────────────────────────────────────────────┤
+│                  Configuration (Pydantic Settings)           │
+│    Env vars  │  YAML file  │  Platform-appropriate dirs       │
+├─────────────────────────────────────────────────────────────┤
+│                  Plugin System (Entry Points)                │
+│    Custom providers  │  Import sources  │  Search hooks       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Folder responsibilities
+## Core Design Principles
 
-### `core/`
+### 1. Local-First
+- All data stored on local filesystem
+- No network calls required for core functionality
+- Embeddings computed locally with sentence-transformers
+- FAISS index for fast local similarity search
 
-Contains framework-independent domain logic. Code in `core/` should avoid direct network, file-system, database, UI, or vendor-specific calls when possible.
+### 2. Git-Friendly Storage
+- Each snippet = one JSON file
+- Human-readable, diffable format
+- Deterministic serialization (sorted keys, consistent formatting)
+- No binary databases or lock files
 
-Good candidates:
+### 3. Modular Architecture
+- Core engine has zero CLI dependencies
+- Search engine is pluggable (semantic/keyword/hybrid)
+- Providers are independent export formatters
+- Plugins use Python entry points for discovery
 
-- domain models
-- pure transformations
-- validation rules
-- orchestration interfaces
-- reusable service boundaries
+### 4. Type Safety
+- Pydantic v2 models enforce data integrity
+- Full type hints throughout
+- Runtime validation on all inputs
 
-### `providers/`
+## Data Flow
 
-Contains adapters for external systems or runtime-specific integrations.
-
-Good candidates:
-
-- API clients
-- database adapters
-- file-system adapters
-- cloud service adapters
-- AI/model provider adapters
-
-Providers should depend on `core/` contracts instead of forcing `core/` to know vendor details.
-
-### `plugins/`
-
-Contains optional extensions that can be added, removed, or replaced without rewriting core behavior.
-
-Good candidates:
-
-- feature modules
-- command extensions
-- workflow extensions
-- experimental integrations
-
-A plugin should declare what it needs and expose a small entry point. Avoid hidden global state.
-
-### `config/`
-
-Contains configuration defaults, schemas, examples, and environment documentation.
-
-Good candidates:
-
-- example config files
-- schema files
-- environment variable documentation
-- validation helpers
-
-Do not commit secrets. Prefer explicit placeholders such as `EXAMPLE_TOKEN` or `YOUR_API_KEY_HERE`.
-
-### `scripts/`
-
-Contains local development, maintenance, and automation helpers.
-
-Scripts should be safe to run repeatedly, explain what they are doing, and avoid destructive behavior unless explicitly documented.
-
-### `tests/`
-
-Contains automated tests and fixtures.
-
-Suggested organization:
-
-- `tests/unit/` for isolated logic tests
-- `tests/integration/` for adapter or provider tests
-- `tests/fixtures/` for reusable sample data
-
-## Dependency direction
-
-Keep dependencies flowing inward:
-
-```text
-plugins -> providers -> core
-scripts -> project tooling
-config -> runtime setup
+### Saving a Snippet
+```
+User Input → Snippet model (validation) → StorageEngine → JSON file
+                                              ↓
+                                       VectorIndex (async reindex)
 ```
 
-`core/` should not import from `providers/` or `plugins/`. This keeps the template portable and makes future rewrites less painful.
+### Searching
+```
+Query → EmbeddingEngine (encode) → FAISS Index (search)
+                                          ↓
+Query → KeywordIndex (TF-IDF search) → Score Fusion
+                                          ↓
+                                    StorageEngine (hydrate) → Results
+```
 
-## Extension pattern
+### Exporting
+```
+Snippet IDs / Search Results → Provider (format) → LLM-optimized string
+                                                          ↓
+                                                   stdout or file
+```
 
-When adding a new capability:
+## Storage Layout
 
-1. Define the stable behavior in `core/`.
-2. Put external-service details in `providers/`.
-3. Put optional feature wiring in `plugins/`.
-4. Document configuration in `config/`.
-5. Add tests under `tests/`.
+```
+~/.local/share/SnipContext/          # Linux (platformdirs)
+~/Library/Application Support/SnipContext/  # macOS
+%APPDATA%\\SnipContext\\                   # Windows
+├── snippets/
+│   ├── abc123def456.json              # Individual snippet files
+│   ├── def789ghi012.json
+│   └── ...
+├── index/
+│   ├── vector.faiss                   # FAISS vector index
+│   ├── idmap.json                     # FAISS ID → snippet ID mapping
+│   └── keyword_index.pkl              # TF-IDF vectorizer + matrix
+└── config.yaml                        # User configuration
+```
 
-## Configuration pattern
+## Search Implementation Details
 
-Prefer configuration that is:
+### Semantic Search
+- **Model**: `all-MiniLM-L6-v2` (default) — 384-dim, fast, high quality
+- **Index**: FAISS IndexFlatIP (exact inner product = cosine similarity)
+- **Scaling**: Automatically switches to IndexIVFFlat for >5000 vectors
+- **Normalization**: L2-normalized vectors for cosine similarity
 
-- explicit
-- documented
-- environment-aware
-- safe by default
-- easy to override in CI
+### Keyword Search
+- **Method**: TF-IDF with scikit-learn
+- **Features**: Unigrams + bigrams, English stop words removed
+- **Scoring**: Cosine similarity between query and document vectors
 
-Template repositories should use example files instead of real secrets or machine-specific paths.
+### Hybrid Search
+- **Fusion**: `score = w_sem * semantic_score + w_kw * keyword_score`
+- **Defaults**: 70% semantic, 30% keyword (configurable)
+- **Reciprocal Rank Fusion** also supported for rank-based combination
 
-## Portability rules
+## Plugin Architecture
 
-- Avoid hardcoded absolute paths.
-- Keep OS-specific commands isolated in scripts.
-- Prefer plain text docs and simple shell helpers.
-- Keep provider-specific behavior outside `core/`.
-- Make optional features removable without breaking the baseline template.
+Plugins are discovered via Python entry points in the `snipcontext.plugins` group.
+
+```python
+# setup.py of a plugin package
+entry_points = {
+    "snipcontext.plugins": [
+        "myplugin = mypackage.plugin:MyPlugin",
+    ],
+    "snipcontext.providers": [
+        "custom = mypackage.provider:CustomProvider",
+    ],
+}
+```
+
+See `plugins/base.py` for the `Plugin` base class with all available hooks.
+
+## Configuration Priority
+
+1. Environment variables (`SNIPCONTEXT_*`)
+2. YAML config file (`~/.config/SnipContext/snipcontext.yaml`)
+3. Default values in `config/settings.py`
+
+## Performance Characteristics
+
+| Operation | Complexity | Notes |
+|-----------|-----------|-------|
+| Save snippet | O(1) | Append to filesystem |
+| Get snippet | O(1) | Direct file lookup by ID |
+| Semantic search | O(n) | FAISS exact search |
+| Keyword search | O(n) | Sparse matrix dot product |
+| Index build | O(n) | One-time, incremental updates planned |
+| Export | O(k) | k = number of snippets exported |
