@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import html
+from typing import TYPE_CHECKING
 
-from snipcontext.core.models import Snippet
 from snipcontext.providers.base import BaseProvider, ExportFormat
+
+if TYPE_CHECKING:
+    from snipcontext.core.models import Snippet
 
 
 class ClaudeProvider(BaseProvider):
