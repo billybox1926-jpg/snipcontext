@@ -84,6 +84,38 @@ class ExportConfig(BaseSettings):
     include_line_numbers: bool = Field(default=False)
 
 
+class EncryptionConfig(BaseSettings):
+    """Configuration for snippet encryption (Fernet/AES-128)."""
+
+    model_config = SettingsConfigDict(env_prefix="SNIPCONTEXT_ENCRYPT_", extra="ignore")
+
+    enabled: bool = Field(default=False, description="Enable snippet encryption")
+    key_iterations: int = Field(default=100000, ge=10000, description="PBKDF2 iterations for key derivation")
+    key_salt: str | None = Field(default=None, description="Base64-encoded salt for key derivation (auto-generated if not provided)")
+
+    def get_or_create_salt(self) -> bytes:
+        """Get existing salt or generate and persist a new one."""
+        if self.key_salt:
+            import base64
+            return base64.b64decode(self.key_salt)
+
+        import base64
+        import secrets
+        salt = secrets.token_bytes(16)
+        # Auto-save the salt to config
+        self.key_salt = base64.b64encode(salt).decode()
+        # Persist to config file
+        try:
+            from snipcontext.config.settings import get_config
+            config = get_config()
+            config.encryption.key_salt = self.key_salt
+            config.save_to_file()
+        except Exception:
+            pass  # Best effort to persist salt
+
+        return salt
+
+
 class Config(BaseSettings):
     """Root configuration for SnipContext.
 
@@ -105,6 +137,7 @@ class Config(BaseSettings):
     search: SearchConfig = Field(default_factory=SearchConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
     export: ExportConfig = Field(default_factory=ExportConfig)
+    encryption: EncryptionConfig = Field(default_factory=EncryptionConfig)
 
     @field_validator("storage", mode="before")
     @classmethod

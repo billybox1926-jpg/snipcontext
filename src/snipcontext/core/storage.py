@@ -10,6 +10,7 @@ directory tree by tags. This design ensures:
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 from pathlib import Path
@@ -17,6 +18,10 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from snipcontext.config.settings import Config, get_config
 from snipcontext.core.models import Snippet
@@ -30,6 +35,43 @@ class StorageError(Exception):
 
 class SnippetNotFoundError(StorageError):
     """Raised when a requested snippet does not exist."""
+
+
+class IndexCorruptedError(StorageError):
+    """Raised when a search index is detected as corrupted or invalid."""
+
+    def __init__(self, index_type: str, path: str, original_error: Exception | None = None):
+        self.index_type = index_type
+        self.path = path
+        self.original_error = original_error
+        msg = f"Index corrupted: {index_type} at {path}"
+        if original_error:
+            msg += f" (caused by: {original_error})"
+        super().__init__(msg)
+
+
+class MissingIndexError(StorageError):
+    """Raised when a required search index is missing."""
+
+    def __init__(self, index_type: str, path: str):
+        self.index_type = index_type
+        self.path = path
+        super().__init__(f"Index missing: {index_type} at {path}")
+
+
+class EncryptionError(StorageError):
+    """Raised when encryption/decryption operations fail."""
+
+    def __init__(self, operation: str, snippet_id: str | None = None, original_error: Exception | None = None):
+        self.operation = operation
+        self.snippet_id = snippet_id
+        self.original_error = original_error
+        msg = f"Encryption error during {operation}"
+        if snippet_id:
+            msg += f" for snippet {snippet_id}"
+        if original_error:
+            msg += f" (caused by: {original_error})"
+        super().__init__(msg)
 
 
 class StorageEngine:
@@ -86,6 +128,7 @@ class StorageEngine:
 
         # Remove embedding from JSON - it's stored in the vector index
         data.pop("embedding", None)
+        # Keep encrypted_content in JSON for persistence
 
         try:
             with open(path, "w", encoding="utf-8") as f:
@@ -219,6 +262,54 @@ class StorageEngine:
             "oldest": min(s.created_at for s in snippets).isoformat(),
             "newest": max(s.updated_at for s in snippets).isoformat(),
         }
+
+    # ------------------------------------------------------------------
+    # Encryption
+    # ------------------------------------------------------------------
+
+    def _get_fernet(self) -> Fernet:
+        """Create or retrieve a Fernet cipher from the encryption config."""
+        if not self._config.encryption.enabled:
+            raise EncryptionError("encrypt/decrypt", original_error=RuntimeError("Encryption is not enabled in config"))
+
+        enc_config = self._config.encryption
+        salt = enc_config.get_or_create_salt()
+
+        # Use a fixed passphrase from environment or derive from a stable source
+        # In production, this should come from a secure key management system
+        import os
+        passphrase = os.environ.get("SNIPCONTEXT_ENCRYPTION_PASSPHRASE", "snipcontext-default-passphrase")
+        passphrase_bytes = passphrase.encode()
+
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=enc_config.key_iterations,
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(passphrase_bytes))
+        return Fernet(key)
+
+    def encrypt_content(self, content: str) -> str:
+        """Encrypt content using Fernet (AES-128)."""
+        try:
+            fernet = self._get_fernet()
+            encrypted = fernet.encrypt(content.encode())
+            return base64.urlsafe_b64encode(encrypted).decode()
+        except Exception as exc:
+            raise EncryptionError("encrypt", original_error=exc) from exc
+
+    def decrypt_content(self, encrypted_content: str) -> str:
+        """Decrypt content using Fernet (AES-128)."""
+        try:
+            fernet = self._get_fernet()
+            encrypted_bytes = base64.urlsafe_b64decode(encrypted_content.encode())
+            decrypted = fernet.decrypt(encrypted_bytes)
+            return decrypted.decode()
+        except InvalidToken as exc:
+            raise EncryptionError("decrypt", original_error=exc) from exc
+        except Exception as exc:
+            raise EncryptionError("decrypt", original_error=exc) from exc
 
     # ------------------------------------------------------------------
     # Maintenance

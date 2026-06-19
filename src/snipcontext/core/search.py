@@ -10,6 +10,7 @@ All processing happens locally — no data leaves the machine.
 
 from __future__ import annotations
 
+import json
 import logging
 import pickle
 from typing import TYPE_CHECKING
@@ -18,6 +19,7 @@ import numpy as np
 
 from snipcontext.config.settings import Config, get_config
 from snipcontext.core.models import SearchMode, SearchResult, Snippet
+from snipcontext.core.storage import StorageError
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -79,7 +81,9 @@ class EmbeddingEngine:
         if not texts:
             return np.zeros((0, self.dimension), dtype=np.float32)
 
-        prefixed = [f"{self._config.embedding.doc_instruction}{t}" for t in texts]
+        prefixed = [
+            f"{self._config.embedding.doc_instruction}{t}" for t in texts
+        ]
         embeddings = self.model.encode(
             prefixed,
             batch_size=self._config.embedding.batch_size,
@@ -224,24 +228,38 @@ class VectorIndex:
         Returns:
             True if loaded successfully, False otherwise.
         """
-        import json
-
-        import faiss
 
         index_file = path / "vector.faiss"
         idmap_file = path / "idmap.json"
 
         if not index_file.exists() or not idmap_file.exists():
+            logger.debug("Index files not found at %s", path)
             return False
 
         try:
+            import faiss
             self._index = faiss.read_index(str(index_file))
             with open(idmap_file) as f:
                 self._id_map = json.load(f)
+
+            # Validate index integrity
+            if self._index.ntotal != len(self._id_map):
+                logger.warning("Index ID map length mismatch: %d vectors vs %d IDs",
+                              self._index.ntotal, len(self._id_map))
+                return False
+
             logger.debug("Loaded vector index from %s", path)
             return True
         except Exception as exc:
-            logger.warning("Failed to load vector index: %s", exc)
+            logger.warning("Failed to load vector index from %s: %s", path, exc)
+            # Clean up potentially corrupted files
+            try:
+                if index_file.exists():
+                    index_file.unlink()
+                if (path / "idmap.json").exists():
+                    (path / "idmap.json").unlink()
+            except Exception:
+                pass
             return False
 
 
@@ -262,6 +280,7 @@ class KeywordIndex:
         self._vectorizer: TfidfVectorizer | None = None
         self._matrix: spmatrix | None = None
         self._id_map: list[str] = []
+        self._texts: list[str] = []
 
     @property
     def is_trained(self) -> bool:
@@ -365,7 +384,7 @@ class KeywordIndex:
         try:
             from rapidfuzz import fuzz, process
 
-            # Use token set ratio for better matching of code snippets
+            # Use token_set_ratio for better matching of code snippets
             # This handles reordered words and partial matches well
             results = process.extract(
                 query,
@@ -392,6 +411,7 @@ class KeywordIndex:
                     "vectorizer": self._vectorizer,
                     "matrix": self._matrix,
                     "id_map": self._id_map,
+                    "texts": self._texts,
                 },
                 f,
             )
@@ -401,6 +421,7 @@ class KeywordIndex:
         """Load the keyword index from disk."""
         index_file = path / "keyword_index.pkl"
         if not index_file.exists():
+            logger.debug("Keyword index file not found at %s", path)
             return False
         try:
             with open(index_file, "rb") as f:
@@ -409,10 +430,23 @@ class KeywordIndex:
             self._matrix = data["matrix"]
             self._id_map = data["id_map"]
             self._texts = data.get("texts", [])
+
+            # Validate index integrity
+            if self._matrix is not None and len(self._id_map) != self._matrix.shape[0]:
+                logger.warning("Keyword index ID map length mismatch: %d IDs vs %d rows",
+                              len(self._id_map), self._matrix.shape[0])
+                return False
+
             logger.debug("Loaded keyword index from %s", path)
             return True
         except Exception as exc:
-            logger.warning("Failed to load keyword index: %s", exc)
+            logger.warning("Failed to load keyword index from %s: %s", path, exc)
+            # Clean up potentially corrupted file
+            try:
+                if index_file.exists():
+                    index_file.unlink()
+            except Exception:
+                pass
             return False
 
 
@@ -442,27 +476,36 @@ class SemanticSearch:
         storage = StorageEngine(self._config)
 
         query_embedding = self.embedder.encode_query(query)
-        results = self.vector_index.search(
-            query_embedding,
-            top_k=top_k,
-            min_score=self._config.search.min_score,
-        )
+        results = self.vector_index.search(query_embedding, top_k=top_k, min_score=0.0)
+        return self._hydrate(results, "semantic", top_k, storage)
 
+    def _hydrate(self, raw_results: list[tuple[str, float]], matched_by: str, top_k: int, storage: StorageEngine) -> list[SearchResult]:
         search_results: list[SearchResult] = []
-        for snippet_id, score in results:
+        seen = set()
+
+        for snippet_id, score in raw_results:
+            if snippet_id in seen:
+                continue
+            seen.add(snippet_id)
+
             try:
                 snippet = storage.get(snippet_id)
-                snippet.record_access()
-                storage.save(snippet)
-                search_results.append(
-                    SearchResult(
-                        snippet=snippet,
-                        score=score,
-                        matched_by="semantic",
-                    )
-                )
             except Exception:
                 continue
+
+            snippet.record_access()
+            storage.save(snippet)
+
+            search_results.append(
+                SearchResult(
+                    snippet=snippet,
+                    score=min(score, 1.0),
+                    matched_by=matched_by,
+                )
+            )
+
+            if len(search_results) >= top_k:
+                break
 
         return search_results
 
@@ -483,17 +526,58 @@ class HybridSearch:
         self.vector_index = VectorIndex(config)
         self.keyword_index = KeywordIndex(config)
 
+    def load_indices(self) -> tuple[bool, bool]:
+        """Load existing search indices from disk.
+
+        Returns:
+            Tuple of (semantic_loaded, keyword_loaded).
+        """
+        semantic_loaded = self.vector_index.load(self._config.index_path)
+        keyword_loaded = self.keyword_index.load(self._config.index_path)
+
+        if semantic_loaded and keyword_loaded:
+            logger.debug("Loaded existing search indices from %s", self._config.index_path)
+
+        return semantic_loaded, keyword_loaded
+
     def index_snippets(self, snippets: list[Snippet]) -> None:
-        """Build both semantic and keyword indices."""
+        """Build both semantic and keyword indices.
+
+        If semantic index fails to load or build, falls back to keyword-only.
+        """
+        # Try to load existing indices first
+        semantic_loaded = self.vector_index.load(self._config.index_path)
+        keyword_loaded = self.keyword_index.load(self._config.index_path)
+
+        # If both loaded successfully and we're not forcing rebuild, return
+        if semantic_loaded and keyword_loaded:
+            logger.debug("Loaded existing search indices from %s", self._config.index_path)
+            return
+
+        logger.info("Rebuilding search indices (%d snippets)", len(snippets))
+
+        # Try to build semantic index
+        semantic_ok = False
         try:
             self.vector_index.build(snippets, self.embedder)
             self.vector_index.save(self._config.index_path)
+            semantic_ok = True
         except (ImportError, OSError) as exc:
-            logger.warning("Semantic index unavailable: %s", exc)
+            logger.warning("Semantic index build failed: %s", exc)
             logger.info("Falling back to keyword-only search")
 
-        self.keyword_index.build(snippets)
-        self.keyword_index.save(self._config.index_path)
+        # Always build keyword index as fallback
+        try:
+            self.keyword_index.build(snippets)
+            self.keyword_index.save(self._config.index_path)
+        except Exception as exc:
+            logger.error("Keyword index build failed: %s", exc)
+            raise StorageError(f"Failed to build keyword index: {exc}") from exc
+
+        if not semantic_ok:
+            logger.info("Built keyword-only index (semantic unavailable)")
+        else:
+            logger.info("Built hybrid search indices (semantic + keyword)")
 
     def search(
         self,
@@ -550,7 +634,12 @@ class HybridSearch:
         return self._hydrate(raw, "keyword", top_k, storage)
 
     def _hybrid_search(
-        self, query: str, top_k: int, min_score: float, fuzzy: bool, storage: StorageEngine
+        self,
+        query: str,
+        top_k: int,
+        min_score: float,
+        fuzzy: bool,
+        storage: StorageEngine,
     ) -> list[SearchResult]:
         """Weighted fusion of semantic and keyword scores."""
         w_sem = self._config.search.semantic_weight
@@ -561,9 +650,7 @@ class HybridSearch:
         if self.vector_index.is_trained:
             try:
                 query_embedding = self.embedder.encode_query(query)
-                sem_raw = self.vector_index.search(
-                    query_embedding, top_k=top_k * 3, min_score=min_score
-                )
+                sem_raw = self.vector_index.search(query_embedding, top_k=top_k * 3, min_score=min_score)
                 sem_scores = dict(sem_raw)
             except Exception:
                 pass  # Fall back to keyword-only
@@ -576,9 +663,7 @@ class HybridSearch:
         if not sem_scores:
             return self._hydrate(
                 sorted(kw_scores.items(), key=lambda x: x[1], reverse=True)[:top_k],
-                "keyword",
-                top_k,
-                storage,
+                "keyword", top_k, storage
             )
 
         # Fuse scores
@@ -592,7 +677,9 @@ class HybridSearch:
         fused.sort(key=lambda x: x[1], reverse=True)
         return self._hydrate(fused[:top_k], "hybrid", top_k, storage)
 
-    def _tag_search(self, query: str, top_k: int, storage: StorageEngine) -> list[SearchResult]:
+    def _tag_search(
+        self, query: str, top_k: int, storage: StorageEngine
+    ) -> list[SearchResult]:
         """Exact tag match search."""
         tag = query.strip().lstrip("#").lower()
         snippets = storage.find_by_tag(tag)
@@ -646,19 +733,3 @@ class HybridSearch:
                 break
 
         return search_results
-
-    def is_indexed(self) -> bool:
-        """Check if both indices are built and ready."""
-        return self.vector_index.is_trained and self.keyword_index.is_trained
-
-    def load_indices(self) -> bool:
-        """Attempt to load persisted indices from disk."""
-        try:
-            v_ok = self.vector_index.load(self._config.index_path)
-        except ImportError:
-            v_ok = False
-        try:
-            k_ok = self.keyword_index.load(self._config.index_path)
-        except ImportError:
-            k_ok = False
-        return v_ok and k_ok
