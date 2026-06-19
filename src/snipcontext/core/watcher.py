@@ -9,7 +9,7 @@ and degrades gracefully when watchdog is not installed.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from watchdog.observers import Observer
@@ -53,7 +53,7 @@ class SnippetWatcher:
         self.config = config
         self.search = search_engine
         self.storage = storage_engine
-        self.observer: Optional[Observer] = None
+        self.observer: Observer | None = None
 
     def start(self) -> None:
         """Begin watching the snippets directory for changes.
