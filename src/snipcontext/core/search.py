@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 import pickle
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -22,12 +21,11 @@ from snipcontext.core.models import SearchMode, SearchResult, Snippet
 
 if TYPE_CHECKING:
     import faiss
+    from pathlib import Path
     from scipy.sparse import spmatrix
     from sentence_transformers import SentenceTransformer
     from sklearn.feature_extraction.text import TfidfVectorizer
-
     from snipcontext.core.storage import StorageEngine
-
 
 logger = logging.getLogger(__name__)
 
@@ -565,13 +563,13 @@ class HybridSearch:
             try:
                 query_embedding = self.embedder.encode_query(query)
                 sem_raw = self.vector_index.search(query_embedding, top_k=top_k * 3, min_score=min_score)
-                sem_scores = {sid: s for sid, s in sem_raw}
+                sem_scores = dict(sem_raw)
             except Exception:
                 pass  # Fall back to keyword-only
 
         # Keyword results
         kw_raw = self.keyword_index.search(query, top_k=top_k * 3, min_score=min_score, fuzzy=fuzzy)
-        kw_scores: dict[str, float] = {sid: s for sid, s in kw_raw}
+        kw_scores: dict[str, float] = dict(kw_raw)
 
         # If no semantic results available, do keyword-only
         if not sem_scores:

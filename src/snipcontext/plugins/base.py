@@ -39,14 +39,12 @@ class Plugin(ABC):
         """Called when the plugin is unloaded. Override for cleanup."""
         pass
 
-    def get_providers(self) -> list[type[BaseProvider]]:
-        """Return additional export providers provided by this plugin."""
-        return []
-
+    @abstractmethod
     def on_snippet_saved(self, snippet: Snippet) -> None:
         """Hook called after a snippet is saved."""
         pass
 
+    @abstractmethod
     def on_snippet_loaded(self, snippet: Snippet) -> None:
         """Hook called after a snippet is loaded."""
         pass
