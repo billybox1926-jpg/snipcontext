@@ -167,7 +167,9 @@ class VectorIndex:
         index.add(embeddings)
         self._id_map = [s.id for s in snippets]
         self._id_to_idx = {sid: i for i, sid in enumerate(self._id_map)}
-        self._content_hashes = {s.id: hashlib.sha256(s.content.encode()).hexdigest()[:16] for s in snippets}
+        self._content_hashes = {
+            s.id: hashlib.sha256(s.content.encode()).hexdigest()[:16] for s in snippets
+        }
         self._index = index
 
         # Store embeddings on snippets for hybrid search
