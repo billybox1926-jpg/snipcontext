@@ -33,7 +33,7 @@ jobs:
         run: ruff format --check src/snipcontext tests
 
       - name: Mypy type check
-        run: mypy src/snipcontext --ignore-missing-imports --exclude="parametrize"
+        run: mypy src/snipcontext --ignore-missing-imports --exclude=".*parametrize.*"
 
   # ── Tests across Python versions ─────────────────────────────────
   test:
