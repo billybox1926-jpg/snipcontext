@@ -62,7 +62,9 @@ class MissingIndexError(StorageError):
 class EncryptionError(StorageError):
     """Raised when encryption/decryption operations fail."""
 
-    def __init__(self, operation: str, snippet_id: str | None = None, original_error: Exception | None = None):
+    def __init__(
+        self, operation: str, snippet_id: str | None = None, original_error: Exception | None = None
+    ):
         self.operation = operation
         self.snippet_id = snippet_id
         self.original_error = original_error
@@ -270,7 +272,10 @@ class StorageEngine:
     def _get_fernet(self) -> Fernet:
         """Create or retrieve a Fernet cipher from the encryption config."""
         if not self._config.encryption.enabled:
-            raise EncryptionError("encrypt/decrypt", original_error=RuntimeError("Encryption is not enabled in config"))
+            raise EncryptionError(
+                "encrypt/decrypt",
+                original_error=RuntimeError("Encryption is not enabled in config"),
+            )
 
         enc_config = self._config.encryption
         salt = enc_config.get_or_create_salt()
@@ -278,7 +283,10 @@ class StorageEngine:
         # Use a fixed passphrase from environment or derive from a stable source
         # In production, this should come from a secure key management system
         import os
-        passphrase = os.environ.get("SNIPCONTEXT_ENCRYPTION_PASSPHRASE", "snipcontext-default-passphrase")
+
+        passphrase = os.environ.get(
+            "SNIPCONTEXT_ENCRYPTION_PASSPHRASE", "snipcontext-default-passphrase"
+        )
         passphrase_bytes = passphrase.encode()
 
         kdf = PBKDF2HMAC(

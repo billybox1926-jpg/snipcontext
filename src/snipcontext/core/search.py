@@ -81,9 +81,7 @@ class EmbeddingEngine:
         if not texts:
             return np.zeros((0, self.dimension), dtype=np.float32)
 
-        prefixed = [
-            f"{self._config.embedding.doc_instruction}{t}" for t in texts
-        ]
+        prefixed = [f"{self._config.embedding.doc_instruction}{t}" for t in texts]
         embeddings = self.model.encode(
             prefixed,
             batch_size=self._config.embedding.batch_size,
@@ -238,14 +236,18 @@ class VectorIndex:
 
         try:
             import faiss
+
             self._index = faiss.read_index(str(index_file))
             with open(idmap_file) as f:
                 self._id_map = json.load(f)
 
             # Validate index integrity
             if self._index.ntotal != len(self._id_map):
-                logger.warning("Index ID map length mismatch: %d vectors vs %d IDs",
-                              self._index.ntotal, len(self._id_map))
+                logger.warning(
+                    "Index ID map length mismatch: %d vectors vs %d IDs",
+                    self._index.ntotal,
+                    len(self._id_map),
+                )
                 return False
 
             logger.debug("Loaded vector index from %s", path)
@@ -433,8 +435,11 @@ class KeywordIndex:
 
             # Validate index integrity
             if self._matrix is not None and len(self._id_map) != self._matrix.shape[0]:
-                logger.warning("Keyword index ID map length mismatch: %d IDs vs %d rows",
-                              len(self._id_map), self._matrix.shape[0])
+                logger.warning(
+                    "Keyword index ID map length mismatch: %d IDs vs %d rows",
+                    len(self._id_map),
+                    self._matrix.shape[0],
+                )
                 return False
 
             logger.debug("Loaded keyword index from %s", path)
@@ -479,7 +484,13 @@ class SemanticSearch:
         results = self.vector_index.search(query_embedding, top_k=top_k, min_score=0.0)
         return self._hydrate(results, "semantic", top_k, storage)
 
-    def _hydrate(self, raw_results: list[tuple[str, float]], matched_by: str, top_k: int, storage: StorageEngine) -> list[SearchResult]:
+    def _hydrate(
+        self,
+        raw_results: list[tuple[str, float]],
+        matched_by: str,
+        top_k: int,
+        storage: StorageEngine,
+    ) -> list[SearchResult]:
         search_results: list[SearchResult] = []
         seen = set()
 
@@ -650,7 +661,9 @@ class HybridSearch:
         if self.vector_index.is_trained:
             try:
                 query_embedding = self.embedder.encode_query(query)
-                sem_raw = self.vector_index.search(query_embedding, top_k=top_k * 3, min_score=min_score)
+                sem_raw = self.vector_index.search(
+                    query_embedding, top_k=top_k * 3, min_score=min_score
+                )
                 sem_scores = dict(sem_raw)
             except Exception:
                 pass  # Fall back to keyword-only
@@ -663,7 +676,9 @@ class HybridSearch:
         if not sem_scores:
             return self._hydrate(
                 sorted(kw_scores.items(), key=lambda x: x[1], reverse=True)[:top_k],
-                "keyword", top_k, storage
+                "keyword",
+                top_k,
+                storage,
             )
 
         # Fuse scores
@@ -677,9 +692,7 @@ class HybridSearch:
         fused.sort(key=lambda x: x[1], reverse=True)
         return self._hydrate(fused[:top_k], "hybrid", top_k, storage)
 
-    def _tag_search(
-        self, query: str, top_k: int, storage: StorageEngine
-    ) -> list[SearchResult]:
+    def _tag_search(self, query: str, top_k: int, storage: StorageEngine) -> list[SearchResult]:
         """Exact tag match search."""
         tag = query.strip().lstrip("#").lower()
         snippets = storage.find_by_tag(tag)
