@@ -88,14 +88,21 @@ path = "src/snipcontext/__init__.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/snipcontext",
+    "/src/snipcontext",
     "/tests",
-    "/scripts",
-    "/docs",
+    "/README.md",
+    "/pyproject.toml",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["snipcontext"]
+packages = ["src/snipcontext"]
+
+[tool.hatch.build]
+exclude = [
+    "/tests",
+    "/.github",
+    "/.gitignore",
+]
 
 [tool.ruff]
 target-version = "py39"
