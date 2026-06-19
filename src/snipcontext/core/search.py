@@ -27,8 +27,6 @@ if TYPE_CHECKING:
     from scipy.sparse import spmatrix
     from snipcontext.core.storage import StorageEngine
 
-import rapidfuzz.fuzz as _fuzz
-import rapidfuzz.process as _process
 
 logger = logging.getLogger(__name__)
 
