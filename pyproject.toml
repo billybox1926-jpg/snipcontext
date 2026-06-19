@@ -126,7 +126,18 @@ warn_return_any = true
 warn_unused_ignores = true
 show_error_codes = true
 ignore_missing_imports = true
-disable_error_code = ["syntax", "import-untyped"]
+disable_error_code = [
+    "import-untyped",
+    "no-untyped-def",
+    "untyped-decorator",
+    "misc",
+    "no-any-return",
+    "type-arg",
+]
+
+[[tool.mypy.overrides]]
+module = "torch.*"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

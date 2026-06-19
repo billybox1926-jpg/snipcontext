@@ -6,8 +6,13 @@ stdlib-only no-op entry point so `python -m snipcontext` is always executable.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 
-def get_app():
+if TYPE_CHECKING:
+    import typer
+
+
+def get_app() -> "typer.Typer":
     try:
         from snipcontext.cli.main import app
 
@@ -22,7 +27,7 @@ def get_app():
         app = typer.Typer(add_completion=True)
 
         @app.command()
-        def demo():
+        def demo() -> None:
             """Run the SnipContext demo."""
             print("SnipContext demo not available in minimal runtime.")
 
