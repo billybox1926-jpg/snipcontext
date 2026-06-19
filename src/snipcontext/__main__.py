@@ -17,7 +17,7 @@ def get_app():
             import typer
         except Exception as exc:  # pragma: no cover - defensive fallback
             print(f"SnipContext CLI unavailable: {exc}")
-            raise SystemExit(1)
+            raise SystemExit(1) from exc
 
         app = typer.Typer(add_completion=True)
 

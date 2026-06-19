@@ -35,6 +35,7 @@ class Plugin(ABC):
         """Called when the plugin is loaded."""
         ...
 
+    @abstractmethod
     def deactivate(self) -> None:
         """Called when the plugin is unloaded. Override for cleanup."""
         pass

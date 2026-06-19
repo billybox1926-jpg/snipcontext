@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -231,10 +230,10 @@ def get(
             console.print(f"[yellow]Multiple matches for prefix '{snippet_id}':[/yellow]")
             for s in matches:
                 console.print(f"  [dim]{s.id}[/dim] — {s.metadata.title}")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from SnippetNotFoundError()
         else:
             console.print(f"[red]Snippet not found: {snippet_id}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from SnippetNotFoundError()
 
     snippet.record_access()
     storage.save(snippet)
@@ -436,13 +435,20 @@ def delete(
 
 # -- EXPORT ----------------------------------------------------------
 
+# Module-level Option constants to avoid B008
+_OPT_QUERY = typer.Option(None, "--query", "-q", help="Export search results")
+_OPT_IDS = typer.Option([], "--id", help="Export specific snippet IDs")
+_OPT_PROVIDER = typer.Option("generic", "--provider", "-p", help="Export format provider")
+_OPT_OUTPUT = typer.Option(None, "--output", "-o", help="Output file (default: stdout)")
+_OPT_TOP_K = typer.Option(10, "--limit", "-n", help="Max results for query export")
+
 @app.command()
 def export(
-    query: Optional[str] = typer.Option(None, "--query", "-q", help="Export search results"),
-    ids: list[str] = typer.Option([], "--id", help="Export specific snippet IDs"),
-    provider: str = typer.Option("generic", "--provider", "-p", help="Export format provider"),
-    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file (default: stdout)"),
-    top_k: int = typer.Option(10, "--limit", "-n", help="Max results for query export"),
+    query: str | None = _OPT_QUERY,
+    ids: list[str] = _OPT_IDS,
+    provider: str = _OPT_PROVIDER,
+    output: str | None = _OPT_OUTPUT,
+    top_k: int = _OPT_TOP_K,
 ):
     """Export snippets in LLM-optimized format."""
     from snipcontext.core.search import HybridSearch
