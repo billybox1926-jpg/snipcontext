@@ -117,12 +117,14 @@ class PluginManager:
         from snipcontext.providers.generic import GenericProvider
         from snipcontext.providers.openai import OpenAIProvider
 
-        self._providers.update({
-            "claude": ClaudeProvider,
-            "cursor": CursorProvider,
-            "generic": GenericProvider,
-            "openai": OpenAIProvider,
-        })
+        self._providers.update(
+            {
+                "claude": ClaudeProvider,
+                "cursor": CursorProvider,
+                "generic": GenericProvider,
+                "openai": OpenAIProvider,
+            }
+        )
 
     def get_provider(self, name: str) -> BaseProvider:
         """Get a provider instance by name."""

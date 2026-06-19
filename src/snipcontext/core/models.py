@@ -202,10 +202,10 @@ class Snippet(BaseModel):
 class SearchMode(str, Enum):
     """Available search strategies."""
 
-    SEMANTIC = "semantic"       # Dense vector similarity
-    KEYWORD = "keyword"         # TF-IDF / BM25 style text search
-    HYBRID = "hybrid"           # Weighted combination
-    TAG = "tag"                 # Exact tag matching
+    SEMANTIC = "semantic"  # Dense vector similarity
+    KEYWORD = "keyword"  # TF-IDF / BM25 style text search
+    HYBRID = "hybrid"  # Weighted combination
+    TAG = "tag"  # Exact tag matching
 
 
 class SearchResult(BaseModel):

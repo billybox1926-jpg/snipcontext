@@ -38,12 +38,14 @@ class OpenAIProvider(BaseProvider):
             lines.append("")
 
         lang = snippet.metadata.language.value
-        lines.extend([
-            f"```{lang}",
-            snippet.content,
-            "```",
-            "",
-        ])
+        lines.extend(
+            [
+                f"```{lang}",
+                snippet.content,
+                "```",
+                "",
+            ]
+        )
         return "\n".join(lines)
 
     def export_batch(self, snippets: list[Snippet], title: str = "Code Context") -> str:
