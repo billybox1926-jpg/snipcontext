@@ -251,6 +251,8 @@ class VectorIndex:
         with open(path / "idmap.json", "w") as f:
             json_str = '"' + '", "'.join(self._id_map) + '"'
             f.write(f"[{json_str}]")
+        hash_path = path / "content_hashes.json"
+        hash_path.write_text(json.dumps(self._content_hashes), encoding="utf-8")
         logger.debug("Saved vector index to %s", path)
 
     def load(self, path: Path) -> bool:
@@ -274,6 +276,13 @@ class VectorIndex:
             with open(idmap_file) as f:
                 self._id_map = json.load(f)
 
+            hash_path = path / "content_hashes.json"
+            if hash_path.exists():
+                self._content_hashes = json.loads(hash_path.read_text(encoding="utf-8"))
+            else:
+                self._content_hashes = {}
+            self._id_to_idx = {sid: i for i, sid in enumerate(self._id_map)}
+
             # Validate index integrity
             if self._index.ntotal != len(self._id_map):
                 logger.warning(
@@ -291,8 +300,11 @@ class VectorIndex:
             try:
                 if index_file.exists():
                     index_file.unlink()
-                if (path / "idmap.json").exists():
-                    (path / "idmap.json").unlink()
+                if idmap_file.exists():
+                    idmap_file.unlink()
+                hash_file = path / "content_hashes.json"
+                if hash_file.exists():
+                    hash_file.unlink()
             except Exception:
                 pass
             return False
