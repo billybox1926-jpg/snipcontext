@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-from snipcontext.core.models import Snippet
+from typing import TYPE_CHECKING
+
 from snipcontext.providers.base import BaseProvider, ExportFormat
+
+if TYPE_CHECKING:
+    from snipcontext.core.models import Snippet
 
 
 class GenericProvider(BaseProvider):
@@ -24,6 +28,7 @@ class GenericProvider(BaseProvider):
 
         lines.append(self._code_block(snippet))
         lines.append("")
+
         return "\n".join(lines)
 
     def export_batch(self, snippets: list[Snippet], title: str = "Code Context") -> str:

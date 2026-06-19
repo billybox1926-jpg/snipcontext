@@ -154,8 +154,14 @@ class TestStorageStats:
 
     def test_populated_stats(self, temp_config):
         storage = StorageEngine(temp_config)
-        s1 = Snippet(content="x", metadata=SnippetMetadata(title="A", language=Language.PYTHON), tags=["py"])
-        s2 = Snippet(content="y", metadata=SnippetMetadata(title="B", language=Language.PYTHON), tags=["py", "web"])
+        s1 = Snippet(
+            content="x", metadata=SnippetMetadata(title="A", language=Language.PYTHON), tags=["py"]
+        )
+        s2 = Snippet(
+            content="y",
+            metadata=SnippetMetadata(title="B", language=Language.PYTHON),
+            tags=["py", "web"],
+        )
         storage.save(s1)
         storage.save(s2)
 

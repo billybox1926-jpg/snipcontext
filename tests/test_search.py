@@ -17,6 +17,7 @@ from snipcontext.core.models import Language, SearchMode, Snippet, SnippetMetada
 
 try:
     import sentence_transformers  # noqa: F401
+
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
     SENTENCE_TRANSFORMERS_AVAILABLE = False
@@ -109,7 +110,9 @@ class TestKeywordIndex:
         assert results == []
 
 
-@pytest.mark.skipif(not SENTENCE_TRANSFORMERS_AVAILABLE, reason="sentence-transformers not installed")
+@pytest.mark.skipif(
+    not SENTENCE_TRANSFORMERS_AVAILABLE, reason="sentence-transformers not installed"
+)
 @pytest.mark.slow
 class TestEmbeddingEngine:
     """Tests for the embedding engine."""
@@ -151,7 +154,9 @@ class TestEmbeddingEngine:
         assert abs(norm - 1.0) < 0.01
 
 
-@pytest.mark.skipif(not SENTENCE_TRANSFORMERS_AVAILABLE, reason="sentence-transformers not installed")
+@pytest.mark.skipif(
+    not SENTENCE_TRANSFORMERS_AVAILABLE, reason="sentence-transformers not installed"
+)
 @pytest.mark.slow
 class TestVectorIndex:
     """Tests for FAISS vector index."""
@@ -180,7 +185,9 @@ class TestVectorIndex:
         assert not idx.is_trained
 
 
-@pytest.mark.skipif(not SENTENCE_TRANSFORMERS_AVAILABLE, reason="sentence-transformers not installed")
+@pytest.mark.skipif(
+    not SENTENCE_TRANSFORMERS_AVAILABLE, reason="sentence-transformers not installed"
+)
 @pytest.mark.slow
 class TestHybridSearch:
     """Integration tests for hybrid search."""

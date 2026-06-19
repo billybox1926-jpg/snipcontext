@@ -7,8 +7,8 @@ and an excellent developer experience.
 from __future__ import annotations
 
 import logging
+import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -62,6 +62,7 @@ app.add_typer(config_app)
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _print_snippet(snippet, score: float | None = None, idx: int | None = None):
     """Pretty-print a snippet with Rich."""
     from rich.syntax import Syntax
@@ -69,7 +70,9 @@ def _print_snippet(snippet, score: float | None = None, idx: int | None = None):
     prefix = f"[{idx}] " if idx else ""
     score_text = f" (score: {score:.3f})" if score else ""
 
-    console.print(f"\n[bold yellow]{prefix}[/bold yellow][bold cyan]{snippet.metadata.title}[/bold cyan][dim]{score_text}[/dim]")
+    console.print(
+        f"\n[bold yellow]{prefix}[/bold yellow][bold cyan]{snippet.metadata.title}[/bold cyan][dim]{score_text}[/dim]"
+    )
 
     # Metadata
     if snippet.metadata.description:
@@ -81,7 +84,9 @@ def _print_snippet(snippet, score: float | None = None, idx: int | None = None):
     console.print()
 
     # Code block
-    lang = snippet.metadata.language.value if snippet.metadata.language.value != "unknown" else "text"
+    lang = (
+        snippet.metadata.language.value if snippet.metadata.language.value != "unknown" else "text"
+    )
     syntax = Syntax(
         snippet.content,
         lang,
@@ -113,6 +118,7 @@ def _init_config_and_plugins():
 # Main commands
 # ---------------------------------------------------------------------------
 
+
 @app.callback()
 def main(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
@@ -127,9 +133,12 @@ def main(
 
 # -- ADD -------------------------------------------------------------
 
+
 @app.command()
 def add(
-    content: str = typer.Argument(..., help="Code content or path to file"),
+    content: str | None = typer.Argument(
+        None, help="Code content or path to file (reads from stdin if omitted)"
+    ),
     title: str = typer.Option("", "--title", "-t", help="Snippet title"),
     description: str = typer.Option("", "--desc", "-d", help="Short description"),
     language: str = typer.Option("", "--lang", "-l", help="Programming language"),
@@ -141,6 +150,16 @@ def add(
     from snipcontext.core.storage import StorageEngine
 
     config = get_config()
+
+    # Read content from stdin if not provided and stdin has data
+    if content is None:
+        if not sys.stdin.isatty():
+            content = sys.stdin.read()
+        else:
+            console.print(
+                "[red]Error: No content provided. Pass content as argument, use --file, or pipe content via stdin.[/red]"
+            )
+            raise typer.Exit(1)
 
     # Read content from file if requested
     if from_file:
@@ -154,13 +173,31 @@ def add(
         if not language:
             ext = path.suffix.lstrip(".").lower()
             ext_lang_map = {
-                "py": "python", "js": "javascript", "ts": "typescript",
-                "jsx": "jsx", "tsx": "tsx", "html": "html", "css": "css",
-                "java": "java", "go": "go", "rs": "rust", "cpp": "cpp",
-                "c": "c", "cs": "csharp", "php": "php", "rb": "ruby",
-                "swift": "swift", "sql": "sql", "sh": "bash", "yml": "yaml",
-                "yaml": "yaml", "json": "json", "toml": "toml", "md": "markdown",
-                "dockerfile": "dockerfile", "tf": "terraform",
+                "py": "python",
+                "js": "javascript",
+                "ts": "typescript",
+                "jsx": "jsx",
+                "tsx": "tsx",
+                "html": "html",
+                "css": "css",
+                "java": "java",
+                "go": "go",
+                "rs": "rust",
+                "cpp": "cpp",
+                "c": "c",
+                "cs": "csharp",
+                "php": "php",
+                "rb": "ruby",
+                "swift": "swift",
+                "sql": "sql",
+                "sh": "bash",
+                "yml": "yaml",
+                "yaml": "yaml",
+                "json": "json",
+                "toml": "toml",
+                "md": "markdown",
+                "dockerfile": "dockerfile",
+                "tf": "terraform",
             }
             language = ext_lang_map.get(ext, "")
 
@@ -168,6 +205,11 @@ def add(
     if not title:
         first_line = content.strip().split("\n")[0][:50]
         title = first_line or "Untitled Snippet"
+
+    # Validate content is not empty
+    if not content.strip():
+        console.print("[red]Error: Content cannot be empty.[/red]")
+        raise typer.Exit(1)
 
     # Build snippet
     try:
@@ -195,13 +237,14 @@ def add(
 
 # -- GET -------------------------------------------------------------
 
+
 @app.command()
 def get(
     snippet_id: str = typer.Argument(..., help="Snippet ID or prefix"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Print only code, no metadata"),
 ):
     """Retrieve a snippet by ID."""
-    from snipcontext.core.storage import StorageEngine, SnippetNotFoundError
+    from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
 
     config = get_config()
     storage = StorageEngine(config)
@@ -217,10 +260,10 @@ def get(
             console.print(f"[yellow]Multiple matches for prefix '{snippet_id}':[/yellow]")
             for s in matches:
                 console.print(f"  [dim]{s.id}[/dim] — {s.metadata.title}")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from SnippetNotFoundError()
         else:
             console.print(f"[red]Snippet not found: {snippet_id}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from SnippetNotFoundError()
 
     snippet.record_access()
     storage.save(snippet)
@@ -233,14 +276,21 @@ def get(
 
 # -- SEARCH ----------------------------------------------------------
 
+
 @app.command()
 def search(
     query: str = typer.Argument(..., help="Search query"),
-    mode: str = typer.Option("hybrid", "--mode", "-m", help="Search mode: semantic, keyword, hybrid, tag"),
+    mode: str = typer.Option(
+        "hybrid", "--mode", "-m", help="Search mode: semantic, keyword, hybrid, tag"
+    ),
     top_k: int = typer.Option(10, "--limit", "-n", help="Max results"),
     index: bool = typer.Option(False, "--index", "-i", help="Force reindex before search"),
-    threshold: float = typer.Option(None, "--threshold", "-t", help="Minimum relevance score (0.0-1.0)"),
-    fuzzy: bool = typer.Option(False, "--fuzzy", "-f", help="Enable fuzzy matching for keyword search"),
+    threshold: float = typer.Option(
+        None, "--threshold", "-t", help="Minimum relevance score (0.0-1.0)"
+    ),
+    fuzzy: bool = typer.Option(
+        False, "--fuzzy", "-f", help="Enable fuzzy matching for keyword search"
+    ),
 ):
     """Search snippets with semantic + keyword hybrid search."""
     from snipcontext.core.search import HybridSearch
@@ -277,7 +327,9 @@ def search(
             console.print(f"[dim]Try lowering --threshold (currently {threshold})[/dim]")
         raise typer.Exit(0)
 
-    console.print(f"\n[bold]{len(results)} results[/bold] for '[cyan]{query}[/cyan]' ([dim]{mode}[/dim]):\n")
+    console.print(
+        f"\n[bold]{len(results)} results[/bold] for '[cyan]{query}[/cyan]' ([dim]{mode}[/dim]):\n"
+    )
     for i, result in enumerate(results, 1):
         _print_snippet(result.snippet, score=result.score, idx=i)
         console.print()
@@ -285,11 +337,14 @@ def search(
 
 # -- LIST ------------------------------------------------------------
 
+
 @app.command("list")
 def list_snippets(
     tag: str | None = _OPT_TAG,
     language: str | None = _OPT_LANG,
-    sort: str = typer.Option("updated", "--sort", "-s", help="Sort by: updated, created, title, access"),
+    sort: str = typer.Option(
+        "updated", "--sort", "-s", help="Sort by: updated, created, title, access"
+    ),
 ):
     """List all snippets with optional filters."""
     from snipcontext.core.storage import StorageEngine
@@ -332,6 +387,7 @@ def list_snippets(
     table.add_column("Updated", style="dim", width=10)
 
     from datetime import datetime
+
     for s in snippets:
         updated = s.updated_at.strftime("%Y-%m-%d") if isinstance(s.updated_at, datetime) else "?"
         table.add_row(
@@ -347,6 +403,7 @@ def list_snippets(
 
 # -- EDIT ------------------------------------------------------------
 
+
 @app.command()
 def edit(
     snippet_id: str = typer.Argument(..., help="Snippet ID or prefix"),
@@ -358,7 +415,7 @@ def edit(
     message: str = typer.Option("", "--message", "-m", help="Version bump message"),
 ):
     """Edit an existing snippet."""
-    from snipcontext.core.storage import StorageEngine, SnippetNotFoundError
+    from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
 
     config = get_config()
     storage = StorageEngine(config)
@@ -395,13 +452,14 @@ def edit(
 
 # -- DELETE ----------------------------------------------------------
 
+
 @app.command()
 def delete(
     snippet_id: str = typer.Argument(..., help="Snippet ID or prefix"),
     force: bool = typer.Option(False, "--force", help="Skip confirmation"),
 ):
     """Delete a snippet."""
-    from snipcontext.core.storage import StorageEngine, SnippetNotFoundError
+    from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
 
     config = get_config()
     storage = StorageEngine(config)
@@ -422,13 +480,21 @@ def delete(
 
 # -- EXPORT ----------------------------------------------------------
 
+# Module-level Option constants to avoid B008
+_OPT_QUERY = typer.Option(None, "--query", "-q", help="Export search results")
+_OPT_IDS = typer.Option([], "--id", help="Export specific snippet IDs")
+_OPT_PROVIDER = typer.Option("generic", "--provider", "-p", help="Export format provider")
+_OPT_OUTPUT = typer.Option(None, "--output", "-o", help="Output file (default: stdout)")
+_OPT_TOP_K = typer.Option(10, "--limit", "-n", help="Max results for query export")
+
+
 @app.command()
 def export(
-    query: Optional[str] = typer.Option(None, "--query", "-q", help="Export search results"),
-    ids: list[str] = typer.Option([], "--id", help="Export specific snippet IDs"),
-    provider: str = typer.Option("generic", "--provider", "-p", help="Export format provider"),
-    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file (default: stdout)"),
-    top_k: int = typer.Option(10, "--limit", "-n", help="Max results for query export"),
+    query: str | None = _OPT_QUERY,
+    ids: list[str] = _OPT_IDS,
+    provider: str = _OPT_PROVIDER,
+    output: str | None = _OPT_OUTPUT,
+    top_k: int = _OPT_TOP_K,
 ):
     """Export snippets in LLM-optimized format."""
     from snipcontext.core.search import HybridSearch
@@ -483,6 +549,7 @@ def export(
 
 # -- INDEX -----------------------------------------------------------
 
+
 @app.command()
 def build_index(
     force: bool = typer.Option(False, "--force", "-f", help="Force rebuild even if index exists"),
@@ -501,7 +568,9 @@ def build_index(
         return
 
     if not force and searcher.load_indices():
-        console.print(f"[yellow]Index already exists ({len(snippets)} snippets). Use --force to rebuild.[/yellow]")
+        console.print(
+            f"[yellow]Index already exists ({len(snippets)} snippets). Use --force to rebuild.[/yellow]"
+        )
         return
 
     console.print(f"[dim]Building index for {len(snippets)} snippets...[/dim]")
@@ -510,6 +579,7 @@ def build_index(
 
 
 # -- STATS -----------------------------------------------------------
+
 
 @app.command()
 def stats():
@@ -527,34 +597,37 @@ def stats():
         console.print("Add one with: [bold]sc add 'your code here' --title 'My Snippet'[/bold]")
         return
 
-    console.print(Panel(
-        f"""
+    console.print(
+        Panel(
+            f"""
 [bold]Collection Overview[/bold]
   Snippets: {total}
-  Unique Tags: {s['total_tags']}
-  Languages: {len(s['languages'])}
+  Unique Tags: {s["total_tags"]}
+  Languages: {len(s["languages"])}
 
 [bold]By Language:[/bold]
-{chr(10).join(f"  {lang}: {count}" for lang, count in s['languages'].items())}
+{chr(10).join(f"  {lang}: {count}" for lang, count in s["languages"].items())}
 
 [bold]Storage:[/bold]
   Data directory: {config.storage.data_dir}
   Snippets: {config.snippets_path}
   Index: {config.index_path}
         """.strip(),
-        title="SnipContext Stats",
-        border_style="green",
-    ))
+            title="SnipContext Stats",
+            border_style="green",
+        )
+    )
 
 
 # -- DEMO -----------------------------------------------------------
+
 
 @app.command()
 def demo():
     """Run an interactive demo with sample snippets."""
     from snipcontext.core.models import Language, Snippet, SnippetMetadata
-    from snipcontext.core.storage import StorageEngine
     from snipcontext.core.search import HybridSearch
+    from snipcontext.core.storage import StorageEngine
 
     config = get_config()
     storage = StorageEngine(config)
@@ -563,7 +636,9 @@ def demo():
     existing = storage.list_all()
     if existing:
         console.print("[yellow]Demo mode: existing snippets detected.[/yellow]")
-        console.print("Run [bold]sc list[/bold] to see them, or clear your snippets dir to start fresh.")
+        console.print(
+            "Run [bold]sc list[/bold] to see them, or clear your snippets dir to start fresh."
+        )
         return
 
     samples = [
@@ -645,6 +720,7 @@ def demo():
     console.print("\n[bold]Sample search (semantic):[/bold]")
     try:
         from snipcontext.core.search import HybridSearch
+
         searcher = HybridSearch(config)
         if searcher.load_indices():
             query = "async python"
@@ -656,13 +732,16 @@ def demo():
             else:
                 console.print("[yellow]Search returned no results.[/yellow]")
         else:
-            console.print("[yellow]No search index available. Run [bold]sc build-index[/bold] after adding snippets.[/yellow]")
+            console.print(
+                "[yellow]No search index available. Run [bold]sc build-index[/bold] after adding snippets.[/yellow]"
+            )
     except Exception as exc:  # pragma: no cover - best-effort demo path
         console.print(f"[yellow]Demo search skipped: {exc}[/yellow]")
 
     console.print("\n[bold]Sample export (generic):[/bold]")
     try:
         from snipcontext.plugins.base import PluginManager
+
         pm = PluginManager()
         pm.load_builtin_providers()
         provider = pm.get_provider("generic")
@@ -679,6 +758,7 @@ def demo():
 
 # -- PROVIDERS -------------------------------------------------------
 
+
 @app.command()
 def providers():
     """List available export providers."""
@@ -694,7 +774,7 @@ def providers():
 
     for name, desc in pm.list_providers().items():
         fmt = pm._providers.get(name)
-        fmt_name = fmt.format if fmt and hasattr(fmt, 'format') else "?"
+        fmt_name = fmt.format if fmt and hasattr(fmt, "format") else "?"
         table.add_row(name, desc, str(fmt_name))
 
     console.print(table)
@@ -704,6 +784,7 @@ def providers():
 # Config sub-commands
 # ---------------------------------------------------------------------------
 
+
 @config_app.command("show")
 def config_show():
     """Show current configuration."""
@@ -711,11 +792,13 @@ def config_show():
     import yaml
 
     payload = config.model_dump(mode="json")
-    console.print(Panel(
-        yaml.safe_dump(payload, default_flow_style=False, sort_keys=False),
-        title="Configuration",
-        border_style="blue",
-    ))
+    console.print(
+        Panel(
+            yaml.safe_dump(payload, default_flow_style=False, sort_keys=False),
+            title="Configuration",
+            border_style="blue",
+        )
+    )
     console.print(f"\n[dim]Config file: {config.config_file_path}[/dim]")
 
 
@@ -747,6 +830,7 @@ def config_path():
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def _main():
     """Entry point for the CLI."""
