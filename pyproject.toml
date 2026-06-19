@@ -84,7 +84,7 @@ Issues = "https://github.com/billybox1926-jpg/snipcontext/issues"
 Changelog = "https://github.com/billybox1926-jpg/snipcontext/blob/main/CHANGELOG.md"
 
 [tool.hatch.version]
-path = "snipcontext/__init__.py"
+path = "src/snipcontext/__init__.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
