@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -16,7 +15,6 @@ from rich.logging import RichHandler
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
 from snipcontext.config.settings import get_config
 
@@ -189,7 +187,7 @@ def get(
     raw: bool = typer.Option(False, "--raw", "-r", help="Print only code, no metadata"),
 ):
     """Retrieve a snippet by ID."""
-    from snipcontext.core.storage import StorageEngine, SnippetNotFoundError
+    from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
 
     config = get_config()
     storage = StorageEngine(config)
@@ -227,6 +225,8 @@ def search(
     mode: str = typer.Option("hybrid", "--mode", "-m", help="Search mode: semantic, keyword, hybrid, tag"),
     top_k: int = typer.Option(10, "--limit", "-n", help="Max results"),
     index: bool = typer.Option(False, "--index", "-i", help="Force reindex before search"),
+    threshold: float = typer.Option(None, "--threshold", "-t", help="Minimum relevance score (0.0-1.0)"),
+    fuzzy: bool = typer.Option(False, "--fuzzy", "-f", help="Enable fuzzy matching for keyword search"),
 ):
     """Search snippets with semantic + keyword hybrid search."""
     from snipcontext.core.search import HybridSearch
@@ -246,10 +246,21 @@ def search(
         searcher.index_snippets(snippets)
         console.print(f"[green]Indexed {len(snippets)} snippets[/green]")
 
-    results = searcher.search(query, top_k=top_k, mode=mode)
+    results = searcher.search(
+        query,
+        top_k=top_k,
+        mode=mode,
+        min_score=threshold,
+        fuzzy=fuzzy,
+    )
 
     if not results:
         console.print(f"[yellow]No results for '{query}'[/yellow]")
+        # Suggest alternatives
+        if not fuzzy:
+            console.print("[dim]Try with --fuzzy for approximate matching[/dim]")
+        if threshold and threshold > 0.1:
+            console.print(f"[dim]Try lowering --threshold (currently {threshold})[/dim]")
         raise typer.Exit(0)
 
     console.print(f"\n[bold]{len(results)} results[/bold] for '[cyan]{query}[/cyan]' ([dim]{mode}[/dim]):\n")
@@ -262,8 +273,8 @@ def search(
 
 @app.command("list")
 def list_snippets(
-    tag: Optional[str] = typer.Option(None, "--tag", "-t", help="Filter by tag"),
-    language: Optional[str] = typer.Option(None, "--lang", "-l", help="Filter by language"),
+    tag: str | None = typer.Option(None, "--tag", "-t", help="Filter by tag"),
+    language: str | None = typer.Option(None, "--lang", "-l", help="Filter by language"),
     sort: str = typer.Option("updated", "--sort", "-s", help="Sort by: updated, created, title, access"),
 ):
     """List all snippets with optional filters."""
@@ -325,15 +336,15 @@ def list_snippets(
 @app.command()
 def edit(
     snippet_id: str = typer.Argument(..., help="Snippet ID or prefix"),
-    content: Optional[str] = typer.Option(None, "--content", "-c", help="New code content"),
-    title: Optional[str] = typer.Option(None, "--title", "-t", help="New title"),
-    description: Optional[str] = typer.Option(None, "--desc", "-d", help="New description"),
+    content: str | None = typer.Option(None, "--content", "-c", help="New code content"),
+    title: str | None = typer.Option(None, "--title", "-t", help="New title"),
+    description: str | None = typer.Option(None, "--desc", "-d", help="New description"),
     add_tags: list[str] = typer.Option([], "--add-tag", help="Add tags"),
     remove_tags: list[str] = typer.Option([], "--remove-tag", help="Remove tags"),
     message: str = typer.Option("", "--message", "-m", help="Version bump message"),
 ):
     """Edit an existing snippet."""
-    from snipcontext.core.storage import StorageEngine, SnippetNotFoundError
+    from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
 
     config = get_config()
     storage = StorageEngine(config)
@@ -376,7 +387,7 @@ def delete(
     force: bool = typer.Option(False, "--force", help="Skip confirmation"),
 ):
     """Delete a snippet."""
-    from snipcontext.core.storage import StorageEngine, SnippetNotFoundError
+    from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
 
     config = get_config()
     storage = StorageEngine(config)
@@ -399,10 +410,10 @@ def delete(
 
 @app.command()
 def export(
-    query: Optional[str] = typer.Option(None, "--query", "-q", help="Export search results"),
+    query: str | None = typer.Option(None, "--query", "-q", help="Export search results"),
     ids: list[str] = typer.Option([], "--id", help="Export specific snippet IDs"),
     provider: str = typer.Option("generic", "--provider", "-p", help="Export format provider"),
-    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file (default: stdout)"),
+    output: str | None = typer.Option(None, "--output", "-o", help="Output file (default: stdout)"),
     top_k: int = typer.Option(10, "--limit", "-n", help="Max results for query export"),
 ):
     """Export snippets in LLM-optimized format."""
@@ -528,8 +539,8 @@ def stats():
 def demo():
     """Run an interactive demo with sample snippets."""
     from snipcontext.core.models import Language, Snippet, SnippetMetadata
-    from snipcontext.core.storage import StorageEngine
     from snipcontext.core.search import HybridSearch
+    from snipcontext.core.storage import StorageEngine
 
     config = get_config()
     storage = StorageEngine(config)
@@ -608,8 +619,8 @@ def demo():
 
     saved = []
     for snippet in snippets:
-        stored = storage.save(snippet)
-        saved.append(stored)
+        storage.save(snippet)
+        saved.append(snippet)
 
     console.print(f"[green]Seeded {len(saved)} demo snippets.[/green]")
 

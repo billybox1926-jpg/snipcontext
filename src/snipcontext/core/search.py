@@ -17,8 +17,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from snipcontext.core.models import SearchMode, SearchResult, Snippet
 from snipcontext.config.settings import Config, get_config
+from snipcontext.core.models import SearchMode, SearchResult, Snippet
 
 if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer
@@ -113,7 +113,7 @@ class VectorIndex:
 
     def __init__(self, config: Config | None = None) -> None:
         self._config = config or get_config()
-        self._index: "faiss.Index" | None = None
+        self._index: faiss.Index | None = None
         self._id_map: list[str] = []  # faiss_idx -> snippet_id
 
     @property
@@ -220,8 +220,9 @@ class VectorIndex:
         Returns:
             True if loaded successfully, False otherwise.
         """
-        import faiss
         import json
+
+        import faiss
 
         index_file = path / "vector.faiss"
         idmap_file = path / "idmap.json"
@@ -231,7 +232,7 @@ class VectorIndex:
 
         try:
             self._index = faiss.read_index(str(index_file))
-            with open(idmap_file, "r") as f:
+            with open(idmap_file) as f:
                 self._id_map = json.load(f)
             logger.debug("Loaded vector index from %s", path)
             return True
@@ -254,9 +255,10 @@ class KeywordIndex:
 
     def __init__(self, config: Config | None = None) -> None:
         self._config = config or get_config()
-        self._vectorizer: "sklearnTfidfVectorizer" | None = None
-        self._matrix: "sparse_matrix" | None = None
+        self._vectorizer: sklearnTfidfVectorizer | None = None
+        self._matrix: sparse_matrix | None = None
         self._id_map: list[str] = []
+        self._texts: list[str] = []  # Store original texts for fuzzy matching
 
     @property
     def is_trained(self) -> bool:
@@ -270,9 +272,11 @@ class KeywordIndex:
             self._vectorizer = None
             self._matrix = None
             self._id_map = []
+            self._texts = []
             return
 
         texts = [s.to_search_text() for s in snippets]
+        self._texts = texts  # Store for fuzzy matching
         self._vectorizer = TfidfVectorizer(
             lowercase=True,
             stop_words="english",
@@ -295,8 +299,15 @@ class KeywordIndex:
         query: str,
         top_k: int,
         min_score: float = 0.0,
+        fuzzy: bool = False,
     ) -> list[tuple[str, float]]:
         """Search by keyword relevance.
+
+        Args:
+            query: The search query string.
+            top_k: Maximum number of results.
+            min_score: Minimum relevance score threshold.
+            fuzzy: Enable fuzzy matching for approximate text matching.
 
         Returns:
             List of (snippet_id, score) tuples.
@@ -308,6 +319,20 @@ class KeywordIndex:
 
         query_vec = self._vectorizer.transform([query])
         similarities = cosine_similarity(query_vec, self._matrix)[0]
+
+        if fuzzy:
+            # Augment with fuzzy matching against original texts
+            try:
+                from rapidfuzz import fuzz
+                fuzzy_scores = self._fuzzy_search(query, top_k, min_score)
+                # Merge TF-IDF and fuzzy scores
+                for idx, f_score in fuzzy_scores:
+                    # Blend: 70% TF-IDF, 30% fuzzy
+                    tfidf_score = float(similarities[idx]) if idx < len(similarities) else 0.0
+                    blended = 0.7 * tfidf_score + 0.3 * f_score
+                    similarities[idx] = blended
+            except ImportError:
+                pass  # rapidfuzz not available, skip fuzzy matching
 
         # Get top-k indices
         if top_k >= len(similarities):
@@ -325,6 +350,36 @@ class KeywordIndex:
 
         return results
 
+    def _fuzzy_search(
+        self, query: str, top_k: int, min_score: float
+    ) -> list[tuple[int, float]]:
+        """Perform fuzzy matching against stored texts.
+
+        Returns:
+            List of (index, normalized_score) tuples.
+        """
+        if not self._texts:
+            return []
+
+        try:
+            from rapidfuzz import fuzz, process
+
+            # Use token set ratio for better matching of code snippets
+            # This handles reordered words and partial matches well
+            results = process.extract(
+                query,
+                self._texts,
+                scorer=fuzz.token_set_ratio,
+                limit=top_k * 2,
+                score_cutoff=int(min_score * 100),
+            )
+
+            # Normalize scores to 0-1 range
+            normalized = [(idx, score / 100.0) for _, score, idx in results]
+            return normalized
+        except ImportError:
+            return []
+
     def save(self, path: Path) -> None:
         """Save the keyword index to disk."""
         if not self.is_trained:
@@ -336,6 +391,7 @@ class KeywordIndex:
                     "vectorizer": self._vectorizer,
                     "matrix": self._matrix,
                     "id_map": self._id_map,
+                    "texts": self._texts,
                 },
                 f,
             )
@@ -352,6 +408,7 @@ class KeywordIndex:
             self._vectorizer = data["vectorizer"]
             self._matrix = data["matrix"]
             self._id_map = data["id_map"]
+            self._texts = data.get("texts", [])
             logger.debug("Loaded keyword index from %s", path)
             return True
         except Exception as exc:
@@ -427,12 +484,18 @@ class HybridSearch:
         self.keyword_index = KeywordIndex(config)
 
     def index_snippets(self, snippets: list[Snippet]) -> None:
-        """Build both semantic and keyword indices."""
+        """Build both semantic and keyword indices.
+
+        Semantic index is optional - if it fails (e.g., missing torch on Windows),
+        we fall back to keyword-only search.
+        """
+        # Try to build semantic index, but don't fail if it doesn't work
         try:
             self.vector_index.build(snippets, self.embedder)
             self.vector_index.save(self._config.index_path)
-        except ImportError:
-            logger.warning("FAISS not available, semantic index disabled")
+        except (ImportError, OSError, RuntimeError) as exc:
+            logger.warning("Semantic index unavailable: %s", exc)
+            logger.info("Falling back to keyword-only search")
 
         self.keyword_index.build(snippets)
         self.keyword_index.save(self._config.index_path)
@@ -442,6 +505,8 @@ class HybridSearch:
         query: str,
         top_k: int | None = None,
         mode: SearchMode | str | None = None,
+        min_score: float | None = None,
+        fuzzy: bool = False,
     ) -> list[SearchResult]:
         """Execute search using the specified or default strategy.
 
@@ -449,6 +514,8 @@ class HybridSearch:
             query: The search query string.
             top_k: Maximum number of results. Defaults to config.
             mode: Override search strategy. Defaults to config default_mode.
+            min_score: Minimum relevance score threshold. Defaults to config.min_score.
+            fuzzy: Enable fuzzy matching for keyword search.
 
         Returns:
             Ranked list of SearchResult objects.
@@ -456,6 +523,7 @@ class HybridSearch:
         from snipcontext.core.storage import StorageEngine
 
         top_k = top_k or self._config.search.top_k
+        min_score = min_score if min_score is not None else self._config.search.min_score
         mode = SearchMode(mode or self._config.search.default_mode)
         storage = StorageEngine(self._config)
 
@@ -463,31 +531,31 @@ class HybridSearch:
             return self._tag_search(query, top_k, storage)
 
         if mode == SearchMode.KEYWORD:
-            return self._keyword_search(query, top_k, storage)
+            return self._keyword_search(query, top_k, min_score, fuzzy, storage)
 
         if mode == SearchMode.SEMANTIC:
-            return self._semantic_search(query, top_k, storage)
+            return self._semantic_search(query, top_k, min_score, storage)
 
         # HYBRID mode
-        return self._hybrid_search(query, top_k, storage)
+        return self._hybrid_search(query, top_k, min_score, fuzzy, storage)
 
     def _semantic_search(
-        self, query: str, top_k: int, storage: "StorageEngine"
+        self, query: str, top_k: int, min_score: float, storage: StorageEngine
     ) -> list[SearchResult]:
         """Pure semantic search path."""
         query_embedding = self.embedder.encode_query(query)
-        raw = self.vector_index.search(query_embedding, top_k=top_k * 2)
+        raw = self.vector_index.search(query_embedding, top_k=top_k * 2, min_score=min_score)
         return self._hydrate(raw, "semantic", top_k, storage)
 
     def _keyword_search(
-        self, query: str, top_k: int, storage: "StorageEngine"
+        self, query: str, top_k: int, min_score: float, fuzzy: bool, storage: StorageEngine
     ) -> list[SearchResult]:
         """Pure keyword search path."""
-        raw = self.keyword_index.search(query, top_k=top_k * 2)
+        raw = self.keyword_index.search(query, top_k=top_k * 2, min_score=min_score, fuzzy=fuzzy)
         return self._hydrate(raw, "keyword", top_k, storage)
 
     def _hybrid_search(
-        self, query: str, top_k: int, storage: "StorageEngine"
+        self, query: str, top_k: int, min_score: float, fuzzy: bool, storage: StorageEngine
     ) -> list[SearchResult]:
         """Weighted fusion of semantic and keyword scores."""
         w_sem = self._config.search.semantic_weight
@@ -498,13 +566,13 @@ class HybridSearch:
         if self.vector_index.is_trained:
             try:
                 query_embedding = self.embedder.encode_query(query)
-                sem_raw = self.vector_index.search(query_embedding, top_k=top_k * 3)
+                sem_raw = self.vector_index.search(query_embedding, top_k=top_k * 3, min_score=min_score)
                 sem_scores = {sid: s for sid, s in sem_raw}
             except Exception:
                 pass  # Fall back to keyword-only
 
         # Keyword results
-        kw_raw = self.keyword_index.search(query, top_k=top_k * 3)
+        kw_raw = self.keyword_index.search(query, top_k=top_k * 3, min_score=min_score, fuzzy=fuzzy)
         kw_scores: dict[str, float] = {sid: s for sid, s in kw_raw}
 
         # If no semantic results available, do keyword-only
@@ -519,14 +587,14 @@ class HybridSearch:
         fused: list[tuple[str, float]] = []
         for sid in all_ids:
             score = w_sem * sem_scores.get(sid, 0.0) + w_kw * kw_scores.get(sid, 0.0)
-            if score >= self._config.search.min_score:
+            if score >= min_score:
                 fused.append((sid, score))
 
         fused.sort(key=lambda x: x[1], reverse=True)
         return self._hydrate(fused[:top_k], "hybrid", top_k, storage)
 
     def _tag_search(
-        self, query: str, top_k: int, storage: "StorageEngine"
+        self, query: str, top_k: int, storage: StorageEngine
     ) -> list[SearchResult]:
         """Exact tag match search."""
         tag = query.strip().lstrip("#").lower()
@@ -550,7 +618,7 @@ class HybridSearch:
         raw_results: list[tuple[str, float]],
         matched_by: str,
         top_k: int,
-        storage: "StorageEngine",
+        storage: StorageEngine,
     ) -> list[SearchResult]:
         """Convert raw ID+score pairs into SearchResult objects."""
         search_results: list[SearchResult] = []

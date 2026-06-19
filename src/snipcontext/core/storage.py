@@ -12,11 +12,11 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
-from snipcontext.core.models import Snippet
 from snipcontext.config.settings import Config, get_config
+from snipcontext.core.models import Snippet
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ class StorageEngine:
             raise SnippetNotFoundError(f"Snippet not found: {snippet_id}")
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except (OSError, json.JSONDecodeError) as exc:
             raise StorageError(f"Failed to load snippet {snippet_id}: {exc}") from exc
@@ -160,7 +160,7 @@ class StorageEngine:
 
         for path in sorted(self.snippets_dir.glob("*.json")):
             try:
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, encoding="utf-8") as f:
                     data = json.load(f)
                 yield Snippet.model_validate(data)
             except Exception:
@@ -287,7 +287,7 @@ class StorageEngine:
             raise StorageError(f"Import file not found: {input_path}")
 
         try:
-            with open(input_path, "r", encoding="utf-8") as f:
+            with open(input_path, encoding="utf-8") as f:
                 data = json.load(f)
         except (OSError, json.JSONDecodeError) as exc:
             raise StorageError(f"Failed to read import file: {exc}") from exc
