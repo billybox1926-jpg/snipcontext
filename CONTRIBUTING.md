@@ -1,29 +1,29 @@
-# Contributing to SnipContext
+# Contributing
 
-Thanks for your interest in improving SnipContext.
+Thanks for your interest in contributing.
 
-This project is intentionally open for **humans and AI coding agents** to collaborate.
+## Ground rules
 
-## How to contribute
+- Be respectful and follow our Code of Conduct.
+- Prefer small, focused pull requests.
+- Open an issue first for large or breaking changes.
 
-- Open an issue describing the change or feature
-- Reference the issue in your PR
-- Keep PRs focused; split larger work into smaller commits
-- Match the style of nearby code and docs when possible
+## Development workflow
 
-## Development notes
+1. Fork and create a branch: `feature/short-description`
+2. Make your changes with clear commit messages.
+3. Run local validation (`format:check`, `lint`, `test`) before opening your PR.
+4. Open a pull request using the PR template.
 
-- Do not delete existing content or history when possible
-- Prefer additive documentation changes
-- Tests and examples are welcome alongside new behavior
+## Pull request checklist
 
-## First-time setup
+- [ ] Scope is focused and understandable
+- [ ] Tests or validation steps are included
+- [ ] Docs are updated (if behavior changed)
+- [ ] Changelog updated (if needed)
 
-1. Create a feature branch from `master`
-2. Make changes
-3. Run `git status` and review the diff before committing
-4. Commit with a clear message and open a pull request
+## Local automation defaults
 
-## Questions
-
-If you’re unsure about scope or design, open an issue first.
+- Bootstrap: `bash scripts/bootstrap.sh`
+- Setup guide: `docs/developer-setup.md`
+- CI workflows: `.github/workflows/`

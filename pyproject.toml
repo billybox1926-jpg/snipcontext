@@ -4,23 +4,38 @@ build-backend = "hatchling.build"
 
 [project]
 name = "snipcontext"
-version = "0.1.0"
-description = "AI-powered code snippet and context manager"
+dynamic = ["version"]
+description = "AI-powered code snippet & context manager with local semantic search"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
-authors = [{ name = "Billy", email = "billybox1926@gmail.com" }]
-keywords = ["ai", "llm", "snippet", "context", "cli", "developer-tools"]
+requires-python = ">=3.9"
+authors = [
+    { name = "SnipContext Contributors" },
+]
+keywords = [
+    "snippet",
+    "code",
+    "context",
+    "llm",
+    "ai",
+    "semantic-search",
+    "embeddings",
+    "developer-tools",
+    "productivity",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Code Generators",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
 ]
 dependencies = [
     "pydantic>=2.0,<3.0",
@@ -69,35 +84,35 @@ Issues = "https://github.com/billybox1926-jpg/snipcontext/issues"
 Changelog = "https://github.com/billybox1926-jpg/snipcontext/blob/main/CHANGELOG.md"
 
 [tool.hatch.version]
-path = "src/snipcontext/__init__.py"
+path = "snipcontext/__init__.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/src",
+    "/snipcontext",
     "/tests",
     "/scripts",
     "/docs",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/snipcontext"]
+packages = ["snipcontext"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py39"
 line-length = 100
 
 [tool.ruff.lint]
 select = [
-    "E",
-    "F",
-    "I",
-    "N",
-    "W",
-    "UP",
-    "B",
-    "C4",
-    "SIM",
-    "TCH",
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "W",   # pycodestyle warnings
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
 ]
 ignore = ["E501"]
 
@@ -123,7 +138,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["src/snipcontext"]
+source = ["snipcontext"]
 omit = ["*/tests/*", "*/test_*"]
 
 [tool.coverage.report]

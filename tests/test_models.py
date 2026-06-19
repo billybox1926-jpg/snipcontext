@@ -92,7 +92,7 @@ class TestSnippet:
 
     def test_bump_version(self):
         s = Snippet(content="v1", metadata=SnippetMetadata(title="T"))
-        v = s.bump_version("Initial version")
+        s.bump_version("Initial version")
         assert len(s.versions) == 1
         assert s.versions[0].content == "v1"
         assert "Initial version" in s.versions[0].change_message
