@@ -44,6 +44,7 @@ def test_watcher_event_triggers_incremental_rebuild() -> None:
 
         try:
             from watchdog.events import FileCreatedEvent
+
             event = FileCreatedEvent(str(snippet_file))
         except ImportError as exc:
             pytest.skip(f"watchdog not available: {exc}")

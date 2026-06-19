@@ -17,6 +17,7 @@ class _Snippet:
 
 # ---------- HybridSearch incremental methods ----------
 
+
 def test_add_snippet_calls_index_snippets_with_updated_list() -> None:
     from snipcontext.core.search import HybridSearch
 
@@ -81,6 +82,7 @@ def test_rebuild_incremental_excludes_soft_deleted() -> None:
 
 # ---------- StorageEngine.mark_deleted ----------
 
+
 def test_mark_deleted_sets_flag_and_saves(tmp_path: Path) -> None:
     from snipcontext.core.storage import StorageEngine
 
@@ -94,6 +96,7 @@ def test_mark_deleted_sets_flag_and_saves(tmp_path: Path) -> None:
         def __init__(self, path):
             self.snippets_path = path
             self.index_path = path / "index"
+
         def ensure_directories(self):
             self.snippets_path.mkdir(parents=True, exist_ok=True)
             self.index_path.mkdir(parents=True, exist_ok=True)
@@ -114,6 +117,7 @@ def test_mark_deleted_sets_flag_and_saves(tmp_path: Path) -> None:
 
 
 # ---------- CLI index command ----------
+
 
 def test_index_command_with_snippets() -> None:
     from snipcontext.cli.main import index
