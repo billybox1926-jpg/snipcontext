@@ -10,6 +10,7 @@ All processing happens locally — no data leaves the machine.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import pickle
@@ -121,6 +122,8 @@ class VectorIndex:
         self._config = config or get_config()
         self._index: faiss.Index | None = None
         self._id_map: list[str] = []  # faiss_idx -> snippet_id
+        self._id_to_idx: dict[str, int] = {}
+        self._content_hashes: dict[str, str] = {}
 
     @property
     def is_trained(self) -> bool:
@@ -163,6 +166,8 @@ class VectorIndex:
 
         index.add(embeddings)
         self._id_map = [s.id for s in snippets]
+        self._id_to_idx = {sid: i for i, sid in enumerate(self._id_map)}
+        self._content_hashes = {s.id: hashlib.sha256(s.content.encode()).hexdigest()[:16] for s in snippets}
         self._index = index
 
         # Store embeddings on snippets for hybrid search
