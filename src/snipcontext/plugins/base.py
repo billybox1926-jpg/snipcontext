@@ -35,18 +35,17 @@ class Plugin(ABC):
         """Called when the plugin is loaded."""
         ...
 
+    @abstractmethod
     def deactivate(self) -> None:
         """Called when the plugin is unloaded. Override for cleanup."""
         pass
 
-    def get_providers(self) -> list[type[BaseProvider]]:
-        """Return additional export providers provided by this plugin."""
-        return []
-
+    @abstractmethod
     def on_snippet_saved(self, snippet: Snippet) -> None:
         """Hook called after a snippet is saved."""
         pass
 
+    @abstractmethod
     def on_snippet_loaded(self, snippet: Snippet) -> None:
         """Hook called after a snippet is loaded."""
         pass
@@ -118,12 +117,14 @@ class PluginManager:
         from snipcontext.providers.generic import GenericProvider
         from snipcontext.providers.openai import OpenAIProvider
 
-        self._providers.update({
-            "claude": ClaudeProvider,
-            "cursor": CursorProvider,
-            "generic": GenericProvider,
-            "openai": OpenAIProvider,
-        })
+        self._providers.update(
+            {
+                "claude": ClaudeProvider,
+                "cursor": CursorProvider,
+                "generic": GenericProvider,
+                "openai": OpenAIProvider,
+            }
+        )
 
     def get_provider(self, name: str) -> BaseProvider:
         """Get a provider instance by name."""

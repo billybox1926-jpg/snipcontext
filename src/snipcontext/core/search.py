@@ -12,23 +12,22 @@ from __future__ import annotations
 
 import logging
 import pickle
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 
-from snipcontext.core.models import SearchMode, SearchResult, Snippet
 from snipcontext.config.settings import Config, get_config
+from snipcontext.core.models import SearchMode, SearchResult, Snippet
 
 if TYPE_CHECKING:
-    from sentence_transformers import SentenceTransformer
-    import faiss
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from scipy.sparse import spmatrix
-    from snipcontext.core.storage import StorageEngine
+    from pathlib import Path
 
-import rapidfuzz.fuzz as _fuzz
-import rapidfuzz.process as _process
+    import faiss
+    from scipy.sparse import spmatrix
+    from sentence_transformers import SentenceTransformer
+    from sklearn.feature_extraction.text import TfidfVectorizer
+
+    from snipcontext.core.storage import StorageEngine
 
 logger = logging.getLogger(__name__)
 
@@ -80,9 +79,7 @@ class EmbeddingEngine:
         if not texts:
             return np.zeros((0, self.dimension), dtype=np.float32)
 
-        prefixed = [
-            f"{self._config.embedding.doc_instruction}{t}" for t in texts
-        ]
+        prefixed = [f"{self._config.embedding.doc_instruction}{t}" for t in texts]
         embeddings = self.model.encode(
             prefixed,
             batch_size=self._config.embedding.batch_size,
@@ -170,9 +167,7 @@ class VectorIndex:
         for i, snippet in enumerate(snippets):
             snippet.embedding = embeddings[i].tolist()
 
-        logger.info(
-            "Built FAISS index: %d vectors, %d dims", len(snippets), dimension
-        )
+        logger.info("Built FAISS index: %d vectors, %d dims", len(snippets), dimension)
 
     def search(
         self,
@@ -218,7 +213,7 @@ class VectorIndex:
 
         faiss.write_index(self._index, str(path / "vector.faiss"))
         with open(path / "idmap.json", "w") as f:
-            json_str = "\"" + "\", \"".join(self._id_map) + "\""
+            json_str = '"' + '", "'.join(self._id_map) + '"'
             f.write(f"[{json_str}]")
         logger.debug("Saved vector index to %s", path)
 
@@ -228,8 +223,9 @@ class VectorIndex:
         Returns:
             True if loaded successfully, False otherwise.
         """
-        import faiss
         import json
+
+        import faiss
 
         index_file = path / "vector.faiss"
         idmap_file = path / "idmap.json"
@@ -239,7 +235,7 @@ class VectorIndex:
 
         try:
             self._index = faiss.read_index(str(index_file))
-            with open(idmap_file, "r") as f:
+            with open(idmap_file) as f:
                 self._id_map = json.load(f)
             logger.debug("Loaded vector index from %s", path)
             return True
@@ -354,9 +350,7 @@ class KeywordIndex:
 
         return results
 
-    def _fuzzy_search(
-        self, query: str, top_k: int, min_score: float
-    ) -> list[tuple[int, float]]:
+    def _fuzzy_search(self, query: str, top_k: int, min_score: float) -> list[tuple[int, float]]:
         """Perform fuzzy matching against stored texts.
 
         Returns:
@@ -538,7 +532,7 @@ class HybridSearch:
         return self._hybrid_search(query, top_k, min_score, fuzzy, storage)
 
     def _semantic_search(
-        self, query: str, top_k: int, min_score: float, storage: "StorageEngine"
+        self, query: str, top_k: int, min_score: float, storage: StorageEngine
     ) -> list[SearchResult]:
         """Pure semantic search path."""
         query_embedding = self.embedder.encode_query(query)
@@ -546,14 +540,14 @@ class HybridSearch:
         return self._hydrate(raw, "semantic", top_k, storage)
 
     def _keyword_search(
-        self, query: str, top_k: int, min_score: float, fuzzy: bool, storage: "StorageEngine"
+        self, query: str, top_k: int, min_score: float, fuzzy: bool, storage: StorageEngine
     ) -> list[SearchResult]:
         """Pure keyword search path."""
         raw = self.keyword_index.search(query, top_k=top_k * 2, min_score=min_score, fuzzy=fuzzy)
         return self._hydrate(raw, "keyword", top_k, storage)
 
     def _hybrid_search(
-        self, query: str, top_k: int, min_score: float, fuzzy: bool, storage: "StorageEngine"
+        self, query: str, top_k: int, min_score: float, fuzzy: bool, storage: StorageEngine
     ) -> list[SearchResult]:
         """Weighted fusion of semantic and keyword scores."""
         w_sem = self._config.search.semantic_weight
@@ -564,20 +558,24 @@ class HybridSearch:
         if self.vector_index.is_trained:
             try:
                 query_embedding = self.embedder.encode_query(query)
-                sem_raw = self.vector_index.search(query_embedding, top_k=top_k * 3, min_score=min_score)
-                sem_scores = {sid: s for sid, s in sem_raw}
+                sem_raw = self.vector_index.search(
+                    query_embedding, top_k=top_k * 3, min_score=min_score
+                )
+                sem_scores = dict(sem_raw)
             except Exception:
                 pass  # Fall back to keyword-only
 
         # Keyword results
         kw_raw = self.keyword_index.search(query, top_k=top_k * 3, min_score=min_score, fuzzy=fuzzy)
-        kw_scores: dict[str, float] = {sid: s for sid, s in kw_raw}
+        kw_scores: dict[str, float] = dict(kw_raw)
 
         # If no semantic results available, do keyword-only
         if not sem_scores:
             return self._hydrate(
                 sorted(kw_scores.items(), key=lambda x: x[1], reverse=True)[:top_k],
-                "keyword", top_k, storage
+                "keyword",
+                top_k,
+                storage,
             )
 
         # Fuse scores
@@ -591,9 +589,7 @@ class HybridSearch:
         fused.sort(key=lambda x: x[1], reverse=True)
         return self._hydrate(fused[:top_k], "hybrid", top_k, storage)
 
-    def _tag_search(
-        self, query: str, top_k: int, storage: "StorageEngine"
-    ) -> list[SearchResult]:
+    def _tag_search(self, query: str, top_k: int, storage: StorageEngine) -> list[SearchResult]:
         """Exact tag match search."""
         tag = query.strip().lstrip("#").lower()
         snippets = storage.find_by_tag(tag)
@@ -616,7 +612,7 @@ class HybridSearch:
         raw_results: list[tuple[str, float]],
         matched_by: str,
         top_k: int,
-        storage: "StorageEngine",
+        storage: StorageEngine,
     ) -> list[SearchResult]:
         """Convert raw ID+score pairs into SearchResult objects."""
         search_results: list[SearchResult] = []

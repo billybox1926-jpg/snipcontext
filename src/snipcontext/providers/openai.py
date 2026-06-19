@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-from snipcontext.core.models import Snippet
+from typing import TYPE_CHECKING
+
 from snipcontext.providers.base import BaseProvider, ExportFormat
+
+if TYPE_CHECKING:
+    from snipcontext.core.models import Snippet
 
 
 class OpenAIProvider(BaseProvider):
@@ -34,12 +38,14 @@ class OpenAIProvider(BaseProvider):
             lines.append("")
 
         lang = snippet.metadata.language.value
-        lines.extend([
-            f"```{lang}",
-            snippet.content,
-            "```",
-            "",
-        ])
+        lines.extend(
+            [
+                f"```{lang}",
+                snippet.content,
+                "```",
+                "",
+            ]
+        )
         return "\n".join(lines)
 
     def export_batch(self, snippets: list[Snippet], title: str = "Code Context") -> str:

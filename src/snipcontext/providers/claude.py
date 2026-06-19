@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import html
+from typing import TYPE_CHECKING
 
-from snipcontext.core.models import Snippet
 from snipcontext.providers.base import BaseProvider, ExportFormat
+
+if TYPE_CHECKING:
+    from snipcontext.core.models import Snippet
 
 
 class ClaudeProvider(BaseProvider):
@@ -27,7 +30,9 @@ class ClaudeProvider(BaseProvider):
         if self.include_metadata:
             lines.append("<metadata>")
             if snippet.metadata.description:
-                lines.append(f"<description>{html.escape(snippet.metadata.description)}</description>")
+                lines.append(
+                    f"<description>{html.escape(snippet.metadata.description)}</description>"
+                )
             lines.append(f"<language>{snippet.metadata.language.value}</language>")
             if snippet.tags:
                 lines.append(f"<tags>{', '.join(snippet.tags)}</tags>")
@@ -35,13 +40,15 @@ class ClaudeProvider(BaseProvider):
 
         lang = snippet.metadata.language.value
         escaped_content = html.escape(snippet.content)
-        lines.extend([
-            "<document_content>",
-            f"```{lang}",
-            escaped_content,
-            "```",
-            "</document_content>",
-        ])
+        lines.extend(
+            [
+                "<document_content>",
+                f"```{lang}",
+                escaped_content,
+                "```",
+                "</document_content>",
+            ]
+        )
 
         return "\n".join(lines)
 
