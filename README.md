@@ -1,5 +1,11 @@
 # SnipContext
 
+[![PyPI version](https://img.shields.io/pypi/v/snipcontext)](https://pypi.org/project/snipcontext/)
+[![CI Status](https://img.shields.io/github/actions/status/billybox1926-jpg/snipcontext/ci)](https://github.com/billybox1926-jpg/snipcontext/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/billybox1926-jpg/snipcontext)](LICENSE)
+[![Python](https://img.shields.io/pypi/pyversions/snipcontext)](https://pypi.org/project/snipcontext/)
+[![Downloads](https://img.shields.io/pypi/dm/snipcontext)](https://pypi.org/project/snipcontext/)
+
 **AI-powered code snippet & context manager.**
 
 Save, search, tag, and instantly inject your best boilerplate, patterns, and context into any LLM (Claude, Cursor, Grok, Windsurf, etc.).
@@ -50,6 +56,9 @@ Save, search, tag, and instantly inject your best boilerplate, patterns, and con
 # From PyPI (recommended)
 pip install snipcontext
 
+# Or with uv
+uv tool install snipcontext
+
 # From source (after cloning)
 pip install -e ".[dev]"
 
@@ -87,7 +96,7 @@ snipcontext providers       # List available export providers
 
 ```bash
 # Add a snippet
-snipcontext add "def authenticate(token):\\n    return jwt.decode(token, SECRET)" \
+snipcontext add "def authenticate(token):\n    return jwt.decode(token, SECRET)" \
   --title "JWT Authentication" \
   --desc "Decode and verify JWT tokens" \
   --lang python \
@@ -267,7 +276,8 @@ snipcontext/
 ├── tests/                    # Comprehensive test suite
 ├── docs/                     # Documentation
 │   ├── ARCHITECTURE.md       # Design docs
-│   └── API.md                # Python API reference
+│   ├── API.md                # Python API reference
+│   └── MAINTAINER.md         # Maintainer guide
 ├── pyproject.toml            # Modern Python packaging
 └── README.md                 # This file
 ```
@@ -280,4 +290,4 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ## Contributing
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) first.
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) first. New contributors should check out our [Good First Issues](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
