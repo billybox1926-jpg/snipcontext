@@ -96,6 +96,7 @@ class StorageEngine:
     def __init__(self, config: Config | None = None) -> None:
         self._config = config or get_config()
         self._config.ensure_directories()
+        self._deleted_ids: set[str] = set()
 
     @property
     def snippets_dir(self) -> Path:
@@ -104,6 +105,10 @@ class StorageEngine:
     @property
     def index_dir(self) -> Path:
         return self._config.index_path
+
+    @property
+    def deleted_ids(self) -> set[str]:
+        return set(self._deleted_ids)
 
     def _snippet_path(self, snippet_id: str) -> Path:
         """Compute the filesystem path for a snippet by ID."""
