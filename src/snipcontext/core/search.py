@@ -17,14 +17,15 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from snipcontext.core.models import SearchMode, SearchResult, Snippet
 from snipcontext.config.settings import Config, get_config
+from snipcontext.core.models import SearchMode, SearchResult, Snippet
 
 if TYPE_CHECKING:
-    from sentence_transformers import SentenceTransformer
     import faiss
-    from sklearn.feature_extraction.text import TfidfVectorizer
     from scipy.sparse import spmatrix
+    from sentence_transformers import SentenceTransformer
+    from sklearn.feature_extraction.text import TfidfVectorizer
+
     from snipcontext.core.storage import StorageEngine
 
 
@@ -226,8 +227,9 @@ class VectorIndex:
         Returns:
             True if loaded successfully, False otherwise.
         """
-        import faiss
         import json
+
+        import faiss
 
         index_file = path / "vector.faiss"
         idmap_file = path / "idmap.json"
@@ -237,7 +239,7 @@ class VectorIndex:
 
         try:
             self._index = faiss.read_index(str(index_file))
-            with open(idmap_file, "r") as f:
+            with open(idmap_file) as f:
                 self._id_map = json.load(f)
             logger.debug("Loaded vector index from %s", path)
             return True
@@ -536,7 +538,7 @@ class HybridSearch:
         return self._hybrid_search(query, top_k, min_score, fuzzy, storage)
 
     def _semantic_search(
-        self, query: str, top_k: int, min_score: float, storage: "StorageEngine"
+        self, query: str, top_k: int, min_score: float, storage: StorageEngine
     ) -> list[SearchResult]:
         """Pure semantic search path."""
         query_embedding = self.embedder.encode_query(query)
@@ -544,14 +546,14 @@ class HybridSearch:
         return self._hydrate(raw, "semantic", top_k, storage)
 
     def _keyword_search(
-        self, query: str, top_k: int, min_score: float, fuzzy: bool, storage: "StorageEngine"
+        self, query: str, top_k: int, min_score: float, fuzzy: bool, storage: StorageEngine
     ) -> list[SearchResult]:
         """Pure keyword search path."""
         raw = self.keyword_index.search(query, top_k=top_k * 2, min_score=min_score, fuzzy=fuzzy)
         return self._hydrate(raw, "keyword", top_k, storage)
 
     def _hybrid_search(
-        self, query: str, top_k: int, min_score: float, fuzzy: bool, storage: "StorageEngine"
+        self, query: str, top_k: int, min_score: float, fuzzy: bool, storage: StorageEngine
     ) -> list[SearchResult]:
         """Weighted fusion of semantic and keyword scores."""
         w_sem = self._config.search.semantic_weight
@@ -590,7 +592,7 @@ class HybridSearch:
         return self._hydrate(fused[:top_k], "hybrid", top_k, storage)
 
     def _tag_search(
-        self, query: str, top_k: int, storage: "StorageEngine"
+        self, query: str, top_k: int, storage: StorageEngine
     ) -> list[SearchResult]:
         """Exact tag match search."""
         tag = query.strip().lstrip("#").lower()
@@ -614,7 +616,7 @@ class HybridSearch:
         raw_results: list[tuple[str, float]],
         matched_by: str,
         top_k: int,
-        storage: "StorageEngine",
+        storage: StorageEngine,
     ) -> list[SearchResult]:
         """Convert raw ID+score pairs into SearchResult objects."""
         search_results: list[SearchResult] = []
