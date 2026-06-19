@@ -57,3 +57,13 @@ Lint and mypy are **blocking**. Documentation-only changes use `continue-on-erro
 - Issues for bugs and concrete feature requests
 - PRs for code discussion tied to a specific change
 - Use draft PRs for work-in-progress; mark "Ready for review" when CI passes
+
+## Acknowledging contributors
+
+- When merging external PRs, leave a thank-you comment acknowledging the specific contribution
+- Credit contributors in [CONTRIBUTORS.md](../CONTRIBUTORS.md)
+- For significant contributions (new features, major docs), mention in the release notes
+- Prefer squash-merge to keep history clean, but preserve co-author credit for substantial input:
+  ```
+  git commit --co-authored-by="Name <email@users.noreply.github.com>"
+  ```
