@@ -59,6 +59,25 @@ config_app = typer.Typer(name="config", help="Manage configuration")
 app.add_typer(config_app)
 
 
+# -- WATCH -------------------------------------------------------------
+
+
+@app.command()
+def watch() -> None:
+    """Watch snippet directory for changes and auto-update the search index."""
+    from snipcontext.core.search import HybridSearch
+    from snipcontext.core.storage import StorageEngine
+    from snipcontext.core.watcher import SnippetWatcher
+
+    config = get_config()
+    storage = StorageEngine(config)
+    search = HybridSearch(config)
+    watcher = SnippetWatcher(config, search, storage)
+    watcher.start()
+
+
+# -- WATCH -------------------------------------------------------------
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
