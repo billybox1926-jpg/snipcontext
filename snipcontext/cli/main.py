@@ -96,6 +96,50 @@ def _init_config_and_plugins():
     return config, pm
 
 
+def _auto_index_add(config, snippet) -> None:
+    """Incrementally add a snippet to the search index (fire-and-forget)."""
+    try:
+        from snipcontext.core.search import HybridSearch
+        searcher = HybridSearch(config)
+        if not searcher.load_indices():
+            # No existing index yet — build from all snippets
+            from snipcontext.core.storage import StorageEngine
+            storage = StorageEngine(config)
+            snippets = storage.list_all()
+            searcher.index_snippets(snippets)
+        else:
+            searcher.add_snippet(snippet)
+    except Exception as exc:
+        logger.debug("Auto-index add skipped: %s", exc)
+
+
+def _auto_index_remove(config, snippet_id: str) -> None:
+    """Incrementally remove a snippet from the search index (fire-and-forget)."""
+    try:
+        from snipcontext.core.search import HybridSearch
+        searcher = HybridSearch(config)
+        if searcher.load_indices():
+            searcher.remove_snippet(snippet_id)
+    except Exception as exc:
+        logger.debug("Auto-index remove skipped: %s", exc)
+
+
+def _auto_index_update(config, snippet) -> None:
+    """Incrementally update a snippet in the search index (fire-and-forget)."""
+    try:
+        from snipcontext.core.search import HybridSearch
+        searcher = HybridSearch(config)
+        if not searcher.load_indices():
+            from snipcontext.core.storage import StorageEngine
+            storage = StorageEngine(config)
+            snippets = storage.list_all()
+            searcher.index_snippets(snippets)
+        else:
+            searcher.update_snippet(snippet)
+    except Exception as exc:
+        logger.debug("Auto-index update skipped: %s", exc)
+
+
 # ---------------------------------------------------------------------------
 # Main commands
 # ---------------------------------------------------------------------------
@@ -176,6 +220,9 @@ def add(
 
     storage = StorageEngine(config)
     storage.save(snippet)
+
+    # Auto-index: incrementally add to search index
+    _auto_index_add(config, snippet)
 
     console.print(f"[green]Added snippet:[/green] [bold]{snippet.metadata.title}[/bold]")
     console.print(f"   [dim]ID: {snippet.id}[/dim]")
@@ -369,6 +416,9 @@ def edit(
     snippet.touch()
     storage.save(snippet)
 
+    # Auto-index: update search index incrementally
+    _auto_index_update(config, snippet)
+
     console.print(f"[green]Updated:[/green] {snippet.metadata.title} [dim]({snippet_id})[/dim]")
 
 
@@ -396,6 +446,10 @@ def delete(
         return
 
     storage.delete(snippet.id)
+
+    # Auto-index: remove from search index incrementally
+    _auto_index_remove(config, snippet.id)
+
     console.print(f"[red]Deleted:[/red] {snippet.metadata.title}")
 
 
@@ -467,6 +521,7 @@ def export(
 @app.command()
 def build_index(
     force: bool = typer.Option(False, "--force", "-f", help="Force rebuild even if index exists"),
+    watch: bool = typer.Option(False, "--watch", "-w", help="Watch snippet directory for changes and reindex in real-time"),
 ):
     """Build or rebuild the semantic search index."""
     from snipcontext.core.search import HybridSearch
@@ -488,6 +543,101 @@ def build_index(
     console.print(f"[dim]Building index for {len(snippets)} snippets...[/dim]")
     searcher.index_snippets(snippets)
     console.print(f"[green]Index built: {len(snippets)} snippets indexed[/green]")
+
+    if watch:
+        _watch_and_reindex(config, storage, searcher)
+
+
+def _watch_and_reindex(config, storage, searcher) -> None:
+    """Watch the snippet directory for filesystem changes and reindex.
+
+    Uses inotifywait if available, otherwise falls back to polling.
+    On Termux/Android, polling is the reliable fallback.
+    """
+    import subprocess
+    import time
+
+    snippets_dir = str(config.snippets_path)
+    console.print(f"[dim]Watching {snippets_dir} for changes... (Ctrl+C to stop)[/dim]")
+
+    # Try inotifywait first
+    use_inotify = False
+    try:
+        subprocess.run(["which", "inotifywait"], capture_output=True, check=True, timeout=5)
+        use_inotify = True
+    except Exception:
+        pass
+
+    if use_inotify:
+        console.print("[dim]Using inotifywait for real-time monitoring[/dim]")
+        try:
+            proc = subprocess.Popen(
+                ["inotifywait", "-m", "-r", "-e", "create,delete,modify,move",
+                 "--format", "%e %f", snippets_dir],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            last_reindex = 0.0
+            for line in proc.stdout:
+                line = line.strip()
+                if not line:
+                    continue
+                now = time.time()
+                # Debounce: wait 1s after last event before reindexing
+                if now - last_reindex < 1.0:
+                    continue
+                last_reindex = now
+                console.print(f"[dim]Change detected: {line}[/dim]")
+                try:
+                    snippets = storage.list_all()
+                    if snippets:
+                        searcher.index_snippets(snippets)
+                        console.print(f"[green]Reindexed {len(snippets)} snippets[/green]")
+                except Exception as exc:
+                    console.print(f"[yellow]Reindex failed: {exc}[/yellow]")
+        except KeyboardInterrupt:
+            proc.terminate()
+            console.print("\n[dim]Watch stopped.[/dim]")
+    else:
+        # Polling fallback (works everywhere, including Termux)
+        console.print("[dim]inotifywait not available — using polling (2s interval)[/dim]")
+        last_mtime = _dir_max_mtime(config.snippets_path)
+        try:
+            while True:
+                time.sleep(2)
+                current_mtime = _dir_max_mtime(config.snippets_path)
+                if current_mtime != last_mtime:
+                    last_mtime = current_mtime
+                    console.print("[dim]Change detected, reindexing...[/dim]")
+                    try:
+                        snippets = storage.list_all()
+                        if snippets:
+                            searcher.index_snippets(snippets)
+                            console.print(f"[green]Reindexed {len(snippets)} snippets[/green]")
+                    except Exception as exc:
+                        console.print(f"[yellow]Reindex failed: {exc}[/yellow]")
+        except KeyboardInterrupt:
+            console.print("\n[dim]Watch stopped.[/dim]")
+
+
+def _dir_max_mtime(path) -> float:
+    """Return the max mtime of all files in a directory (recursive)."""
+    import os
+    max_mtime = 0.0
+    try:
+        for root, dirs, files in os.walk(str(path)):
+            for f in files:
+                fp = os.path.join(root, f)
+                try:
+                    m = os.path.getmtime(fp)
+                    if m > max_mtime:
+                        max_mtime = m
+                except OSError:
+                    pass
+    except OSError:
+        pass
+    return max_mtime
 
 
 # -- STATS -----------------------------------------------------------
