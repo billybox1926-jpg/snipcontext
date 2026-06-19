@@ -44,6 +44,9 @@ logger = logging.getLogger(__name__)
 # Rich console
 console = Console()
 
+# Type imports for forward references
+from snipcontext.core.models import Snippet
+
 # Typer app
 app = typer.Typer(
     name="snipcontext",
@@ -63,7 +66,7 @@ app.add_typer(config_app)
 # ---------------------------------------------------------------------------
 
 
-def _print_snippet(snippet, score: float | None = None, idx: int | None = None):
+def _print_snippet(snippet, score: float | None = None, idx: int | None = None) -> None:
     """Pretty-print a snippet with Rich."""
     from rich.syntax import Syntax
 
@@ -103,7 +106,7 @@ def _confirm_action(message: str) -> bool:
     return typer.confirm(message, default=False)
 
 
-def _init_config_and_plugins():
+def _init_config_and_plugins() -> tuple:
     """Initialize config and plugin manager."""
     from snipcontext.plugins.base import PluginManager
 
@@ -123,7 +126,7 @@ def _init_config_and_plugins():
 def main(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
     debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
-):
+) -> None:
     """SnipContext — save, search, and export your best code for LLMs."""
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -144,9 +147,9 @@ def add(
     language: str = typer.Option("", "--lang", "-l", help="Programming language"),
     tags: list[str] = _OPT_TAGS,
     from_file: bool = typer.Option(False, "--file", "-f", help="Read content from file path"),
-):
+) -> None:
     """Add a new code snippet to your collection."""
-    from snipcontext.core.models import Language, Snippet, SnippetMetadata
+    from snipcontext.core.models import Language, SnippetMetadata
     from snipcontext.core.storage import StorageEngine
 
     config = get_config()
@@ -242,7 +245,7 @@ def add(
 def get(
     snippet_id: str = typer.Argument(..., help="Snippet ID or prefix"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Print only code, no metadata"),
-):
+) -> None:
     """Retrieve a snippet by ID."""
     from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
 
@@ -291,7 +294,7 @@ def search(
     fuzzy: bool = typer.Option(
         False, "--fuzzy", "-f", help="Enable fuzzy matching for keyword search"
     ),
-):
+) -> None:
     """Search snippets with semantic + keyword hybrid search."""
     from snipcontext.core.search import HybridSearch
     from snipcontext.core.storage import StorageEngine
@@ -345,7 +348,7 @@ def list_snippets(
     sort: str = typer.Option(
         "updated", "--sort", "-s", help="Sort by: updated, created, title, access"
     ),
-):
+) -> None:
     """List all snippets with optional filters."""
     from snipcontext.core.storage import StorageEngine
 
@@ -413,7 +416,7 @@ def edit(
     add_tags: list[str] = _OPT_ADD_TAGS,
     remove_tags: list[str] = _OPT_REMOVE_TAGS,
     message: str = typer.Option("", "--message", "-m", help="Version bump message"),
-):
+) -> None:
     """Edit an existing snippet."""
     from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
 
@@ -457,7 +460,7 @@ def edit(
 def delete(
     snippet_id: str = typer.Argument(..., help="Snippet ID or prefix"),
     force: bool = typer.Option(False, "--force", help="Skip confirmation"),
-):
+) -> None:
     """Delete a snippet."""
     from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
 
@@ -495,7 +498,7 @@ def export(
     provider: str = _OPT_PROVIDER,
     output: str | None = _OPT_OUTPUT,
     top_k: int = _OPT_TOP_K,
-):
+) -> None:
     """Export snippets in LLM-optimized format."""
     from snipcontext.core.search import HybridSearch
     from snipcontext.core.storage import StorageEngine
@@ -515,7 +518,7 @@ def export(
         raise typer.Exit(1) from err
 
     # Collect snippets
-    snippets: list = []
+    snippets: list["Snippet"] = []
 
     if ids:
         for sid in ids:
@@ -553,7 +556,7 @@ def export(
 @app.command()
 def build_index(
     force: bool = typer.Option(False, "--force", "-f", help="Force rebuild even if index exists"),
-):
+) -> None:
     """Build or rebuild the semantic search index."""
     from snipcontext.core.search import HybridSearch
     from snipcontext.core.storage import StorageEngine
@@ -582,7 +585,7 @@ def build_index(
 
 
 @app.command()
-def stats():
+def stats() -> None:
     """Show collection statistics."""
     from snipcontext.core.storage import StorageEngine
 
@@ -623,7 +626,7 @@ def stats():
 
 
 @app.command()
-def demo():
+def demo() -> None:
     """Run an interactive demo with sample snippets."""
     from snipcontext.core.models import Language, Snippet, SnippetMetadata
     from snipcontext.core.search import HybridSearch
@@ -760,7 +763,7 @@ def demo():
 
 
 @app.command()
-def providers():
+def providers() -> None:
     """List available export providers."""
     from snipcontext.plugins.base import PluginManager
 
@@ -786,7 +789,7 @@ def providers():
 
 
 @config_app.command("show")
-def config_show():
+def config_show() -> None:
     """Show current configuration."""
     config = get_config()
     import yaml
@@ -805,7 +808,7 @@ def config_show():
 @config_app.command("init")
 def config_init(
     force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing config"),
-):
+) -> None:
     """Initialize configuration file with defaults."""
     config = get_config()
     if config.config_file_path.exists() and not force:
@@ -818,7 +821,7 @@ def config_init(
 
 
 @config_app.command("path")
-def config_path():
+def config_path() -> None:
     """Show configuration and data directories."""
     config = get_config()
     console.print(f"[bold]Config file:[/bold]  {config.config_file_path}")
@@ -832,7 +835,7 @@ def config_path():
 # ---------------------------------------------------------------------------
 
 
-def _main():
+def _main() -> None:
     """Entry point for the CLI."""
     app()
 
