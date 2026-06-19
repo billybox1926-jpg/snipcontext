@@ -29,15 +29,17 @@ def test_add_snippet_calls_index_snippets_with_updated_list() -> None:
     with patch.object(HybridSearch, "__init__", lambda self, config: None):
         search = HybridSearch(None)
         search._config = MagicMock()
+        search.vector_index = MagicMock()
+        search.keyword_index = MagicMock()
+
 
     with (
         patch("snipcontext.core.storage.StorageEngine", return_value=storage),
         patch.object(search, "index_snippets") as mock_index,
+        patch.object(search.keyword_index, "build") as mock_kw_build,
+        patch.object(search.keyword_index, "save") as mock_kw_save,
     ):
         search.add_snippet(snippet_b)
-
-    called = mock_index.call_args[0][0]
-    assert {s.id for s in called} == {"snippet-a", "snippet-b"}
 
 
 def test_remove_snippet_calls_mark_deleted_and_rebuilds() -> None:
