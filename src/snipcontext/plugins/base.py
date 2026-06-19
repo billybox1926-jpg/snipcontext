@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
@@ -54,7 +54,7 @@ class Plugin(ABC):
         """Hook to modify search results."""
         return results
 
-    def get_import_sources(self) -> dict[str, callable]:
+    def get_import_sources(self) -> dict[str, Callable]:
         """Return additional import sources. Map name -> callable."""
         return {}
 
@@ -82,8 +82,9 @@ class PluginManager:
                 plugin_eps = list(eps.select(group=PLUGIN_GROUP))
                 provider_eps = list(eps.select(group=PROVIDER_GROUP))
             else:
-                plugin_eps = eps.get(PLUGIN_GROUP, [])
-                provider_eps = eps.get(PROVIDER_GROUP, [])
+                # Legacy interface (Python < 3.10)
+                plugin_eps = list(eps.get(PLUGIN_GROUP, ()))
+                provider_eps = list(eps.get(PROVIDER_GROUP, ()))
 
             for ep in plugin_eps:
                 try:

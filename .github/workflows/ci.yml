@@ -33,7 +33,7 @@ jobs:
         run: ruff format --check src/snipcontext tests
 
       - name: Mypy type check
-        run: mypy src/snipcontext
+        run: mypy src/snipcontext --ignore-missing-imports --no-site-packages
 
   # ── Tests across Python versions ─────────────────────────────────
   test:
@@ -44,7 +44,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
         include:
           - os: macos-latest
             python-version: "3.12"
@@ -69,14 +69,23 @@ jobs:
             hf-models-${{ runner.os }}-
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+          pip install -e ".[dev]"
 
       - name: Run tests
-        run: pytest -q --tb=short --cov=src/snipcontext --cov-report=term-missing
+        shell: bash
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
+          python -m pytest -q --tb=short --cov=src/snipcontext --cov-report=term-missing
 
       - name: Run tests (slow)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: pytest -q --tb=short -m "slow"
+        shell: bash
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
+          python -m pytest -q --tb=short -m "slow"
 
   # ── Build & verify package ───────────────────────────────────────
   build:

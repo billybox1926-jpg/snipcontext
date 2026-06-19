@@ -185,6 +185,7 @@ class VectorIndex:
 
         import faiss
 
+        assert self._index is not None
         # Normalize query for cosine similarity
         faiss.normalize_L2(query_embedding)
 
@@ -307,17 +308,19 @@ class KeywordIndex:
         Args:
             query: The search query string.
             top_k: Maximum number of results.
-            min_score: Minimum relevance score threshold.
-            fuzzy: Enable fuzzy matching for approximate text matching.
+            min_score: Minimum similarity score (0.0 to 1.0).
+            fuzzy: Enable fuzzy matching with rapidfuzz.
 
         Returns:
-            List of (snippet_id, score) tuples.
+            List of (snippet_id, score) tuples sorted by relevance.
         """
         if not self.is_trained:
             return []
 
         from sklearn.metrics.pairwise import cosine_similarity
 
+        assert self._vectorizer is not None
+        assert self._matrix is not None
         query_vec = self._vectorizer.transform([query])
         similarities = cosine_similarity(query_vec, self._matrix)[0]
 
@@ -635,7 +638,7 @@ class HybridSearch:
                 SearchResult(
                     snippet=snippet,
                     score=min(score, 1.0),
-                    matched_by=matched_by,  # type: ignore[arg-type]
+                    matched_by=matched_by,
                 )
             )
 
