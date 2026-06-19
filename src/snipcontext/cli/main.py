@@ -145,8 +145,12 @@ def add(
     language: str = typer.Option("", "--lang", "-l", help="Programming language"),
     tags: list[str] = _OPT_TAGS,
     from_file: bool = typer.Option(False, "--file", "-f", help="Read content from file path"),
-    encrypt: bool = typer.Option(False, "--encrypt", "-e", help="Encrypt content for secure storage"),
-    sensitive: bool = typer.Option(False, "--sensitive", "-s", help="Mark as sensitive (implies --encrypt)"),
+    encrypt: bool = typer.Option(
+        False, "--encrypt", "-e", help="Encrypt content for secure storage"
+    ),
+    sensitive: bool = typer.Option(
+        False, "--sensitive", "-s", help="Mark as sensitive (implies --encrypt)"
+    ),
 ) -> None:
     """Add a new code snippet to your collection."""
     from snipcontext.core.models import Language, SnippetMetadata
@@ -228,7 +232,9 @@ def add(
     if encrypt:
         config = get_config()
         if not config.encryption.enabled:
-            console.print("[red]Encryption is not enabled. Set SNIPCONTEXT_ENCRYPT_ENABLED=true[/red]")
+            console.print(
+                "[red]Encryption is not enabled. Set SNIPCONTEXT_ENCRYPT_ENABLED=true[/red]"
+            )
             raise typer.Exit(1)
         storage_obj = StorageEngine()
         encrypted = storage_obj.encrypt_content(content)
@@ -242,7 +248,9 @@ def add(
             ),
             tags=tags,
         )
-        console.print(f"[green]Added encrypted snippet:[/green] [bold]{snippet.metadata.title}[/bold]")
+        console.print(
+            f"[green]Added encrypted snippet:[/green] [bold]{snippet.metadata.title}[/bold]"
+        )
     else:
         snippet = Snippet(
             content=content,
@@ -886,6 +894,7 @@ def rebuild_index(
         keyword_loaded = True
         try:
             from snipcontext.core.search import KeywordIndex, VectorIndex
+
             vi = VectorIndex(config)
             ki = KeywordIndex(config)
             vector_loaded = vi.load(config.index_path)
@@ -919,7 +928,9 @@ def encrypt(
     config = get_config()
     if not config.encryption.enabled:
         console.print("[red]Encryption is not enabled. Set SNIPCONTEXT_ENCRYPT_ENABLED=true[/red]")
-        console.print("[dim]See: https://github.com/billybox1926-jpg/snipcontext/wiki/Encryption[/dim]")
+        console.print(
+            "[dim]See: https://github.com/billybox1926-jpg/snipcontext/wiki/Encryption[/dim]"
+        )
         raise typer.Exit(1)
 
     storage = StorageEngine()
