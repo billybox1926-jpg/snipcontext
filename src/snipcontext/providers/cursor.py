@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-from snipcontext.core.models import Snippet
+from typing import TYPE_CHECKING
+
 from snipcontext.providers.base import BaseProvider, ExportFormat
+
+if TYPE_CHECKING:
+    from snipcontext.core.models import Snippet
 
 
 class CursorProvider(BaseProvider):
