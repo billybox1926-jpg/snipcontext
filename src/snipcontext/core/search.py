@@ -600,6 +600,36 @@ class HybridSearch:
         else:
             logger.info("Built hybrid search indices (semantic + keyword)")
 
+    def add_snippet(self, snippet: Snippet) -> None:
+        """Incrementally add or update a single snippet in the index."""
+        from snipcontext.core.storage import StorageEngine
+
+        storage = StorageEngine(self._config)
+        snippets = storage.list_all()
+        snippets = [snip for snip in snippets if snip.id != snippet.id]
+        snippets.append(snippet)
+        self.index_snippets(snippets)
+
+    def remove_snippet(self, snippet_id: str) -> None:
+        """Soft-delete a snippet and rebuild indices so it is excluded from results."""
+        from snipcontext.core.storage import StorageEngine
+
+        storage = StorageEngine(self._config)
+        storage._deleted_ids.add(snippet_id)
+        try:
+            snippet = storage.get(snippet_id)
+        except Exception:
+            snippet = None
+        if snippet is not None:
+            snippet.deleted = True
+            storage.save(snippet)
+        self.index_snippets(storage.list_all())
+
+    def rebuild_incremental(self, snippets: list[Snippet]) -> None:
+        """Rebuild indices from a snapshot, excluding soft-deleted snippets."""
+        active = [snip for snip in snippets if not getattr(snip, "deleted", False)]
+        self.index_snippets(active)
+
     def search(
         self,
         query: str,
