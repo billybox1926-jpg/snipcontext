@@ -540,8 +540,13 @@ class HybridSearch:
     def load_indices(self) -> tuple[bool, bool]:
         """Load existing search indices from disk.
 
+        Attempts to load both semantic (vector) and keyword indices from disk.
+        Validates index integrity (ID map length matches matrix/vector counts).
+        Automatically cleans up corrupted index files on load failure.
+
         Returns:
-            Tuple of (semantic_loaded, keyword_loaded).
+            Tuple of (semantic_loaded, keyword_loaded) indicating which indices
+            were successfully loaded from disk.
         """
         semantic_loaded = self.vector_index.load(self._config.index_path)
         keyword_loaded = self.keyword_index.load(self._config.index_path)
@@ -554,7 +559,12 @@ class HybridSearch:
     def index_snippets(self, snippets: list[Snippet]) -> None:
         """Build both semantic and keyword indices.
 
+        If indices already exist on disk, loads them instead of rebuilding.
         If semantic index fails to load or build, falls back to keyword-only.
+        This provides resilience against index corruption and missing dependencies.
+
+        Args:
+            snippets: List of snippets to index. All snippets will be indexed.
         """
         # Try to load existing indices first
         semantic_loaded = self.vector_index.load(self._config.index_path)

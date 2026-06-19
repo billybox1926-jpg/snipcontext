@@ -270,7 +270,17 @@ class StorageEngine:
     # ------------------------------------------------------------------
 
     def _get_fernet(self) -> Fernet:
-        """Create or retrieve a Fernet cipher from the encryption config."""
+        """Create or retrieve a Fernet cipher from the encryption config.
+
+        Derives a key from the configured passphrase and salt using PBKDF2.
+        The salt is auto-generated and persisted on first use.
+
+        Returns:
+            Configured Fernet cipher instance.
+
+        Raises:
+            EncryptionError: If encryption is not enabled in config.
+        """
         if not self._config.encryption.enabled:
             raise EncryptionError(
                 "encrypt/decrypt",
@@ -299,7 +309,17 @@ class StorageEngine:
         return Fernet(key)
 
     def encrypt_content(self, content: str) -> str:
-        """Encrypt content using Fernet (AES-128)."""
+        """Encrypt content using Fernet (AES-128).
+
+        Args:
+            content: Plaintext content to encrypt.
+
+        Returns:
+            Base64-encoded encrypted string suitable for storage.
+
+        Raises:
+            EncryptionError: If encryption fails.
+        """
         try:
             fernet = self._get_fernet()
             encrypted = fernet.encrypt(content.encode())
@@ -308,7 +328,17 @@ class StorageEngine:
             raise EncryptionError("encrypt", original_error=exc) from exc
 
     def decrypt_content(self, encrypted_content: str) -> str:
-        """Decrypt content using Fernet (AES-128)."""
+        """Decrypt content using Fernet (AES-128).
+
+        Args:
+            encrypted_content: Base64-encoded encrypted string from storage.
+
+        Returns:
+            Decrypted plaintext content.
+
+        Raises:
+            EncryptionError: If decryption fails (invalid token, wrong key, etc.).
+        """
         try:
             fernet = self._get_fernet()
             encrypted_bytes = base64.urlsafe_b64decode(encrypted_content.encode())
