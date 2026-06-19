@@ -221,6 +221,20 @@ The search engine automatically:
 3. **Falls back gracefully** — if semantic index unavailable, runs keyword-only search
 4. **Rebuilds on demand** — `index_snippets()` auto-loads existing indices before rebuilding
 
+### Watchdog / Real-time Indexing
+
+Run `sc watch` to monitor the snippets directory and automatically reindex when files change:
+
+```bash
+sc watch
+```
+
+Disable via config if you prefer manual rebuilds only:
+
+```bash
+export SNIPCONTEXT_WATCHDOG_ENABLED=false
+```
+
 ---
 
 ## Architecture
