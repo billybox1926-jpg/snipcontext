@@ -20,11 +20,13 @@ from snipcontext.config.settings import Config, get_config
 from snipcontext.core.models import SearchMode, SearchResult, Snippet
 
 if TYPE_CHECKING:
-    import faiss
     from pathlib import Path
+
+    import faiss
     from scipy.sparse import spmatrix
     from sentence_transformers import SentenceTransformer
     from sklearn.feature_extraction.text import TfidfVectorizer
+
     from snipcontext.core.storage import StorageEngine
 
 logger = logging.getLogger(__name__)
