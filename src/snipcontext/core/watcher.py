@@ -9,6 +9,10 @@ and degrades gracefully when watchdog is not installed.
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from watchdog.observers import Observer
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +24,8 @@ try:  # pragma: no cover - optional dependency
     _WATCHDOG_AVAILABLE = True
 except ImportError:  # pragma: no cover - optional dependency
     _WATCHDOG_AVAILABLE = False
-    FileSystemEventHandler = object  # type: ignore[misc,assignment]
-    Observer = None  # type: ignore[assignment,misc]
+    FileSystemEventHandler = object
+    Observer = None
 
 
 class SnippetChangeHandler(FileSystemEventHandler):
@@ -32,11 +36,7 @@ class SnippetChangeHandler(FileSystemEventHandler):
         self.storage = storage_engine
 
     def on_any_event(self, event) -> None:
-        """Handle any filesystem event by triggering an incremental reindex.
-
-        Skips directory events and temporary files.
-        """
-        if event.is_directory or str(event.src_path).endswith(".tmp"):
+        if event.is_directory or event.src_path.endswith(".tmp"):
             return
         try:
             snippets = self.storage.list_all()
@@ -53,7 +53,7 @@ class SnippetWatcher:
         self.config = config
         self.search = search_engine
         self.storage = storage_engine
-        self.observer = None
+        self.observer: Optional[Observer] = None
 
     def start(self) -> None:
         """Begin watching the snippets directory for changes.
@@ -70,6 +70,7 @@ class SnippetWatcher:
 
         handler = SnippetChangeHandler(self.search, self.storage)
         self.observer = Observer()
+        assert self.observer is not None
         self.observer.schedule(handler, str(self.config.snippets_path), recursive=False)
         self.observer.start()
         print(f"Watching {self.config.snippets_path} for changes...")
