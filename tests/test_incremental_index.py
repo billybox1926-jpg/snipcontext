@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from typing import TYPE_CHECKING
 
-import pytest
+if TYPE_CHECKING:
+    from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 
 class _Snippet:
@@ -28,10 +29,11 @@ def test_add_snippet_calls_index_snippets_with_updated_list() -> None:
         search = HybridSearch(None)
         search._config = MagicMock()
 
-    # Patch at the real location — storage module
-    with patch("snipcontext.core.storage.StorageEngine", return_value=storage):
-        with patch.object(search, "index_snippets") as mock_index:
-            search.add_snippet(snippet_b)
+    with (
+        patch("snipcontext.core.storage.StorageEngine", return_value=storage),
+        patch.object(search, "index_snippets") as mock_index,
+    ):
+        search.add_snippet(snippet_b)
 
     called = mock_index.call_args[0][0]
     assert {s.id for s in called} == {"snippet-a", "snippet-b"}
@@ -49,9 +51,11 @@ def test_remove_snippet_calls_mark_deleted_and_rebuilds() -> None:
         search = HybridSearch(None)
         search._config = MagicMock()
 
-    with patch("snipcontext.core.storage.StorageEngine", return_value=storage):
-        with patch.object(search, "index_snippets") as mock_index:
-            search.remove_snippet("snippet-a")
+    with (
+        patch("snipcontext.core.storage.StorageEngine", return_value=storage),
+        patch.object(search, "index_snippets") as mock_index,
+    ):
+        search.remove_snippet("snippet-a")
 
     storage.mark_deleted.assert_called_once_with("snippet-a")
     called = mock_index.call_args[0][0]
@@ -90,7 +94,6 @@ def test_mark_deleted_sets_flag_and_saves(tmp_path: Path) -> None:
         def __init__(self, path):
             self.snippets_path = path
             self.index_path = path / "index"
-
         def ensure_directories(self):
             self.snippets_path.mkdir(parents=True, exist_ok=True)
             self.index_path.mkdir(parents=True, exist_ok=True)
@@ -99,12 +102,15 @@ def test_mark_deleted_sets_flag_and_saves(tmp_path: Path) -> None:
     config.ensure_directories()
 
     engine = StorageEngine(config)
+    # Override save to avoid depending on internal serialization details
     saved_calls = []
     engine.save = lambda snippet: saved_calls.append(snippet)
 
     engine.mark_deleted("snippet-a")
 
     assert "snippet-a" in engine._deleted_ids
+    assert len(saved_calls) == 1
+    assert saved_calls[0].deleted is True
 
 
 # ---------- CLI index command ----------
@@ -120,11 +126,13 @@ def test_index_command_with_snippets() -> None:
         mock_get_config.return_value = mock_config
         storage = MagicMock()
         storage.list_all.return_value = [snippet1, snippet2]
-        with patch("snipcontext.core.storage.StorageEngine", return_value=storage):
-            with patch("snipcontext.core.search.HybridSearch") as mock_search_cls:
-                mock_search = mock_search_cls.return_value
-                with patch("snipcontext.cli.main.console"):
-                    index(force=False)
+        with (
+            patch("snipcontext.core.storage.StorageEngine", return_value=storage),
+            patch("snipcontext.core.search.HybridSearch") as mock_search_cls,
+            patch("snipcontext.cli.main.console"),
+        ):
+            mock_search = mock_search_cls.return_value
+            index(force=False)
 
         mock_search.index_snippets.assert_called_once_with([snippet1, snippet2])
 
@@ -137,10 +145,12 @@ def test_index_command_empty_no_force_returns() -> None:
         mock_get_config.return_value = mock_config
         storage = MagicMock()
         storage.list_all.return_value = []
-        with patch("snipcontext.core.storage.StorageEngine", return_value=storage):
-            with patch("snipcontext.cli.main.console") as mock_console:
-                with patch("snipcontext.core.search.HybridSearch") as mock_search_cls:
-                    index(force=False)
+        with (
+            patch("snipcontext.core.storage.StorageEngine", return_value=storage),
+            patch("snipcontext.cli.main.console") as mock_console,
+            patch("snipcontext.core.search.HybridSearch") as mock_search_cls,
+        ):
+            index(force=False)
 
         mock_search_cls.return_value.index_snippets.assert_not_called()
         output = "".join(call.args[0] for call in mock_console.print.call_args_list)
@@ -155,9 +165,11 @@ def test_index_command_empty_with_force() -> None:
         mock_get_config.return_value = mock_config
         storage = MagicMock()
         storage.list_all.return_value = []
-        with patch("snipcontext.core.storage.StorageEngine", return_value=storage):
-            with patch("snipcontext.core.search.HybridSearch") as mock_search_cls:
-                with patch("snipcontext.cli.main.console"):
-                    index(force=True)
+        with (
+            patch("snipcontext.core.storage.StorageEngine", return_value=storage),
+            patch("snipcontext.core.search.HybridSearch") as mock_search_cls,
+            patch("snipcontext.cli.main.console"),
+        ):
+            index(force=True)
 
         mock_search_cls.return_value.index_snippets.assert_called_once_with([])
