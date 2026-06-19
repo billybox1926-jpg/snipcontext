@@ -70,6 +70,8 @@ class StorageConfig(BaseSettings):
     pretty_json: bool = Field(default=True)
     json_indent: int = Field(default=2)
     max_file_size_mb: int = Field(default=10, ge=1, le=100)
+    watchdog_enabled: bool = Field(default=True, description="Enable filesystem watcher auto-index")
+    watchdog_poll_interval: float = Field(default=5.0, ge=0.1, description="Watcher poll interval seconds")
 
 
 class ExportConfig(BaseSettings):
