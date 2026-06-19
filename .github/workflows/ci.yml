@@ -1,38 +1,106 @@
 name: CI
 
 on:
-  push:
-    branches: [master, main]
   pull_request:
-    branches: [master, main]
+  push:
+    branches:
+      - main
+      - feature-update
+
+permissions:
+  contents: read
 
 jobs:
-  test:
-    name: Python ${{ matrix.python-version }}
+  # ── Lint & type-check ─────────────────────────────────────────────
+  quality:
+    name: Quality (ruff + mypy)
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Ruff lint
+        run: ruff check snipcontext tests
+
+      - name: Ruff format check
+        run: ruff format --check snipcontext tests
+
+      - name: Mypy type check
+        run: mypy snipcontext
+
+  # ── Tests across Python versions ─────────────────────────────────
+  test:
+    name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+    needs: quality
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        os: [ubuntu-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        include:
+          - os: macos-latest
+            python-version: "3.12"
+          - os: windows-latest
+            python-version: "3.12"
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+      - name: Cache Hugging Face models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-models-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            hf-models-${{ runner.os }}-${{ matrix.python-version }}-
+            hf-models-${{ runner.os }}-
 
-      - name: Lint (non-blocking)
-        run: |
-          ruff check . || true
-          mypy . || true
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
 
       - name: Run tests
-        run: pytest
+        run: pytest -q --tb=short --cov=snipcontext --cov-report=term-missing
+
+      - name: Run tests (slow)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: pytest -q --tb=short -m "slow"
+
+  # ── Build & verify package ───────────────────────────────────────
+  build:
+    name: Build & verify
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check package with twine
+        run: twine check dist/*
+
+      - name: Verify entry points
+        run: |
+          pip install dist/*.whl
+          snipcontext --help
+          sc --help

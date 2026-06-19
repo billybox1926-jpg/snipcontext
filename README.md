@@ -4,146 +4,280 @@
 
 Save, search, tag, and instantly inject your best boilerplate, patterns, and context into any LLM (Claude, Cursor, Grok, Windsurf, etc.).
 
-**Local-first • Open source • Built for humans + AI agents to collaborate.**
-
-## Demo
-
-![SnipContext Demo](docs/demo.gif)
-
-```
-$ sc demo
-Seeded 8 demo snippets.
-
-Listing snippets:
-  - FastAPI dependency injection example (a2f387)
-  - React useEffect data fetch hook (513ff6)
-  - Python requests with retry (19ca4e)
-  - SQLAlchemy async session factory (e54afe)
-  - Go graceful shutdown HTTP server (29516b)
-  - TypeScript zod schema for user input (ee8e89)
-  - Rust error handling with anyhow (8351a1)
-  - Bash retry wrapper for flaky commands (d5ac7d)
-
-Sample search (semantic):
-No search index available. Run sc build-index after adding snippets.
-
-Sample export (generic):
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                Code Context                                 │
-└─────────────────────────────────────────────────────────────────────────────┘
-▌ 8 code snippets provided as context
-  ... (full export formatted for LLM context)
-```
-
-## Why SnipContext?
-
-- Stop rewriting the same auth flows, component patterns, or utility functions.
-- Stop feeding LLMs messy or outdated code.
-- Build your personal/team "second brain" of high-quality, reusable code.
-
-## Key Features
-
-- **Rich snippet saving** with tags, metadata, and versioning
-- **Semantic search** (local embeddings via sentence-transformers + FAISS)
-- **One-command export** optimized for major LLMs (generic, claude, cursor, openai)
-- **CLI + Library support** (Python)
-- **Plugin system** for new providers and exporters
-- **Git-friendly, local-first storage** (JSON files + vector index)
-
-## Quick Start
-
-```bash
-# Install from PyPI
-pip install snipcontext
-
-# Or install from source
-git clone https://github.com/billybox1926-jpg/snipcontext
-cd snipcontext
-pip install -e ".[dev]"
-
-# Run the interactive demo
-sc demo
-
-# List your snippets
-sc list
-
-# Search snippets (semantic search requires: sc build-index)
-sc search "async python"
-
-# Export for LLM context (copy-paste into Claude, Cursor, etc.)
-sc export
-```
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `sc add` | Add a new snippet |
-| `sc get` | Retrieve a snippet by ID |
-| `sc search` | Semantic search across snippets |
-| `sc list` | List snippets with filters |
-| `sc edit` | Edit a snippet in your editor |
-| `sc delete` | Delete a snippet |
-| `sc export` | Export snippets for LLM context |
-| `sc build-index` | Build/rebuild semantic search index |
-| `sc stats` | Show collection statistics |
-| `sc demo` | Run interactive demo with sample snippets |
-| `sc providers` | List available export providers |
-| `sc config` | Manage configuration |
-
-## Export Providers
-
-| Provider | Format | Description |
-|----------|--------|-------------|
-| `generic` | Markdown | Universal format for any LLM |
-| `claude` | Markdown | Optimized for Claude |
-| `cursor` | Markdown | Optimized for Cursor |
-| `openai` | JSON | OpenAI API compatible |
-
-```bash
-# Export with specific provider
-sc export -p claude
-
-# Export to file
-sc export -o context.md -p generic
-```
-
-## Configuration
-
-```bash
-# Show current config
-sc config show
-
-# Initialize config file
-sc config init
-
-# Show data directories
-sc config path
-```
-
-Data is stored locally in `~/.local/share/snipcontext/` (Linux/macOS) or `%LOCALAPPDATA%\snipcontext\` (Windows).
-
-## Project Status
-
-This repository is in **active development**. Core features implemented:
-- ✅ Snippet CRUD (add, get, list, edit, delete)
-- ✅ Tag-based organization
-- ✅ Semantic search (local embeddings)
-- ✅ Export to multiple LLM formats
-- ✅ Plugin system for providers
-- ✅ Configuration management
-- ✅ Interactive demo (`sc demo`)
-
-## Contributing
-
-We **love contributions** from both humans and AI coding agents!
-
-- Open issues for features/bugs
-- Submit PRs (even small improvements to docs are welcome)
-- Feel free to use Cursor, Claude, Grok, etc. to implement issues
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get involved.
+> **Local-first** — Open source — Built for humans + AI agents
 
 ---
 
-**Star this repo if you're tired of copying the same code for the 100th time.**
+## Why SnipContext?
+
+- **Stop rewriting** the same auth flows, component patterns, or utility functions
+- **Stop feeding LLMs** messy or outdated code from your clipboard history
+- **Build your personal/team "second brain"** of high-quality, reusable code
+- **Semantic search** finds code by meaning, not just keywords
+- **LLM-optimized exports** format your snippets for maximum comprehension
+
+---
+
+## Key Features
+
+| Feature | Status |
+|---------|--------|
+| Rich snippet saving with tags, metadata, and versioning | ✅ |
+| **Semantic search** with local embeddings (sentence-transformers + FAISS) | ✅ |
+| **Hybrid search** — semantic + keyword with configurable weights | ✅ |
+| One-command export optimized for major LLMs | ✅ |
+| CLI + Library support (Python) | ✅ |
+| Plugin system for new providers and exporters | ✅ |
+| Git-friendly, local-first storage | ✅ |
+| Import/export for backup and sharing | ✅ |
+
+### Supported LLM Providers
+
+| Provider | Format | Best For |
+|----------|--------|----------|
+| **Generic** | Markdown | Universal compatibility |
+| **Claude** | XML documents | Anthropic Claude |
+| **Cursor** | File-style headers | Cursor IDE |
+| **OpenAI** | Delineated sections | ChatGPT / GPT-4 |
+
+---
+
+## Quick Start
+
+### Installation
+
+```bash
+# From PyPI (recommended)
+pip install snipcontext
+
+# From source (after cloning)
+pip install -e ".[dev]"
+
+# Or install directly from GitHub
+pip install git+https://github.com/billybox1926-jpg/snipcontext.git
+```
+
+#### Windows Users: Use `snipcontext` instead of `sc`
+
+Windows has a built-in `sc.exe` (Service Control) that shadows the `sc` CLI entry point. Use the full command name instead:
+
+```bash
+snipcontext add "print('hello')" --title "Hello" --tag python
+snipcontext search "hello world"
+snipcontext list
+snipcontext stats
+```
+
+Or run via module:
+
+```bash
+python -m snipcontext add "print('hello')" --title "Hello" --tag python
+```
+
+#### Verify Installation
+
+```bash
+snipcontext --help          # or: python -m snipcontext --help
+snipcontext providers       # List available export providers
+```
+
+### CLI Usage
+
+> **Note:** On Windows, use `snipcontext` instead of `sc` (see [Installation](#installation)).
+
+```bash
+# Add a snippet
+snipcontext add "def authenticate(token):\\n    return jwt.decode(token, SECRET)" \
+  --title "JWT Authentication" \
+  --desc "Decode and verify JWT tokens" \
+  --lang python \
+  --tag auth --tag jwt --tag security
+
+# Search semantically
+snipcontext search "how to validate auth tokens"
+
+# Search by tag
+snipcontext search "auth" --mode tag
+
+# Export for Claude
+snipcontext search "authentication" --provider claude --output context.xml
+
+# List all snippets
+snipcontext list
+
+# Show stats
+snipcontext stats
+```
+
+### Library Usage
+
+```python
+from snipcontext.core.models import Snippet, SnippetMetadata, Language
+from snipcontext.core.storage import StorageEngine
+from snipcontext.core.search import HybridSearch
+from snipcontext.config.settings import get_config
+
+# Initialize
+config = get_config()
+storage = StorageEngine(config)
+
+# Create and save a snippet
+snippet = Snippet(
+    content="def memoize(fn):\n    cache = {}\n    ...",
+    metadata=SnippetMetadata(
+        title="Memoization Decorator",
+        description="Cache function results",
+        language=Language.PYTHON,
+    ),
+    tags=["python", "decorator", "performance"],
+)
+storage.save(snippet)
+
+# Search with semantic understanding
+searcher = HybridSearch(config)
+searcher.index_snippets(storage.list_all())
+results = searcher.search("cache function results decorator")
+
+for r in results:
+    print(f"{r.score:.3f} | {r.snippet.metadata.title}")
+```
+
+---
+
+## Architecture
+
+```
+CLI (Typer + Rich)
+  │
+├── Providers (Claude XML / Cursor / OpenAI / Generic Markdown)
+│
+├── Search Engine
+│   ├── Semantic: sentence-transformers + FAISS
+│   ├── Keyword: TF-IDF (scikit-learn)
+│   └── Hybrid: configurable weighted fusion
+│
+├── Storage Engine
+│   └── Git-friendly JSON files per snippet
+│
+└── Data Models (Pydantic v2)
+    └── Snippet / SnippetMetadata / SnippetVersion
+```
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed design documentation.
+
+---
+
+## Configuration
+
+SnipContext uses environment variables and a YAML config file:
+
+```bash
+# Use GPU for embeddings
+export SNIPCONTEXT_EMBED_DEVICE="cuda"
+
+# Change embedding model
+export SNIPCONTEXT_EMBED_MODEL_NAME="all-mpnet-base-v2"
+
+# Adjust search weights
+export SNIPCONTEXT_SEARCH_SEMANTIC_WEIGHT="0.8"
+```
+
+Or edit `~/.config/SnipContext/snipcontext.yaml`:
+
+```yaml
+embedding:
+  model_name: "all-MiniLM-L6-v2"
+  device: "cpu"
+
+search:
+  default_mode: "hybrid"
+  semantic_weight: 0.7
+  keyword_weight: 0.3
+  top_k: 10
+```
+
+---
+
+## Development
+
+```bash
+# Clone
+git clone https://github.com/billybox1926-jpg/snipcontext.git
+cd snipcontext
+
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Run with coverage
+pytest --cov=snipcontext
+
+# Linting
+ruff check .
+mypy .
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+---
+
+## Roadmap
+
+- [x] Core snippet CRUD with git-friendly storage
+- [x] Semantic + hybrid search with local embeddings
+- [x] LLM-optimized export providers (Claude, Cursor, OpenAI, Generic)
+- [x] Rich CLI with Typer
+- [x] Plugin system with entry points
+- [x] Python library distribution (PyPI)
+- [ ] Real-time index updates (currently requires rebuild)
+- [ ] Import from GitHub Gists
+- [ ] Import from Git repositories
+- [ ] Snippet templates and scaffolding
+- [ ] Team sharing via git-sync
+- [ ] VS Code extension
+
+---
+
+## Project Structure
+
+```
+snipcontext/
+├── snipcontext/              # Python package
+│   ├── __init__.py           # Package exports
+│   ├── __main__.py           # python -m snipcontext
+│   ├── core/                 # Core engine (models, storage, search)
+│   │   ├── models.py         # Pydantic data models
+│   │   ├── storage.py        # Git-friendly JSON storage
+│   │   └── search.py         # Semantic + hybrid search
+│   ├── providers/            # LLM export providers
+│   │   ├── base.py           # Provider interface
+│   │   ├── claude.py         # Anthropic Claude XML
+│   │   ├── cursor.py         # Cursor IDE format
+│   │   ├── openai.py         # OpenAI format
+│   │   └── generic.py        # Universal Markdown
+│   ├── plugins/              # Plugin system
+│   │   └── base.py           # Plugin base + manager
+│   ├── config/               # Configuration
+│   │   └── settings.py       # Pydantic Settings
+│   └── cli/                  # Command-line interface
+│       └── main.py           # Typer CLI commands
+├── tests/                    # Comprehensive test suite
+├── docs/                     # Documentation
+│   ├── ARCHITECTURE.md       # Design docs
+│   └── API.md                # Python API reference
+├── pyproject.toml            # Modern Python packaging
+└── README.md                 # This file
+```
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) first.
