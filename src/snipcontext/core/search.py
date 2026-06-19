@@ -117,7 +117,7 @@ class VectorIndex:
 
     def __init__(self, config: Config | None = None) -> None:
         self._config = config or get_config()
-        self._index: "faiss.Index | None" = None
+        self._index: faiss.Index | None = None
         self._id_map: list[str] = []  # faiss_idx -> snippet_id
 
     @property
