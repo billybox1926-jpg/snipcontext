@@ -9,6 +9,7 @@ Thank you to everyone who has helped improve SnipContext!
 ## Contributors
 
 - **Gavriel-lab** ([@Gavriel-lab](https://github.com/Gavriel-lab)) — Issue templates, PR template, contributor onboarding docs (PR #49)
+- **saltines321-debug** — Project issue triage, debugging, and project management
 
 ## How to Contribute
 
