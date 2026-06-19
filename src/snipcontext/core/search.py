@@ -189,9 +189,7 @@ class VectorIndex:
         self._index.add(vec)
         self._id_map.append(snippet.id)
         self._id_to_idx[snippet.id] = len(self._id_map) - 1
-        self._content_hashes[snippet.id] = hashlib.sha256(
-            snippet.content.encode()
-        ).hexdigest()[:16]
+        self._content_hashes[snippet.id] = hashlib.sha256(snippet.content.encode()).hexdigest()[:16]
 
     def remove_vector(self, snippet_id: str) -> None:
         """Remove a single snippet from the FAISS index."""
