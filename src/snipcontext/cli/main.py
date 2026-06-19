@@ -145,12 +145,18 @@ def add(
     language: str = typer.Option("", "--lang", "-l", help="Programming language"),
     tags: list[str] = _OPT_TAGS,
     from_file: bool = typer.Option(False, "--file", "-f", help="Read content from file path"),
+    encrypt: bool = typer.Option(False, "--encrypt", "-e", help="Encrypt content for secure storage"),
+    sensitive: bool = typer.Option(False, "--sensitive", "-s", help="Mark as sensitive (implies --encrypt)"),
 ) -> None:
     """Add a new code snippet to your collection."""
     from snipcontext.core.models import Language, SnippetMetadata
     from snipcontext.core.storage import StorageEngine
 
     config = get_config()
+
+    # Handle encryption flags
+    if sensitive:
+        encrypt = True
 
     # Read content from stdin if not provided and stdin has data
     if content is None:
@@ -218,15 +224,35 @@ def add(
     except ValueError:
         lang_enum = Language.UNKNOWN
 
-    snippet = Snippet(
-        content=content,
-        metadata=SnippetMetadata(
-            title=title,
-            description=description,
-            language=lang_enum,
-        ),
-        tags=tags,
-    )
+    # Handle encryption if requested
+    if encrypt:
+        config = get_config()
+        if not config.encryption.enabled:
+            console.print("[red]Encryption is not enabled. Set SNIPCONTEXT_ENCRYPT_ENABLED=true[/red]")
+            raise typer.Exit(1)
+        storage_obj = StorageEngine()
+        encrypted = storage_obj.encrypt_content(content)
+        snippet = Snippet(
+            content="",  # Clear plaintext when encrypted
+            encrypted_content=encrypted,
+            metadata=SnippetMetadata(
+                title=title,
+                description=description,
+                language=lang_enum,
+            ),
+            tags=tags,
+        )
+        console.print(f"[green]Added encrypted snippet:[/green] [bold]{snippet.metadata.title}[/bold]")
+    else:
+        snippet = Snippet(
+            content=content,
+            metadata=SnippetMetadata(
+                title=title,
+                description=description,
+                language=lang_enum,
+            ),
+            tags=tags,
+        )
 
     storage = StorageEngine(config)
     storage.save(snippet)
@@ -826,6 +852,127 @@ def config_path() -> None:
     console.print(f"[bold]Data dir:[/bold]     {config.storage.data_dir}")
     console.print(f"[bold]Snippets:[/bold]    {config.snippets_path}")
     console.print(f"[bold]Index:[/bold]       {config.index_path}")
+
+
+# ---------------------------------------------------------------------------
+# Index rebuild
+# ---------------------------------------------------------------------------
+
+
+@app.command()
+def rebuild_index(
+    force: bool = typer.Option(False, "--force", "-f", help="Force rebuild even if index exists"),
+) -> None:
+    """Build or rebuild the search index.
+
+    If index exists, use --force to rebuild. Useful after corruption
+    or when switching search modes.
+    """
+    from snipcontext.core.search import HybridSearch
+    from snipcontext.core.storage import StorageEngine
+
+    config = get_config()
+    storage = StorageEngine(config)
+    searcher = HybridSearch(config)
+
+    snippets = storage.list_all()
+    if not snippets:
+        console.print("[yellow]No snippets found. Add some first![/yellow]")
+        return
+
+    if not force:
+        # Check if indices already exist
+        vector_loaded = True
+        keyword_loaded = True
+        try:
+            from snipcontext.core.search import KeywordIndex, VectorIndex
+            vi = VectorIndex(config)
+            ki = KeywordIndex(config)
+            vector_loaded = vi.load(config.index_path)
+            keyword_loaded = ki.load(config.index_path)
+        except Exception:
+            vector_loaded = False
+            keyword_loaded = False
+
+        if vector_loaded and keyword_loaded:
+            console.print("[yellow]Index already exists. Use --force to rebuild.[/yellow]")
+            return
+
+    console.print(f"[cyan]Rebuilding index for {len(snippets)} snippets...[/cyan]")
+    searcher.index_snippets(snippets)
+    console.print("[green]Index rebuilt successfully![/green]")
+
+
+# ---------------------------------------------------------------------------
+# Encryption helpers
+# ------------------------------------------------------------------
+
+
+@app.command()
+def encrypt(
+    snippet_id: str = typer.Argument(..., help="Snippet ID to encrypt"),
+) -> None:
+    """Encrypt a snippet's content for secure storage."""
+    from snipcontext.config.settings import get_config
+    from snipcontext.core.storage import StorageEngine
+
+    config = get_config()
+    if not config.encryption.enabled:
+        console.print("[red]Encryption is not enabled. Set SNIPCONTEXT_ENCRYPT_ENABLED=true[/red]")
+        console.print("[dim]See: https://github.com/billybox1926-jpg/snipcontext/wiki/Encryption[/dim]")
+        raise typer.Exit(1)
+
+    storage = StorageEngine()
+    try:
+        snippet = storage.get(snippet_id)
+    except Exception:
+        console.print(f"[red]Snippet not found: {snippet_id}[/red]")
+        raise typer.Exit(1) from None
+
+    if snippet.encrypted_content:
+        console.print("[yellow]Snippet already encrypted[/yellow]")
+        return
+
+    try:
+        storage_obj = StorageEngine()
+        encrypted = storage_obj.encrypt_content(snippet.content)
+        snippet.encrypted_content = encrypted
+        snippet.content = ""  # Clear plaintext
+        storage.save(snippet)
+        console.print(f"[green]Encrypted snippet: {snippet.metadata.title}[/green]")
+    except Exception as exc:
+        console.print(f"[red]Encryption failed: {exc}[/red]")
+        raise typer.Exit(1) from exc
+
+
+@app.command()
+def decrypt(
+    snippet_id: str = typer.Argument(..., help="Snippet ID to decrypt"),
+) -> None:
+    """Decrypt a snippet's content for viewing/editing."""
+    from snipcontext.core.storage import StorageEngine
+
+    storage = StorageEngine()
+    try:
+        snippet = storage.get(snippet_id)
+    except Exception:
+        console.print(f"[red]Snippet not found: {snippet_id}[/red]")
+        raise typer.Exit(1) from None
+
+    if not snippet.encrypted_content:
+        console.print("[yellow]Snippet is not encrypted[/yellow]")
+        return
+
+    try:
+        storage_obj = StorageEngine()
+        decrypted = storage_obj.decrypt_content(snippet.encrypted_content)
+        snippet.content = decrypted
+        snippet.encrypted_content = None
+        storage.save(snippet)
+        console.print(f"[green]Decrypted snippet: {snippet.metadata.title}[/green]")
+    except Exception as exc:
+        console.print(f"[red]Decryption failed: {exc}[/red]")
+        raise typer.Exit(1) from exc
 
 
 # ---------------------------------------------------------------------------
