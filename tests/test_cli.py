@@ -33,7 +33,9 @@ class TestAddCommand:
     """Tests for the `add` command."""
 
     def test_add_snippet(self):
-        result, tmp = invoke("add", "print('hello')", "--title", "Hello", "--tag", "python", "--tag", "demo")
+        result, tmp = invoke(
+            "add", "print('hello')", "--title", "Hello", "--tag", "python", "--tag", "demo"
+        )
         assert result.exit_code == 0
         assert "Added snippet" in result.output
 
@@ -41,12 +43,7 @@ class TestAddCommand:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write("def test():\n    pass\n")
             f.flush()
-            result, tmp = invoke(
-                "add", f.name,
-                "--file",
-                "--title", "Test File",
-                "--tag", "python"
-            )
+            result, tmp = invoke("add", f.name, "--file", "--title", "Test File", "--tag", "python")
             assert result.exit_code == 0
             assert "Added snippet" in result.output
 
