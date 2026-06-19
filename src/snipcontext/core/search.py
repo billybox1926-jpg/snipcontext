@@ -615,14 +615,7 @@ class HybridSearch:
         from snipcontext.core.storage import StorageEngine
 
         storage = StorageEngine(self._config)
-        storage._deleted_ids.add(snippet_id)
-        try:
-            snippet = storage.get(snippet_id)
-        except Exception:
-            snippet = None
-        if snippet is not None:
-            snippet.deleted = True
-            storage.save(snippet)
+        storage.mark_deleted(snippet_id)
         self.index_snippets(storage.list_all())
 
     def rebuild_incremental(self, snippets: list[Snippet]) -> None:
