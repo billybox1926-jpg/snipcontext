@@ -33,7 +33,7 @@ jobs:
         run: ruff format --check src/snipcontext tests
 
       - name: Mypy type check
-        run: mypy src/snipcontext --ignore-missing-imports --exclude="/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/torch"
+        run: mypy src/snipcontext --ignore-missing-imports --exclude="torch/nn/utils/parametrize.py"
 
   # ── Tests across Python versions ─────────────────────────────────
   test:
