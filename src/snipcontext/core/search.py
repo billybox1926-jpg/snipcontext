@@ -144,6 +144,8 @@ class VectorIndex:
         if not snippets:
             self._index = None
             self._id_map = []
+            self._id_to_idx = {}
+            self._content_hashes = {}
             return
 
         # Encode all snippets
@@ -178,29 +180,37 @@ class VectorIndex:
 
         logger.info("Built FAISS index: %d vectors, %d dims", len(snippets), dimension)
 
-    def add_vector(self, snippet: Snippet) -> None:
+    def add_vector(self, snippet: "Snippet") -> None:
         """Incrementally add a single snippet embedding to the FAISS index."""
         import numpy as np
 
         if snippet.id in self._id_to_idx:
-            self.remove_vector(snippet.id)
+            self.remove_vector(snippet.id)  # replace if exists
+
+        if self._index is None:
+            raise RuntimeError("Vector index is not initialized")
+
         embedding = self._embed_fn(snippet.content)
         vec = np.array([embedding], dtype=np.float32)
         self._index.add(vec)
         self._id_map.append(snippet.id)
         self._id_to_idx[snippet.id] = len(self._id_map) - 1
-        self._content_hashes[snippet.id] = hashlib.sha256(snippet.content.encode()).hexdigest()[:16]
+        self._content_hashes[snippet.id] = hashlib.sha256(
+            snippet.content.encode()
+        ).hexdigest()[:16]
 
     def remove_vector(self, snippet_id: str) -> None:
         """Remove a single snippet from the FAISS index."""
         import faiss
 
-        if snippet_id not in self._id_to_idx:
+        if self._index is None or snippet_id not in self._id_to_idx:
             return
+
         idx = self._id_to_idx[snippet_id]
         selector = faiss.IDSelectorBatch([idx])
         self._index.remove_ids(selector)
         del self._id_map[idx]
+        # Rebuild reverse map (indices shifted after removal)
         self._id_to_idx = {sid: i for i, sid in enumerate(self._id_map)}
         self._content_hashes.pop(snippet_id, None)
 
@@ -251,8 +261,6 @@ class VectorIndex:
         with open(path / "idmap.json", "w") as f:
             json_str = '"' + '", "'.join(self._id_map) + '"'
             f.write(f"[{json_str}]")
-        hash_path = path / "content_hashes.json"
-        hash_path.write_text(json.dumps(self._content_hashes), encoding="utf-8")
         logger.debug("Saved vector index to %s", path)
 
     def load(self, path: Path) -> bool:
@@ -308,6 +316,22 @@ class VectorIndex:
             except Exception:
                 pass
             return False
+
+    def _embed_fn(self, text: str) -> np.ndarray:
+        from sentence_transformers import SentenceTransformer
+
+        model = SentenceTransformer(
+            self._config.embedding.model_name,
+            device=self._config.embedding.device,
+        )
+        text = f"{self._config.embedding.doc_instruction}{text}"
+        embedding = model.encode(
+            text,
+            show_progress_bar=False,
+            convert_to_numpy=True,
+            normalize_embeddings=self._config.embedding.normalize,
+        )
+        return embedding.astype(np.float32).reshape(1, -1).flatten()
 
 
 # ---------------------------------------------------------------------------
@@ -581,60 +605,60 @@ class HybridSearch:
         self.embedder = EmbeddingEngine(config)
         self.vector_index = VectorIndex(config)
         self.keyword_index = KeywordIndex(config)
+        self._embed_cache: dict[str, np.ndarray] = {}
 
     def load_indices(self) -> tuple[bool, bool]:
-        """Load existing search indices from disk.
-
-        Attempts to load both semantic (vector) and keyword indices from disk.
-        Validates index integrity (ID map length matches matrix/vector counts).
-        Automatically cleans up corrupted index files on load failure.
+        """Load existing search indices from disk if available.
 
         Returns:
-            Tuple of (semantic_loaded, keyword_loaded) indicating which indices
-            were successfully loaded from disk.
+            Tuple of (semantic_loaded, keyword_loaded).
         """
         semantic_loaded = self.vector_index.load(self._config.index_path)
         keyword_loaded = self.keyword_index.load(self._config.index_path)
-
-        if semantic_loaded and keyword_loaded:
-            logger.debug("Loaded existing search indices from %s", self._config.index_path)
-
         return semantic_loaded, keyword_loaded
 
     def index_snippets(self, snippets: list[Snippet]) -> None:
-        """Build both semantic and keyword indices.
+        """Build both semantic and keyword indices."""
+        semantic_loaded, keyword_loaded = self.load_indices()
 
-        If indices already exist on disk, loads them instead of rebuilding.
-        If semantic index fails to load or build, falls back to keyword-only.
-        This provides resilience against index corruption and missing dependencies.
-
-        Args:
-            snippets: List of snippets to index. All snippets will be indexed.
-        """
-        # Try to load existing indices first
-        semantic_loaded = self.vector_index.load(self._config.index_path)
-        keyword_loaded = self.keyword_index.load(self._config.index_path)
-
-        # If both loaded successfully and we're not forcing rebuild, return
         if semantic_loaded and keyword_loaded:
             logger.debug("Loaded existing search indices from %s", self._config.index_path)
+            if not snippets:
+                return
+
+            enriched = []
+            for snippet in snippets:
+                enriched.append(self._merge_snippet(snippet))
+
+            self.vector_index.build([s for s in enriched if not s.deleted], self.embedder)
+            if not self.vector_index.is_trained:
+                raise RuntimeError("Vector index build failed after merging snippets")
+
+            self.vector_index.save(self._config.index_path)
+            self.keyword_index.build([s for s in enriched if not s.deleted])
+            if not self.keyword_index.is_trained:
+                raise RuntimeError("Keyword index build failed after merging snippets")
+
+            self.keyword_index.save(self._config.index_path)
             return
 
-        logger.info("Rebuilding search indices (%d snippets)", len(snippets))
+        self._build_indices_from_scratch(snippets)
 
-        # Try to build semantic index
+    def _build_indices_from_scratch(self, snippets: list[Snippet]) -> None:
+        active = [s for s in snippets if not getattr(s, "deleted", False)]
+        logger.info("Rebuilding search indices (%d snippets)", len(active))
+
         semantic_ok = False
         try:
-            self.vector_index.build(snippets, self.embedder)
+            self.vector_index.build(active, self.embedder)
             self.vector_index.save(self._config.index_path)
             semantic_ok = True
         except (ImportError, OSError) as exc:
             logger.warning("Semantic index build failed: %s", exc)
             logger.info("Falling back to keyword-only search")
 
-        # Always build keyword index as fallback
         try:
-            self.keyword_index.build(snippets)
+            self.keyword_index.build(active)
             self.keyword_index.save(self._config.index_path)
         except Exception as exc:
             logger.error("Keyword index build failed: %s", exc)
@@ -645,18 +669,24 @@ class HybridSearch:
         else:
             logger.info("Built hybrid search indices (semantic + keyword)")
 
+    def _merge_snippet(self, incoming: Snippet) -> Snippet:
+        existing = self._store.get(incoming.id) if hasattr(self, "_store") else None
+        if existing is None:
+            return incoming
+        merged = existing.model_copy(update=incoming.model_dump())
+        return merged
+
     def add_snippet(self, snippet: Snippet) -> None:
         """Incrementally add or update a single snippet in the index."""
+        self.vector_index.add_vector(snippet)
         from snipcontext.core.storage import StorageEngine
 
         storage = StorageEngine(self._config)
-        snippets = storage.list_all()
-        snippets = [snip for snip in snippets if snip.id != snippet.id]
-        snippets.append(snippet)
-        self.index_snippets(snippets)
+        self.keyword_index.build(storage.list_all())
+        self.keyword_index.save(self._config.index_path)
 
     def remove_snippet(self, snippet_id: str) -> None:
-        """Soft-delete a snippet and rebuild indices so it is excluded from results."""
+        """Soft-delete a snippet and remove from active indices."""
         from snipcontext.core.storage import StorageEngine
 
         storage = StorageEngine(self._config)
@@ -665,7 +695,7 @@ class HybridSearch:
 
     def rebuild_incremental(self, snippets: list[Snippet]) -> None:
         """Rebuild indices from a snapshot, excluding soft-deleted snippets."""
-        active = [snip for snip in snippets if not getattr(snip, "deleted", False)]
+        active = [snip for snip in snippets if not snip.deleted]
         self.index_snippets(active)
 
     def search(
