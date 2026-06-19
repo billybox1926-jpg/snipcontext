@@ -153,6 +153,76 @@ for r in results:
 
 ---
 
+## 🔐 Encryption at Rest
+
+SnipContext supports **Fernet (AES-128)** encryption for sensitive snippets. When enabled, snippet content is encrypted at rest using a key derived from a passphrase via PBKDF2 (100k iterations).
+
+### Enable Encryption
+
+```bash
+# Enable encryption (required)
+export SNIPCONTEXT_ENCRYPT_ENABLED=true
+
+# Set passphrase (used for key derivation)
+export SNIPCONTEXT_ENCRYPTION_PASSPHRASE="your-secure-passphrase"
+
+# Optional: persist salt to config (auto-generated if omitted)
+export SNIPCONTEXT_ENCRYPT_KEY_SALT="base64-encoded-salt"
+```
+
+### Encrypt Snippets
+
+```bash
+# Encrypt a new snippet
+snipcontext add "api_key = 'sk-12345'" \
+  --title "API Key" \
+  --tag secret \
+  --encrypt
+
+# Mark as sensitive (auto-enables encryption)
+snipcontext add "password = 'secret123'" \
+  --title "DB Password" \
+  --sensitive
+```
+
+### Decrypt for Viewing/Editing
+
+```bash
+# Decrypt for viewing
+snipcontext decrypt <snippet-id>
+
+# Encrypt an existing snippet
+snipcontext encrypt <snippet-id>
+```
+
+> **Note:** When encrypted, the plaintext `content` is cleared from storage. The `encrypted_content` field stores the encrypted data. Use `sc decrypt <id>` to restore plaintext for editing.
+
+---
+
+## 🔄 Index Rebuild & Resilience
+
+SnipContext automatically detects and recovers from index corruption. The `HybridSearch` engine validates index integrity on load and rebuilds automatically when needed.
+
+### Manual Rebuild
+
+```bash
+# Check if rebuild is needed (skips if index is valid)
+snipcontext rebuild-index
+
+# Force rebuild (useful after corruption, dependency changes, or mode switches)
+snipcontext rebuild-index --force
+```
+
+### Auto-Recovery
+
+The search engine automatically:
+1. **Validates index integrity** on load (checks ID map lengths, matrix dimensions)
+2. **Cleans up corrupted files** (deletes mismatched/corrupted index files)
+3. **Falls back gracefully** — if semantic index unavailable, runs keyword-only search
+4. **Rebuilds on demand** — `index_snippets()` auto-loads existing indices before rebuilding
+
+---
+
 ## Architecture
 
 ```
