@@ -178,6 +178,34 @@ class VectorIndex:
 
         logger.info("Built FAISS index: %d vectors, %d dims", len(snippets), dimension)
 
+    def add_vector(self, snippet: "Snippet") -> None:
+        """Incrementally add a single snippet embedding to the FAISS index."""
+        import numpy as np
+
+        if snippet.id in self._id_to_idx:
+            self.remove_vector(snippet.id)
+        embedding = self._embed_fn(snippet.content)
+        vec = np.array([embedding], dtype=np.float32)
+        self._index.add(vec)
+        self._id_map.append(snippet.id)
+        self._id_to_idx[snippet.id] = len(self._id_map) - 1
+        self._content_hashes[snippet.id] = hashlib.sha256(
+            snippet.content.encode()
+        ).hexdigest()[:16]
+
+    def remove_vector(self, snippet_id: str) -> None:
+        """Remove a single snippet from the FAISS index."""
+        import faiss
+
+        if snippet_id not in self._id_to_idx:
+            return
+        idx = self._id_to_idx[snippet_id]
+        selector = faiss.IDSelectorBatch([idx])
+        self._index.remove_ids(selector)
+        del self._id_map[idx]
+        self._id_to_idx = {sid: i for i, sid in enumerate(self._id_map)}
+        self._content_hashes.pop(snippet_id, None)
+
     def search(
         self,
         query_embedding: np.ndarray,
