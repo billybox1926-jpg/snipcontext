@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import pickle
+import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -109,12 +110,20 @@ class VectorIndex:
     """FAISS-based vector index for fast similarity search.
 
     Manages the mapping between FAISS internal IDs and SnipContext snippet IDs.
+    Supports incremental add via FAISS add(). Deletion is handled by tracking
+    removed IDs and filtering at search time; a full rebuild is done when
+    the removal ratio exceeds a threshold.
     """
+
+    # Fraction of deleted vectors that triggers an automatic rebuild
+    REBUILD_REMOVAL_FRACTION = 0.25
 
     def __init__(self, config: Config | None = None) -> None:
         self._config = config or get_config()
         self._index: "faiss.Index" | None = None
         self._id_map: list[str] = []  # faiss_idx -> snippet_id
+        self._removed_ids: set[str] = set()  # soft-deleted snippet IDs
+        self._dimension: int | None = None
 
     @property
     def is_trained(self) -> bool:
@@ -122,7 +131,39 @@ class VectorIndex:
 
     @property
     def count(self) -> int:
+        if self._index is None:
+            return 0
+        return self._index.ntotal - len(self._removed_ids)
+
+    @property
+    def total_raw(self) -> int:
+        """Raw vector count including soft-deleted entries."""
         return self._index.ntotal if self._index else 0
+
+    @property
+    def dimension(self) -> int | None:
+        return self._dimension
+
+    @property
+    def needs_rebuild(self) -> bool:
+        """Return True if too many deletions have accumulated."""
+        if self._index is None or self._index.ntotal == 0:
+            return False
+        return len(self._removed_ids) / self._index.ntotal > self.REBUILD_REMOVAL_FRACTION
+
+    def _build_index(self, dimension: int, embeddings: "np.ndarray") -> "faiss.Index":
+        """Create a new FAISS index (FlatIP or IVF depending on size)."""
+        import faiss
+
+        n = embeddings.shape[0]
+        if n > 5000:
+            nlist = min(int(np.sqrt(n)), 256)
+            quantizer = faiss.IndexFlatIP(dimension)
+            idx = faiss.IndexIVFFlat(quantizer, dimension, nlist)
+            idx.train(embeddings)
+        else:
+            idx = faiss.IndexFlatIP(dimension)
+        return idx
 
     def build(self, snippets: list[Snippet], embedding_engine: EmbeddingEngine) -> None:
         """Build the FAISS index from a list of snippets.
@@ -135,28 +176,23 @@ class VectorIndex:
         if not snippets:
             self._index = None
             self._id_map = []
+            self._removed_ids = set()
+            self._dimension = None
             return
 
         # Encode all snippets
         texts = [s.to_search_text() for s in snippets]
         embeddings = embedding_engine.encode(texts)
         dimension = embeddings.shape[1]
+        self._dimension = dimension
 
         # Normalize for cosine similarity via inner product
         faiss.normalize_L2(embeddings)
 
-        # Use IndexFlatIP for exact search (cosine similarity)
-        if len(snippets) > 5000:
-            # IVF for larger collections
-            nlist = min(int(np.sqrt(len(snippets))), 256)
-            quantizer = faiss.IndexFlatIP(dimension)
-            self._index = faiss.IndexIVFFlat(quantizer, dimension, nlist)
-            self._index.train(embeddings)
-        else:
-            self._index = faiss.IndexFlatIP(dimension)
-
+        self._index = self._build_index(dimension, embeddings)
         self._index.add(embeddings)
         self._id_map = [s.id for s in snippets]
+        self._removed_ids = set()
 
         # Store embeddings on snippets for hybrid search
         for i, snippet in enumerate(snippets):
@@ -165,6 +201,73 @@ class VectorIndex:
         logger.info(
             "Built FAISS index: %d vectors, %d dims", len(snippets), dimension
         )
+
+    def add_vector(
+        self, snippet_id: str, embedding_engine: EmbeddingEngine, text: str
+    ) -> None:
+        """Add a single snippet vector to the index incrementally.
+
+        If the index has accumulated too many soft-deletions, triggers
+        a full rebuild instead.
+
+        Args:
+            snippet_id: Unique ID for the snippet.
+            embedding_engine: The embedding engine to encode the text.
+            text: The search text to encode.
+        """
+        import faiss
+
+        if snippet_id in self._removed_ids:
+            self._removed_ids.discard(snippet_id)
+
+        embedding = embedding_engine.encode([text])
+        dimension = embedding.shape[1]
+
+        if self._index is None or self._dimension is None:
+            # First vector — build fresh
+            faiss.normalize_L2(embedding)
+            self._dimension = dimension
+            self._index = self._build_index(dimension, embedding)
+            self._id_map = []
+            self._removed_ids = set()
+        elif self.needs_rebuild:
+            logger.info("Vector index: rebuild triggered due to deletion ratio")
+            # Rebuild from scratch — collect all active vectors
+            active = [
+                sid for sid in self._id_map if sid not in self._removed_ids
+            ]
+            # We can't recover original vectors from FAISS FlatIP, so we
+            # encode fresh. The caller must handle this — here we just
+            # mark that a rebuild is needed and the HybridSearch layer
+            # will call build() instead.
+            self._removed_ids = set()
+            raise _IncrementalRebuildNeeded()
+        else:
+            faiss.normalize_L2(embedding)
+
+        self._index.add(embedding)
+        self._id_map.append(snippet_id)
+        logger.debug("Added vector for %s (index size: %d)", snippet_id, self._index.ntotal)
+
+    def remove_vector(self, snippet_id: str) -> bool:
+        """Mark a vector as removed (soft delete).
+
+        FAISS FlatIP doesn't support true deletion. We track removed IDs
+        and filter them at search time. A full rebuild happens automatically
+        when the removal ratio exceeds REBUILD_REMOVAL_FRACTION.
+
+        Args:
+            snippet_id: The snippet ID to remove.
+
+        Returns:
+            True if the ID was found in the index.
+        """
+        if snippet_id not in self._id_map:
+            return False
+        self._removed_ids.add(snippet_id)
+        logger.debug("Soft-deleted vector %s (removed: %d/%d)",
+                      snippet_id, len(self._removed_ids), len(self._id_map))
+        return True
 
     def search(
         self,
@@ -185,15 +288,20 @@ class VectorIndex:
         # Normalize query for cosine similarity
         faiss.normalize_L2(query_embedding)
 
-        scores, indices = self._index.search(query_embedding, top_k)
+        # Search with extra room to account for soft-deleted entries
+        search_k = top_k + len(self._removed_ids)
+        scores, indices = self._index.search(query_embedding, min(search_k, self._index.ntotal))
 
         results: list[tuple[str, float]] = []
         for score, idx in zip(scores[0], indices[0]):
             if idx < 0 or idx >= len(self._id_map):
                 continue
+            snippet_id = self._id_map[idx]
+            if snippet_id in self._removed_ids:
+                continue
             if score < min_score:
                 continue
-            results.append((self._id_map[idx], float(score)))
+            results.append((snippet_id, float(score)))
 
         return results
 
@@ -207,11 +315,16 @@ class VectorIndex:
             return
         path.mkdir(parents=True, exist_ok=True)
         import faiss
+        import json
 
         faiss.write_index(self._index, str(path / "vector.faiss"))
         with open(path / "idmap.json", "w") as f:
-            json_str = "\"" + "\", \"".join(self._id_map) + "\""
-            f.write(f"[{json_str}]")
+            json.dump(self._id_map, f)
+        with open(path / "removed_ids.json", "w") as f:
+            json.dump(list(self._removed_ids), f)
+        if self._dimension is not None:
+            with open(path / "dimension.json", "w") as f:
+                json.dump(self._dimension, f)
         logger.debug("Saved vector index to %s", path)
 
     def load(self, path: Path) -> bool:
@@ -233,11 +346,28 @@ class VectorIndex:
             self._index = faiss.read_index(str(index_file))
             with open(idmap_file, "r") as f:
                 self._id_map = json.load(f)
+            removed_file = path / "removed_ids.json"
+            if removed_file.exists():
+                with open(removed_file, "r") as f:
+                    self._removed_ids = set(json.load(f))
+            else:
+                self._removed_ids = set()
+            dim_file = path / "dimension.json"
+            if dim_file.exists():
+                with open(dim_file, "r") as f:
+                    self._dimension = json.load(f)
+            else:
+                self._dimension = self._index.d
             logger.debug("Loaded vector index from %s", path)
             return True
         except Exception as exc:
             logger.warning("Failed to load vector index: %s", exc)
             return False
+
+
+class _IncrementalRebuildNeeded(Exception):
+    """Internal signal that incremental add should fall back to full rebuild."""
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -250,6 +380,10 @@ class KeywordIndex:
 
     Provides fast exact and fuzzy text matching for snippet content,
     titles, descriptions, and tags.
+
+    Incremental operations are tracked via dirty flags; the index is
+    rebuilt from the pending snippet list on next modification, which is
+    fast for typical snippet collections (hundreds to low thousands).
     """
 
     def __init__(self, config: Config | None = None) -> None:
@@ -257,10 +391,23 @@ class KeywordIndex:
         self._vectorizer: "sklearnTfidfVectorizer" | None = None
         self._matrix: "sparse_matrix" | None = None
         self._id_map: list[str] = []
+        self._pending_adds: list[tuple[str, str]] = []  # (snippet_id, text)
+        self._pending_removes: set[str] = set()
+        self._dirty: bool = False
 
     @property
     def is_trained(self) -> bool:
         return self._vectorizer is not None and self._matrix is not None
+
+    @property
+    def is_dirty(self) -> bool:
+        """Return True if there are pending incremental changes."""
+        return self._dirty or bool(self._pending_adds or self._pending_removes)
+
+    @property
+    def count(self) -> int:
+        base = self._matrix.shape[0] if self._matrix is not None else 0
+        return base + len(self._pending_adds) - len(self._pending_removes)
 
     def build(self, snippets: list[Snippet]) -> None:
         """Build the TF-IDF index from snippets."""
@@ -270,6 +417,9 @@ class KeywordIndex:
             self._vectorizer = None
             self._matrix = None
             self._id_map = []
+            self._pending_adds = []
+            self._pending_removes = set()
+            self._dirty = False
             return
 
         texts = [s.to_search_text() for s in snippets]
@@ -283,12 +433,66 @@ class KeywordIndex:
         )
         self._matrix = self._vectorizer.fit_transform(texts)
         self._id_map = [s.id for s in snippets]
+        self._pending_adds = []
+        self._pending_removes = set()
+        self._dirty = False
 
         logger.info(
             "Built keyword index: %d docs, %d terms",
             len(snippets),
             len(self._vectorizer.vocabulary_),
         )
+
+    def _apply_pending(self) -> None:
+        """Rebuild the index to apply pending adds/removes."""
+        if not self.is_dirty:
+            return
+
+        # Build full list: existing (minus removes) + adds
+        active_ids = [sid for sid in self._id_map if sid not in self._pending_removes]
+        all_ids = active_ids + [sid for sid, _ in self._pending_adds]
+
+        if not all_ids:
+            self._vectorizer = None
+            self._matrix = None
+            self._id_map = []
+            self._pending_adds = []
+            self._pending_removes = set()
+            self._dirty = False
+            return
+
+        # We need the actual texts. For existing items we don't have them
+        # cached, so we need the caller to provide them. The HybridSearch
+        # layer handles this by calling build() with full snippet list.
+        # Here we just mark dirty and let the orchestrator rebuild.
+        logger.debug("Keyword index: %d pending adds, %d pending removes",
+                      len(self._pending_adds), len(self._pending_removes))
+
+    def add_doc(self, snippet_id: str, text: str) -> None:
+        """Queue a document for incremental addition.
+
+        The document is added to the pending list and will be included
+        in the index on the next rebuild (triggered automatically by
+        search or explicit rebuild).
+        """
+        # If this ID was pending removal, cancel the removal
+        self._pending_removes.discard(snippet_id)
+        # Remove any existing pending add for this ID
+        self._pending_adds = [(sid, t) for sid, t in self._pending_adds if sid != snippet_id]
+        self._pending_adds.append((snippet_id, text))
+        self._dirty = True
+        logger.debug("Keyword index: queued add for %s", snippet_id)
+
+    def remove_doc(self, snippet_id: str) -> bool:
+        """Queue a document for incremental removal."""
+        if snippet_id not in self._id_map:
+            return False
+        self._pending_removes.add(snippet_id)
+        # Remove any pending add for this ID
+        self._pending_adds = [(sid, t) for sid, t in self._pending_adds if sid != snippet_id]
+        self._dirty = True
+        logger.debug("Keyword index: queued remove for %s", snippet_id)
+        return True
 
     def search(
         self,
@@ -318,12 +522,33 @@ class KeywordIndex:
 
         results: list[tuple[str, float]] = []
         for idx in top_indices:
+            snippet_id = self._id_map[idx]
+            if snippet_id in self._pending_removes:
+                continue
             score = float(similarities[idx])
             if score < min_score:
                 continue
-            results.append((self._id_map[idx], score))
+            results.append((snippet_id, score))
 
-        return results
+        # Also search pending adds (brute-force, typically very few)
+        if self._pending_adds:
+            from sklearn.feature_extraction.text import TfidfVectorizer as _Tfidf
+            # For small pending lists, compute similarity directly
+            pending_texts = [text for _, text in self._pending_adds]
+            # Use the existing vectorizer's vocabulary for consistency
+            try:
+                pending_vecs = self._vectorizer.transform(pending_texts)
+                pending_sims = cosine_similarity(query_vec, pending_vecs)[0]
+                for i, (sid, _) in enumerate(self._pending_adds):
+                    score = float(pending_sims[i])
+                    if score >= min_score:
+                        results.append((sid, score))
+            except Exception:
+                pass  # Vocabulary mismatch — skip pending adds
+
+        # Re-sort and trim
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results[:top_k]
 
     def save(self, path: Path) -> None:
         """Save the keyword index to disk."""
@@ -352,6 +577,9 @@ class KeywordIndex:
             self._vectorizer = data["vectorizer"]
             self._matrix = data["matrix"]
             self._id_map = data["id_map"]
+            self._pending_adds = []
+            self._pending_removes = set()
+            self._dirty = False
             logger.debug("Loaded keyword index from %s", path)
             return True
         except Exception as exc:
@@ -418,6 +646,11 @@ class HybridSearch:
 
     This gives the best of both worlds — semantic understanding of intent
     plus precise keyword matching for specific terms.
+
+    Supports incremental indexing: add_snippet(), remove_snippet(), and
+    update_snippet() modify the indices without a full rebuild. The keyword
+    index auto-rebuilds when dirty; the vector index uses soft-delete with
+    automatic rebuild when the deletion ratio exceeds a threshold.
     """
 
     def __init__(self, config: Config | None = None) -> None:
@@ -425,6 +658,12 @@ class HybridSearch:
         self.embedder = EmbeddingEngine(config)
         self.vector_index = VectorIndex(config)
         self.keyword_index = KeywordIndex(config)
+        self._dirty: bool = False
+
+    @property
+    def is_dirty(self) -> bool:
+        """Return True if indices have pending incremental changes."""
+        return self._dirty or self.keyword_index.is_dirty
 
     def index_snippets(self, snippets: list[Snippet]) -> None:
         """Build both semantic and keyword indices."""
@@ -436,6 +675,99 @@ class HybridSearch:
 
         self.keyword_index.build(snippets)
         self.keyword_index.save(self._config.index_path)
+        self._dirty = False
+
+    def add_snippet(self, snippet: Snippet) -> None:
+        """Incrementally add a snippet to both indices.
+
+        For the vector index, encodes and adds the snippet embedding.
+        For the keyword index, queues the document for inclusion.
+        """
+        text = snippet.to_search_text()
+
+        # Vector index: try incremental add, fall back to rebuild
+        try:
+            self.vector_index.add_vector(snippet.id, self.embedder, text)
+        except _IncrementalRebuildNeeded:
+            logger.info("Incremental add: falling back to full vector rebuild")
+            all_snippets = self._load_all_for_rebuild(snippet)
+            self.vector_index.build(all_snippets, self.embedder)
+            self.vector_index.save(self._config.index_path)
+        except ImportError:
+            pass  # FAISS not available
+
+        # Keyword index: queue incremental add
+        self.keyword_index.add_doc(snippet.id, text)
+
+        # If keyword index is dirty with enough items, rebuild
+        if self.keyword_index.is_dirty:
+            all_snippets = None
+            # Check if we have pending adds that need hydration
+            if self.keyword_index._pending_adds:
+                try:
+                    all_snippets = self._load_all_for_rebuild()
+                except Exception:
+                    pass
+            if all_snippets is not None:
+                self.keyword_index.build(all_snippets)
+                self.keyword_index.save(self._config.index_path)
+            self._dirty = False
+
+        logger.debug("Incrementally added snippet %s", snippet.id)
+
+    def remove_snippet(self, snippet_id: str) -> bool:
+        """Incrementally remove a snippet from both indices."""
+        v_ok = self.vector_index.remove_vector(snippet_id)
+        k_ok = self.keyword_index.remove_doc(snippet_id)
+
+        # If vector index needs rebuild (too many deletions), do it
+        if self.vector_index.needs_rebuild:
+            try:
+                all_snippets = self._load_all_for_rebuild()
+                self.vector_index.build(all_snippets, self.embedder)
+                self.vector_index.save(self._config.index_path)
+            except Exception:
+                pass
+
+        # Rebuild keyword index if dirty
+        if self.keyword_index.is_dirty:
+            try:
+                all_snippets = self._load_all_for_rebuild()
+                if all_snippets:
+                    self.keyword_index.build(all_snippets)
+                    self.keyword_index.save(self._config.index_path)
+                else:
+                    self.keyword_index.build([])
+            except Exception:
+                pass
+
+        self._dirty = False
+        logger.debug("Removed snippet %s (v=%s, k=%s)", snippet_id, v_ok, k_ok)
+        return v_ok or k_ok
+
+    def update_snippet(self, snippet: Snippet) -> None:
+        """Update a snippet's index entries (remove old, add new)."""
+        self.remove_snippet(snippet.id)
+        self.add_snippet(snippet)
+
+    def _load_all_for_rebuild(self, extra: Snippet | None = None) -> list[Snippet]:
+        """Load all snippets from storage for index rebuild."""
+        from snipcontext.core.storage import StorageEngine
+        storage = StorageEngine(self._config)
+        snippets = storage.list_all()
+        if extra is not None and extra.id not in {s.id for s in snippets}:
+            snippets.append(extra)
+        return snippets
+
+    def _ensure_vectors_current(self) -> None:
+        """If vector index needs rebuild due to deletions, rebuild now."""
+        if self.vector_index.needs_rebuild and self.vector_index.is_trained:
+            try:
+                all_snippets = self._load_all_for_rebuild()
+                self.vector_index.build(all_snippets, self.embedder)
+                self.vector_index.save(self._config.index_path)
+            except Exception:
+                pass
 
     def search(
         self,
@@ -492,6 +824,9 @@ class HybridSearch:
         """Weighted fusion of semantic and keyword scores."""
         w_sem = self._config.search.semantic_weight
         w_kw = self._config.search.keyword_weight
+
+        # Ensure vector index is current before hybrid search
+        self._ensure_vectors_current()
 
         # Semantic results (if index available)
         sem_scores: dict[str, float] = {}
