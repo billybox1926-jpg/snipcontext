@@ -215,7 +215,7 @@ def get(
     raw: bool = typer.Option(False, "--raw", "-r", help="Print only code, no metadata"),
 ):
     """Retrieve a snippet by ID."""
-    from snipcontext.core.storage import StorageEngine, SnippetNotFoundError
+    from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
 
     config = get_config()
     storage = StorageEngine(config)
@@ -372,7 +372,7 @@ def edit(
     message: str = typer.Option("", "--message", "-m", help="Version bump message"),
 ):
     """Edit an existing snippet."""
-    from snipcontext.core.storage import StorageEngine, SnippetNotFoundError
+    from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
 
     config = get_config()
     storage = StorageEngine(config)
@@ -415,7 +415,7 @@ def delete(
     force: bool = typer.Option(False, "--force", help="Skip confirmation"),
 ):
     """Delete a snippet."""
-    from snipcontext.core.storage import StorageEngine, SnippetNotFoundError
+    from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
 
     config = get_config()
     storage = StorageEngine(config)
@@ -567,8 +567,8 @@ def stats():
 def demo():
     """Run an interactive demo with sample snippets."""
     from snipcontext.core.models import Language, Snippet, SnippetMetadata
-    from snipcontext.core.storage import StorageEngine
     from snipcontext.core.search import HybridSearch
+    from snipcontext.core.storage import StorageEngine
 
     config = get_config()
     storage = StorageEngine(config)
