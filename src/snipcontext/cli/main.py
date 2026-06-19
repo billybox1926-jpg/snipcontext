@@ -7,6 +7,7 @@ and an excellent developer experience.
 from __future__ import annotations
 
 import logging
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -129,7 +130,7 @@ def main(
 
 @app.command()
 def add(
-    content: str = typer.Argument(..., help="Code content or path to file"),
+    content: str | None = typer.Argument(None, help="Code content or path to file (reads from stdin if omitted)"),
     title: str = typer.Option("", "--title", "-t", help="Snippet title"),
     description: str = typer.Option("", "--desc", "-d", help="Short description"),
     language: str = typer.Option("", "--lang", "-l", help="Programming language"),
@@ -141,6 +142,14 @@ def add(
     from snipcontext.core.storage import StorageEngine
 
     config = get_config()
+
+    # Read content from stdin if not provided and stdin has data
+    if content is None:
+        if not sys.stdin.isatty():
+            content = sys.stdin.read()
+        else:
+            console.print("[red]Error: No content provided. Pass content as argument, use --file, or pipe content via stdin.[/red]")
+            raise typer.Exit(1)
 
     # Read content from file if requested
     if from_file:
@@ -168,6 +177,11 @@ def add(
     if not title:
         first_line = content.strip().split("\n")[0][:50]
         title = first_line or "Untitled Snippet"
+
+    # Validate content is not empty
+    if not content.strip():
+        console.print("[red]Error: Content cannot be empty.[/red]")
+        raise typer.Exit(1)
 
     # Build snippet
     try:
