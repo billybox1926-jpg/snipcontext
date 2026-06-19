@@ -83,6 +83,11 @@ class BaseProvider(ABC):
         return "\n".join(lines)
 
     def _code_block(self, snippet: Snippet) -> str:
-        """Wrap code content in appropriate fences."""
+        """Wrap code content in appropriate fences.
+
+        For encrypted snippets, returns a placeholder indicating the content is encrypted.
+        """
+        if snippet.encrypted_content:
+            return "```\n[ENCRYPTED CONTENT - Use 'sc decrypt <id>' to decrypt]\n```"
         lang = snippet.metadata.language.value
         return f"```{lang}\n{snippet.content}\n```"
