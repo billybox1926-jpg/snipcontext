@@ -18,6 +18,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from snipcontext.config.settings import get_config
+from snipcontext.core.models import Snippet
 
 # Module-level Option constants to avoid B008
 _OPT_TAG = typer.Option(None, "--tag", "-t", help="Filter by tag")
@@ -43,9 +44,6 @@ logger = logging.getLogger(__name__)
 
 # Rich console
 console = Console()
-
-# Type imports for forward references
-from snipcontext.core.models import Snippet
 
 # Typer app
 app = typer.Typer(
@@ -518,7 +516,7 @@ def export(
         raise typer.Exit(1) from err
 
     # Collect snippets
-    snippets: list["Snippet"] = []
+    snippets: list[Snippet] = []
 
     if ids:
         for sid in ids:

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     import typer
 
 
-def get_app() -> "typer.Typer":
+def get_app() -> typer.Typer:
     try:
         from snipcontext.cli.main import app
 
