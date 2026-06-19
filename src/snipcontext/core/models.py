@@ -140,6 +140,8 @@ class Snippet(BaseModel):
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)
     access_count: int = Field(default=0, description="Number of times snippet was retrieved")
+    deleted: bool = Field(default=False, description="Soft deletion flag")
+    delete_marker: str = Field(default="", description="Reason or actor for deletion")
 
     @model_validator(mode="after")
     def _validate_content_or_encrypted(self):
@@ -166,6 +168,11 @@ class Snippet(BaseModel):
     def tag_line(self) -> str:
         """Return tags as a formatted string."""
         return ", ".join(f"#{t}" for t in self.tags)
+
+    @property
+    def is_deleted(self) -> bool:
+        """Convenience accessor for soft-delete state."""
+        return bool(self.deleted)
 
     def bump_version(self, change_message: str = "") -> SnippetVersion:
         """Create a version snapshot from current state and append to history."""
