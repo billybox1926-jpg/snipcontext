@@ -110,6 +110,14 @@ class StorageEngine:
     def deleted_ids(self) -> set[str]:
         return set(self._deleted_ids)
 
+    def mark_deleted(self, snippet_id: str) -> None:
+        """Mark a snippet as soft-deleted and persist the change."""
+        self._deleted_ids.add(snippet_id)
+        snippet = self.get(snippet_id)
+        if snippet is not None:
+            snippet.deleted = True
+            self.save(snippet)
+
     def _snippet_path(self, snippet_id: str) -> Path:
         """Compute the filesystem path for a snippet by ID."""
         return self.snippets_dir / f"{snippet_id}.json"
