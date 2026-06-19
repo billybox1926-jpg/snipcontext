@@ -16,9 +16,21 @@ from rich.logging import RichHandler
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
 from snipcontext.config.settings import get_config
+
+# Module-level Option constants to avoid B008
+_OPT_TAG = typer.Option(None, "--tag", "-t", help="Filter by tag")
+_OPT_LANG = typer.Option(None, "--lang", "-l", help="Filter by language")
+_OPT_TAGS = typer.Option([], "--tag", help="Tags (repeatable)")
+_OPT_CONTENT = typer.Option(None, "--content", "-c", help="New code content")
+_OPT_TITLE = typer.Option(None, "--title", "-t", help="New title")
+_OPT_DESC = typer.Option(None, "--desc", "-d", help="New description")
+_OPT_ADD_TAGS = typer.Option([], "--add-tag", help="Add tags")
+_OPT_REMOVE_TAGS = typer.Option([], "--remove-tag", help="Remove tags")
+_OPT_QUERY = typer.Option(None, "--query", "-q", help="Export search results")
+_OPT_IDS = typer.Option([], "--id", help="Export specific snippet IDs")
+_OPT_OUTPUT = typer.Option(None, "--output", "-o", help="Output file (default: stdout)")
 
 # Configure logging with Rich
 logging.basicConfig(
@@ -121,7 +133,7 @@ def add(
     title: str = typer.Option("", "--title", "-t", help="Snippet title"),
     description: str = typer.Option("", "--desc", "-d", help="Short description"),
     language: str = typer.Option("", "--lang", "-l", help="Programming language"),
-    tags: list[str] = typer.Option([], "--tag", help="Tags (repeatable)"),
+    tags: list[str] = _OPT_TAGS,
     from_file: bool = typer.Option(False, "--file", "-f", help="Read content from file path"),
 ):
     """Add a new code snippet to your collection."""
@@ -227,6 +239,8 @@ def search(
     mode: str = typer.Option("hybrid", "--mode", "-m", help="Search mode: semantic, keyword, hybrid, tag"),
     top_k: int = typer.Option(10, "--limit", "-n", help="Max results"),
     index: bool = typer.Option(False, "--index", "-i", help="Force reindex before search"),
+    threshold: float = typer.Option(None, "--threshold", "-t", help="Minimum relevance score (0.0-1.0)"),
+    fuzzy: bool = typer.Option(False, "--fuzzy", "-f", help="Enable fuzzy matching for keyword search"),
 ):
     """Search snippets with semantic + keyword hybrid search."""
     from snipcontext.core.search import HybridSearch
@@ -246,10 +260,21 @@ def search(
         searcher.index_snippets(snippets)
         console.print(f"[green]Indexed {len(snippets)} snippets[/green]")
 
-    results = searcher.search(query, top_k=top_k, mode=mode)
+    results = searcher.search(
+        query,
+        top_k=top_k,
+        mode=mode,
+        min_score=threshold,
+        fuzzy=fuzzy,
+    )
 
     if not results:
         console.print(f"[yellow]No results for '{query}'[/yellow]")
+        # Suggest alternatives
+        if not fuzzy:
+            console.print("[dim]Try with --fuzzy for approximate matching[/dim]")
+        if threshold and threshold > 0.1:
+            console.print(f"[dim]Try lowering --threshold (currently {threshold})[/dim]")
         raise typer.Exit(0)
 
     console.print(f"\n[bold]{len(results)} results[/bold] for '[cyan]{query}[/cyan]' ([dim]{mode}[/dim]):\n")
@@ -262,8 +287,8 @@ def search(
 
 @app.command("list")
 def list_snippets(
-    tag: Optional[str] = typer.Option(None, "--tag", "-t", help="Filter by tag"),
-    language: Optional[str] = typer.Option(None, "--lang", "-l", help="Filter by language"),
+    tag: str | None = _OPT_TAG,
+    language: str | None = _OPT_LANG,
     sort: str = typer.Option("updated", "--sort", "-s", help="Sort by: updated, created, title, access"),
 ):
     """List all snippets with optional filters."""
@@ -325,11 +350,11 @@ def list_snippets(
 @app.command()
 def edit(
     snippet_id: str = typer.Argument(..., help="Snippet ID or prefix"),
-    content: Optional[str] = typer.Option(None, "--content", "-c", help="New code content"),
-    title: Optional[str] = typer.Option(None, "--title", "-t", help="New title"),
-    description: Optional[str] = typer.Option(None, "--desc", "-d", help="New description"),
-    add_tags: list[str] = typer.Option([], "--add-tag", help="Add tags"),
-    remove_tags: list[str] = typer.Option([], "--remove-tag", help="Remove tags"),
+    content: str | None = _OPT_CONTENT,
+    title: str | None = _OPT_TITLE,
+    description: str | None = _OPT_DESC,
+    add_tags: list[str] = _OPT_ADD_TAGS,
+    remove_tags: list[str] = _OPT_REMOVE_TAGS,
     message: str = typer.Option("", "--message", "-m", help="Version bump message"),
 ):
     """Edit an existing snippet."""
@@ -340,9 +365,9 @@ def edit(
 
     try:
         snippet = storage.get(snippet_id)
-    except SnippetNotFoundError:
+    except SnippetNotFoundError as err:
         console.print(f"[red]Snippet not found: {snippet_id}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from err
 
     # Version bump before changes
     snippet.bump_version(message or f"Edit: {title or 'metadata update'}")
@@ -383,9 +408,9 @@ def delete(
 
     try:
         snippet = storage.get(snippet_id)
-    except SnippetNotFoundError:
+    except SnippetNotFoundError as err:
         console.print(f"[red]Snippet not found: {snippet_id}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from err
 
     if not force and not _confirm_action(f"Delete '{snippet.metadata.title}'?"):
         console.print("Cancelled.")
@@ -418,10 +443,10 @@ def export(
 
     try:
         prov = pm.get_provider(provider)
-    except KeyError:
+    except KeyError as err:
         console.print(f"[red]Unknown provider: {provider}[/red]")
         console.print(f"Available: {', '.join(pm.list_providers().keys())}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from err
 
     # Collect snippets
     snippets: list = []
@@ -608,8 +633,8 @@ def demo():
 
     saved = []
     for snippet in snippets:
-        stored = storage.save(snippet)
-        saved.append(stored)
+        storage.save(snippet)
+        saved.append(snippet)
 
     console.print(f"[green]Seeded {len(saved)} demo snippets.[/green]")
 

@@ -13,7 +13,6 @@ def get_app():
         return app
     except Exception:
         try:
-            import sys
 
             import typer
         except Exception as exc:  # pragma: no cover - defensive fallback
