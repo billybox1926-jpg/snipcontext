@@ -22,6 +22,18 @@ Thanks for your interest in contributing.
 - [ ] Docs are updated (if behavior changed)
 - [ ] Changelog updated (if needed)
 
+## Good first issues
+
+If this is your first contribution to SnipContext, look for issues labeled:
+
+- [`good first issue`](https://github.com/billybox1926-jpg/snipcontext/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22) for small, well-scoped tasks.
+- [`help wanted`](https://github.com/billybox1926-jpg/snipcontext/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22help%20wanted%22) for tasks where community contributions are welcome.
+- [`documentation`](https://github.com/billybox1926-jpg/snipcontext/issues?q=is%3Aissue%20state%3Aopen%20label%3Adocumentation) for README, examples, and docs improvements.
+
+Good starter tasks are usually docs updates, small provider/export improvements, CLI help text, tests for existing behavior, or examples that make the project easier to use.
+
+Before starting, leave a short comment on the issue describing the scope you plan to take. Keep the first PR small enough for maintainers to review quickly.
+
 ## Local automation defaults
 
 - Bootstrap: `bash scripts/bootstrap.sh`

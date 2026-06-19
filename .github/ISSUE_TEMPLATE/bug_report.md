@@ -23,9 +23,15 @@ What you expected to happen.
 ## Environment
 
 - OS:
-- Version/commit:
+- Python version:
+- SnipContext version or commit:
+- Install method: PyPI / source checkout / direct GitHub install
+
+## Validation attempted
+
+- [ ] I checked the latest README or docs for the expected behavior.
+- [ ] I tried a clean command or minimal reproduction.
 
 ## Additional context
 
 Anything else that helps.
-
