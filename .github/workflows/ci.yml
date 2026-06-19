@@ -69,14 +69,20 @@ jobs:
             hf-models-${{ runner.os }}-
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
 
       - name: Run tests
-        run: pytest -q --tb=short --cov=src/snipcontext --cov-report=term-missing
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
+          python -m pytest -q --tb=short --cov=src/snipcontext --cov-report=term-missing
 
       - name: Run tests (slow)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: pytest -q --tb=short -m "slow"
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
+          python -m pytest -q --tb=short -m "slow"
 
   # ── Build & verify package ───────────────────────────────────────
   build:
