@@ -196,12 +196,16 @@ class VectorIndex:
 
         if embedding_engine is not None:
             text = f"{self._config.embedding.doc_instruction}{snippet.content}"
-            embedding = embedding_engine.model.encode(
-                text,
-                show_progress_bar=False,
-                convert_to_numpy=True,
-                normalize_embeddings=self._config.embedding.normalize,
-            ).astype(np.float32).flatten()
+            embedding = (
+                embedding_engine.model.encode(
+                    text,
+                    show_progress_bar=False,
+                    convert_to_numpy=True,
+                    normalize_embeddings=self._config.embedding.normalize,
+                )
+                .astype(np.float32)
+                .flatten()
+            )
         else:
             embedding = self._embed_fn(snippet.content)
         vec = np.array([embedding], dtype=np.float32)
@@ -727,6 +731,7 @@ class HybridSearch:
         """Rebuild keyword index if dirty before a keyword-dependent search."""
         if self._keyword_dirty:
             from snipcontext.core.storage import StorageEngine
+
             storage = StorageEngine(self._config)
             self.rebuild_keyword_index(storage.list_all())
 
