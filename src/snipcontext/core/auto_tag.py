@@ -8,7 +8,12 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import numpy as np
+    from collections.abc import Sequence
+
+    from snipcontext.core.search import VectorIndex
+    from snipcontext.core.storage import StorageEngine
+
+from snipcontext.config.settings import AutoTagConfig
 
 logger = logging.getLogger(__name__)
 
@@ -21,57 +26,33 @@ class SnippetNeighbor:
 
 @dataclass
 class AutoTagService:
-    vector_index: object = field(repr=False)
-    storage: object = field(repr=False)
-    config: object | None = field(default=None, repr=False)
+    vector_index: VectorIndex = field(repr=False)
+    storage: StorageEngine = field(repr=False)
+    config: AutoTagConfig = field(default_factory=AutoTagConfig)
 
-    def suggest(self, embedding: list[float]) -> list[str]:
+    def suggest(self, embedding: Sequence[float]) -> list[str]:
         try:
-            import numpy as np  # noqa: F401
-        except ModuleNotFoundError as exc:  # pragma: no cover
+            import numpy as np
+        except ModuleNotFoundError as exc:
             raise RuntimeError("numpy is required for autotag suggestions") from exc
 
-        vector_index = self.vector_index
-        if not getattr(vector_index, "is_trained", False):
+        if not self.vector_index.is_trained:
             return []
 
-        vec = _to_numpy(embedding)
-        top_k = getattr(self.config, "top_k", 5)
-        min_score = 0.0
-        raw = vector_index.search(vec, top_k=top_k + 1, min_score=min_score)
+        vec = np.asarray(embedding, dtype=np.float32).reshape(1, -1)
+        raw = self.vector_index.search(vec, top_k=self.config.top_k + 1, min_score=0.0)
         neighbors = [SnippetNeighbor(sid, score) for sid, score in raw]
 
         tag_freq: dict[str, int] = defaultdict(int)
         for neighbor in neighbors:
-            tags = _get_storage_tags(self.storage, neighbor.snippet_id)
-            if not tags:
-                continue
-            for tag in tags:
-                normalized = _normalize_tag(tag)
+            for tag in self.storage.get_tags(neighbor.snippet_id):
+                normalized = tag.strip().lower()
                 if normalized:
                     tag_freq[normalized] += 1
 
-        min_frequency = getattr(self.config, "min_frequency", 2)
-        candidates = [tag for tag, count in tag_freq.items() if count >= min_frequency]
-        candidates.sort(key=lambda tag: (-tag_freq[tag], tag))
+        candidates = [tag for tag, count in tag_freq.items() if count >= self.config.min_frequency]
+        candidates.sort(key=lambda t: (-tag_freq[t], t))
         return candidates
-
-
-def _to_numpy(values: list[float]) -> np.ndarray[tuple[int, ...], np.dtype[np.float32]]:
-    import numpy as np
-
-    return np.asarray(list(values), dtype=np.float32).reshape(1, -1)
-
-
-def _normalize_tag(tag: str) -> str:
-    return tag.strip().lower()
-
-
-def _get_storage_tags(storage: object, snippet_id: str) -> tuple[str, ...]:
-    try:
-        return tuple(storage.get_tags(snippet_id))
-    except Exception:
-        return tuple()
 
 
 def _build_auto_tag_smoke() -> None:
