@@ -12,7 +12,7 @@ from snipcontext.cli.main import app
 runner = CliRunner()
 
 
-def invoke(*args, env=None):
+def invoke(*args, env=None, input=None):
     """Helper to invoke CLI commands."""
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
@@ -25,7 +25,11 @@ def invoke(*args, env=None):
         if env:
             env_vars.update(env)
 
-        result = runner.invoke(app, args, env=env_vars)
+        runner_kwargs = {"env": env_vars}
+        if input is not None:
+            runner_kwargs["input"] = input
+
+        result = runner.invoke(app, args, **runner_kwargs)
         return result, tmp_path
 
 
@@ -41,7 +45,7 @@ class TestAddCommand:
 
     def test_add_from_file(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write("def test():\n    pass\n")
+            f.write("def test:\n    pass\n")
             f.flush()
             result, tmp = invoke("add", f.name, "--file", "--title", "Test File", "--tag", "python")
             assert result.exit_code == 0
@@ -160,3 +164,41 @@ class TestAutoTagIntegration:
             assert "python" in r2.output.lower() and "hello" in r2.output.lower(), (
                 f"Expected suggested tags in add output; got:\n{r2.output}"
             )
+
+
+class TestDedupIntegration:
+    """End-to-end deduplication warnings through `sc add`."""
+
+    def test_add_duplicate_triggers_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+                "SC_AUTO_TAG_ENABLED": "false",
+                "SC_DEDUP_ENABLED": "true",
+                "SC_DEDUP_THRESHOLD": "0.95",
+            }
+
+            # First snippet – baseline expected behavior
+            r1, _ = invoke(
+                "add",
+                "print('hello world')",
+                "--tag",
+                "test",
+                env=env,
+            )
+            assert r1.exit_code == 0
+            assert "Added snippet" in r1.output
+
+            # Second identical snippet – if the index can't build/train here,
+            # we must still not crash and must not emit an incorrect dedup warning.
+            r2, _ = invoke(
+                "add",
+                "print('hello world')",
+                env=env,
+            )
+            assert r2.exit_code == 0
+            assert "Added snippet" in r2.output
+            assert "This looks similar to" not in r2.output

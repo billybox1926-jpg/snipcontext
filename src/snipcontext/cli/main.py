@@ -328,32 +328,39 @@ def add(
             tags=tags,
         )
 
-    # Auto-tag suggestions from existing embeddings before persistence.
+    # Auto-tag and dedup suggestions from existing embeddings before persistence.
     final_tags = list(snippet.tags)
-    if getattr(config.auto_tag, "enabled", False) and not encrypt:
+    auto_tag_enabled = getattr(getattr(config, "auto_tag", None), "enabled", False)
+    dedup_enabled = getattr(getattr(config, "dedup", None), "enabled", False)
+    if (auto_tag_enabled or dedup_enabled) and not encrypt:
+        search = None
         try:
             from snipcontext.core.auto_tag import AutoTagService
             from snipcontext.core.search import HybridSearch
         except Exception as exc:  # pragma: no cover - defensive for optional path
-            logger.debug("Auto-tag setup skipped: %s", exc)
+            logger.debug("Auto-tag/dedup setup skipped: %s", exc)
         else:
             try:
                 search = HybridSearch(config)
-                searcher_ready = True
             except Exception as exc:  # pragma: no cover
-                logger.debug("Auto-tag disabled because search setup failed: %s", exc)
-                searcher_ready = False
+                logger.debug("Auto-tag/dedup disabled because search setup failed: %s", exc)
 
-            if searcher_ready:
+        if search is not None:
+            storage_engine = StorageEngine(config)
+            embedding = None
+
+            # Auto-tag suggestions using the precomputed search/index.
+            if auto_tag_enabled:
                 service = AutoTagService(
                     vector_index=search.vector_index,
-                    storage=StorageEngine(config),
+                    storage=storage_engine,
                     config=config.auto_tag,
                 )
                 try:
                     embedding = search.embedder.encode_query(snippet.to_search_text()).flatten()
                 except Exception as exc:  # pragma: no cover - model/runtime issues
                     logger.debug("Auto-tag embedding failed: %s", exc)
+                    embedding = None
                 else:
                     suggested = service.suggest(embedding.tolist())
                     if suggested:
@@ -361,6 +368,38 @@ def add(
                         accepted = _accept_auto_tags(merged, final_tags)
                         if accepted is not None:
                             final_tags = accepted
+
+            # Dedup check against the single best match.
+            if dedup_enabled and embedding is None:
+                try:
+                    embedding = search.embedder.encode_query(snippet.to_search_text()).flatten()
+                except Exception as exc:  # pragma: no cover
+                    logger.debug("Dedup embedding failed: %s", exc)
+                    embedding = None
+
+            if dedup_enabled and embedding is not None:
+                try:
+                    if getattr(search.vector_index, "is_trained", False):
+                        neighbors = search.vector_index.search(embedding.reshape(1, -1), top_k=1)
+                    else:
+                        neighbors = []
+                except Exception as exc:  # pragma: no cover
+                    logger.debug("Dedup search failed: %s", exc)
+                    neighbors = []
+
+                if neighbors:
+                    neighbor_id, score = neighbors[0]
+                    if score >= config.dedup.threshold:
+                        try:
+                            neighbor = storage_engine.get(neighbor_id)
+                            title = neighbor.metadata.title
+                        except Exception:  # pragma: no cover
+                            title = neighbor_id
+                        console.print(
+                            f"[yellow]This looks similar to '{title}' (id: {neighbor_id}). Add anyway?[/yellow]"
+                        )
+                        if not typer.confirm("Add anyway?", default=False):
+                            raise typer.Exit(0)
 
     snippet = snippet.model_copy(update={"tags": final_tags})
 
