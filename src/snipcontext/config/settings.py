@@ -128,6 +128,23 @@ class EncryptionConfig(BaseSettings):
         return salt
 
 
+class AutoTagConfig(BaseSettings):
+    """Configuration for auto-tag suggestions."""
+
+    model_config = SettingsConfigDict(env_prefix="SC_AUTO_TAG_", extra="ignore")
+
+    enabled: bool = Field(
+        default=True,
+        description="Enable local auto-tag suggestions from the FAISS index",
+    )
+    top_k: int = Field(default=5, ge=1, le=50)
+    min_frequency: int = Field(default=2, ge=1)
+    auto_accept: bool = Field(
+        default=False,
+        description="Apply suggestions automatically without interactive prompt",
+    )
+
+
 class Config(BaseSettings):
     """Root configuration for SnipContext.
 
@@ -150,6 +167,7 @@ class Config(BaseSettings):
     storage: StorageConfig = Field(default_factory=StorageConfig)
     export: ExportConfig = Field(default_factory=ExportConfig)
     encryption: EncryptionConfig = Field(default_factory=EncryptionConfig)
+    auto_tag: AutoTagConfig = Field(default_factory=AutoTagConfig)
 
     @field_validator("storage", mode="before")
     @classmethod

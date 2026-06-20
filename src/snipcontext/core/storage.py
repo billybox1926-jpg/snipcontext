@@ -248,6 +248,13 @@ class StorageEngine:
         tag = tag.strip().lower()
         return [s for s in self.iter_all() if tag in s.tags]
 
+    def get_tags(self, snippet_id: str) -> tuple[str, ...]:
+        """Return normalized tags for a single stored snippet, or an empty tuple if missing."""
+        try:
+            return tuple(self.get(snippet_id).tags)
+        except Exception:
+            return tuple()
+
     def get_all_tags(self) -> list[str]:
         """Return a sorted list of all unique tags across all snippets."""
         tags: set[str] = set()
