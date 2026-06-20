@@ -145,23 +145,6 @@ class AutoTagConfig(BaseSettings):
     )
 
 
-class DedupConfig(BaseSettings):
-    """Configuration for local deduplication on sc add."""
-
-    model_config = SettingsConfigDict(env_prefix="SC_DEDUP_", extra="ignore")
-
-    enabled: bool = Field(
-        default=True,
-        description="Warn if a similar snippet already exists before saving",
-    )
-    threshold: float = Field(
-        default=0.95,
-        ge=0.0,
-        le=1.0,
-        description="Minimum cosine similarity to trigger a deduplication warning",
-    )
-
-
 class Config(BaseSettings):
     """Root configuration for SnipContext.
 
@@ -186,6 +169,7 @@ class Config(BaseSettings):
     auto_tag: AutoTagConfig = Field(default_factory=AutoTagConfig)
     dedup: DedupConfig = Field(default_factory=DedupConfig)
     encryption: EncryptionConfig = Field(default_factory=EncryptionConfig)
+    auto_tag: AutoTagConfig = Field(default_factory=AutoTagConfig)
 
     @field_validator("storage", mode="before")
     @classmethod
