@@ -1,10 +1,12 @@
 # SnipContext
 
-[![PyPI version](https://img.shields.io/pypi/v/snipcontext)](https://pypi.org/project/snipcontext/)
-[![CI Status](https://img.shields.io/github/actions/status/billybox1926-jpg/snipcontext/ci)](https://github.com/billybox1926-jpg/snipcontext/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/billybox1926-jpg/snipcontext)](LICENSE)
-[![Python](https://img.shields.io/pypi/pyversions/snipcontext)](https://pypi.org/project/snipcontext/)
-[![Downloads](https://img.shields.io/pypi/dm/snipcontext)](https://pypi.org/project/snipcontext/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Ruff](https://img.shields.io/badge/lint-ruff-261230?logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
+[![Mypy](https://img.shields.io/badge/types-mypy-2C3E50?logo=python&logoColor=white)](https://mypy-lang.org/)
+[![Contributors](https://img.shields.io/github/contributors/billybox1926-jpg/snipcontext)](../../graphs/contributors)
+[![Last Commit](https://img.shields.io/github/last-commit/billybox1926-jpg/snipcontext)](../../commits/master)
+[![Issues](https://img.shields.io/github/issues/billybox1926-jpg/snipcontext)](../../issues)
 
 **AI-powered code snippet & context manager.**
 
