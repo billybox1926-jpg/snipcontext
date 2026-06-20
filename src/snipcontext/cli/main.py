@@ -698,8 +698,31 @@ def export(
 
 
 @app.command()
+def index(
+    force: bool = typer.Option(False, "--force", help="Skip confirmation prompt"),
+) -> None:
+    """Rebuild the search index from all stored snippets."""
+    from snipcontext.core.search import HybridSearch
+    from snipcontext.core.storage import StorageEngine
+
+    config = get_config()
+    storage = StorageEngine(config)
+    snippets = storage.list_all()
+
+    if not snippets:
+        console.print("[yellow]No snippets found. Index will be empty.[/yellow]")
+        if not force:
+            return
+
+    console.print(f"Indexing {len(snippets)} snippets...")
+    search = HybridSearch(config)
+    search.index_snippets(snippets)
+    console.print(f"Index complete. {len(snippets)} snippets indexed.")
+
+
+@app.command()
 def build_index(
-    force: bool = typer.Option(False, "--force", "-f", help="Force rebuild even if index exists"),
+    force: typer.Option(False, "--force", "-f", help="Force rebuild even if index exists"),
 ) -> None:
     """Build or rebuild the semantic search index."""
     from snipcontext.core.search import HybridSearch

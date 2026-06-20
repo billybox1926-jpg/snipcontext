@@ -18,7 +18,33 @@ class _Snippet:
 # ---------- HybridSearch incremental methods ----------
 
 
-def test_add_snippet_calls_index_snippets_with_updated_list() -> None:
+def test_add_snippet_calls_vector_index_add_vector() -> None:
+    from snipcontext.core.search import HybridSearch
+
+    snippet_a = _Snippet("snippet-a")
+    snippet_b = _Snippet("snippet-b")
+    storage = MagicMock()
+    storage.list_all.return_value = [snippet_a, snippet_b]
+
+    with patch.object(HybridSearch, "__init__", lambda self, config: None):
+        search = HybridSearch(None)
+        search._config = MagicMock()
+        search.vector_index = MagicMock()
+        search.keyword_index = MagicMock()
+        search.embedder = MagicMock()
+
+    with (
+        patch("snipcontext.core.storage.StorageEngine", return_value=storage),
+        patch.object(search.vector_index, "save") as mock_save,
+    ):
+        search.add_snippet(snippet_b)
+
+    search.vector_index.add_vector.assert_called_once_with(snippet_b, search.embedder)
+    mock_save.assert_called_once_with(search._config.index_path)
+    assert search._keyword_dirty is True
+
+
+def test_remove_snippet_calls_vector_index_remove_vector() -> None:
     from snipcontext.core.search import HybridSearch
 
     snippet_a = _Snippet("snippet-a")
@@ -34,34 +60,13 @@ def test_add_snippet_calls_index_snippets_with_updated_list() -> None:
 
     with (
         patch("snipcontext.core.storage.StorageEngine", return_value=storage),
-        patch.object(search, "index_snippets"),
-        patch.object(search.keyword_index, "build"),
-        patch.object(search.keyword_index, "save"),
-    ):
-        search.add_snippet(snippet_b)
-
-
-def test_remove_snippet_calls_mark_deleted_and_rebuilds() -> None:
-    from snipcontext.core.search import HybridSearch
-
-    snippet_a = _Snippet("snippet-a")
-    snippet_b = _Snippet("snippet-b")
-    storage = MagicMock()
-    storage.list_all.return_value = [snippet_a, snippet_b]
-
-    with patch.object(HybridSearch, "__init__", lambda self, config: None):
-        search = HybridSearch(None)
-        search._config = MagicMock()
-
-    with (
-        patch("snipcontext.core.storage.StorageEngine", return_value=storage),
-        patch.object(search, "index_snippets") as mock_index,
+        patch.object(search.vector_index, "save") as mock_save,
     ):
         search.remove_snippet("snippet-a")
 
-    storage.mark_deleted.assert_called_once_with("snippet-a")
-    called = mock_index.call_args[0][0]
-    assert called == [snippet_a, snippet_b]
+    search.vector_index.remove_vector.assert_called_once_with("snippet-a")
+    mock_save.assert_called_once_with(search._config.index_path)
+    assert search._keyword_dirty is True
 
 
 def test_rebuild_incremental_excludes_soft_deleted() -> None:
