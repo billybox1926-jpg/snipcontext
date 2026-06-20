@@ -343,9 +343,7 @@ def add(
             try:
                 search = HybridSearch(config)
             except Exception as exc:  # pragma: no cover
-                logger.debug(
-                    "Auto-tag/dedup disabled because search setup failed: %s", exc
-                )
+                logger.debug("Auto-tag/dedup disabled because search setup failed: %s", exc)
 
         if search is not None:
             storage_engine = StorageEngine(config)
@@ -359,9 +357,7 @@ def add(
                     config=config.auto_tag,
                 )
                 try:
-                    embedding = search.embedder.encode_query(
-                        snippet.to_search_text()
-                    ).flatten()
+                    embedding = search.embedder.encode_query(snippet.to_search_text()).flatten()
                 except Exception as exc:  # pragma: no cover - model/runtime issues
                     logger.debug("Auto-tag embedding failed: %s", exc)
                     embedding = None
@@ -376,9 +372,7 @@ def add(
             # Dedup check against the single best match.
             if dedup_enabled and embedding is None:
                 try:
-                    embedding = search.embedder.encode_query(
-                        snippet.to_search_text()
-                    ).flatten()
+                    embedding = search.embedder.encode_query(snippet.to_search_text()).flatten()
                 except Exception as exc:  # pragma: no cover
                     logger.debug("Dedup embedding failed: %s", exc)
                     embedding = None
@@ -386,9 +380,7 @@ def add(
             if dedup_enabled and embedding is not None:
                 try:
                     if getattr(search.vector_index, "is_trained", False):
-                        neighbors = search.vector_index.search(
-                            embedding.reshape(1, -1), top_k=1
-                        )
+                        neighbors = search.vector_index.search(embedding.reshape(1, -1), top_k=1)
                     else:
                         neighbors = []
                 except Exception as exc:  # pragma: no cover
