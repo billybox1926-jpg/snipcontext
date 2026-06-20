@@ -150,6 +150,27 @@ def _confirm_action(message: str) -> bool:
     return typer.confirm(message, default=False)
 
 
+def _accept_auto_tags(merged_tags: list[str], existing_tags: list[str]) -> list[str] | None:
+    console.print(f"[yellow]Suggested tags: {', '.join(merged_tags)}[/yellow]")
+    choice = (
+        typer.prompt(
+            "Accept all, keep existing, or enter tags",
+            default="a",
+            show_default=True,
+        )
+        .strip()
+        .lower()
+    )
+    if choice in {"a", "accept", "y", "yes"}:
+        return merged_tags
+    if choice in {"e", "existing", "k", "keep"}:
+        return existing_tags
+    if not choice:
+        return None
+    custom = [part.strip() for part in choice.replace(",", " ").split() if part.strip()]
+    return sorted({*existing_tags, *custom}) if custom else None
+
+
 def _init_config_and_plugins() -> tuple:
     """Initialize config and plugin manager."""
     from snipcontext.plugins.base import PluginManager
@@ -276,13 +297,12 @@ def add(
 
     # Handle encryption if requested
     if encrypt:
-        config = get_config()
         if not config.encryption.enabled:
             console.print(
                 "[red]Encryption is not enabled. Set SNIPCONTEXT_ENCRYPT_ENABLED=true[/red]"
             )
             raise typer.Exit(1)
-        storage_obj = StorageEngine()
+        storage_obj = StorageEngine(config)
         encrypted = storage_obj.encrypt_content(content)
         snippet = Snippet(
             content="",  # Clear plaintext when encrypted
@@ -307,6 +327,42 @@ def add(
             ),
             tags=tags,
         )
+
+    # Auto-tag suggestions from existing embeddings before persistence.
+    final_tags = list(snippet.tags)
+    if getattr(config.auto_tag, "enabled", False) and not encrypt:
+        try:
+            from snipcontext.core.auto_tag import AutoTagService
+            from snipcontext.core.search import HybridSearch
+        except Exception as exc:  # pragma: no cover - defensive for optional path
+            logger.debug("Auto-tag setup skipped: %s", exc)
+        else:
+            try:
+                search = HybridSearch(config)
+                searcher_ready = True
+            except Exception as exc:  # pragma: no cover
+                logger.debug("Auto-tag disabled because search setup failed: %s", exc)
+                searcher_ready = False
+
+            if searcher_ready:
+                service = AutoTagService(
+                    vector_index=search.vector_index,
+                    storage=StorageEngine(config),
+                    config=config.auto_tag,
+                )
+                try:
+                    embedding = search.embedder.encode_query(snippet.to_search_text()).flatten()
+                except Exception as exc:  # pragma: no cover - model/runtime issues
+                    logger.debug("Auto-tag embedding failed: %s", exc)
+                else:
+                    suggested = service.suggest(embedding.tolist())
+                    if suggested:
+                        merged = sorted({*final_tags, *suggested})
+                        accepted = _accept_auto_tags(merged, final_tags)
+                        if accepted is not None:
+                            final_tags = accepted
+
+    snippet = snippet.model_copy(update={"tags": final_tags})
 
     storage = StorageEngine(config)
     storage.save(snippet)

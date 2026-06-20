@@ -5,9 +5,8 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from typer.testing import CliRunner
-
 from snipcontext.cli.main import app
+from typer.testing import CliRunner
 
 runner = CliRunner()
 
@@ -121,3 +120,42 @@ class TestConfigCommands:
         result, tmp = invoke("config", "path")
         assert result.exit_code == 0
         assert "Data dir" in result.output
+
+
+class TestAutoTagIntegration:
+    """End-to-end auto-tag suggestions through `sc add`."""
+
+    def test_add_auto_tag_suggestion(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+                "SC_AUTO_TAG_ENABLED": "true",
+                "SC_AUTO_TAG_TOP_K": "3",
+                "SC_AUTO_TAG_MIN_FREQUENCY": "1",
+                "SC_AUTO_TAG_AUTO_ACCEPT": "true",
+            }
+
+            r1, _ = invoke(
+                "add",
+                "print('hello world')",
+                "--tag",
+                "python",
+                "--tag",
+                "hello",
+                env=env,
+            )
+            assert r1.exit_code == 0
+
+            r2, _ = invoke(
+                "add",
+                "print('hello python')",
+                env=env,
+            )
+            assert r2.exit_code == 0
+
+            assert (
+                "python" in r2.output.lower() and "hello" in r2.output.lower()
+            ), f"Expected suggested tags in add output; got:\n{r2.output}"
