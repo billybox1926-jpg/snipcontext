@@ -137,10 +137,10 @@ ignore_missing_imports = true
 disable_error_code = [
     "import-untyped",
     "no-untyped-def",
-    "untyped-decorator",
     "misc",
     "no-any-return",
     "type-arg",
+    "no-untyped-call",
 ]
 
 [[tool.mypy.overrides]]
