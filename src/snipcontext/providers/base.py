@@ -91,3 +91,6 @@ class BaseProvider(ABC):
             return "```\n[ENCRYPTED CONTENT - Use 'sc decrypt <id>' to decrypt]\n```"
         lang = snippet.metadata.language.value
         return f"```{lang}\n{snippet.content}\n```"
+
+
+Provider = BaseProvider

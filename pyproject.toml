@@ -119,7 +119,7 @@ select = [
     "UP",  # pyupgrade
     "B",   # flake8-bugbear
 ]
-ignore = ["E501"]
+ignore = ["E501", "B008"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -128,24 +128,27 @@ quote-style = "double"
 convention = "google"
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 strict = true
 warn_return_any = true
 warn_unused_ignores = true
 show_error_codes = true
 ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
 disable_error_code = [
     "import-untyped",
-    "no-untyped-def",
-    "untyped-decorator",
-    "misc",
-    "no-any-return",
     "type-arg",
     "no-untyped-call",
+    "misc",
+    "no-untyped-def",
 ]
 
 [[tool.mypy.overrides]]
 module = "torch.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "watchdog.*"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

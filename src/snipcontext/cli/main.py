@@ -1,7 +1,8 @@
 """SnipContext CLI - AI-powered code snippet & context manager."""
 
+import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 import typer
 from rich.console import Console
@@ -17,6 +18,8 @@ from snipcontext.providers.claude import ClaudeProvider
 from snipcontext.providers.cursor import CursorProvider
 from snipcontext.providers.generic import GenericProvider
 from snipcontext.providers.openai import OpenAIProvider
+
+logger = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="snipcontext",
@@ -45,8 +48,8 @@ def add(
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Snippet title"),
     description: Optional[str] = typer.Option(None, "--desc", "-d", help="Snippet description"),
     language: Optional[str] = typer.Option(None, "--lang", "-l", help="Programming language"),
-    tags: List[str] = typer.Option([], "--tag", "-T", help="Tag(s) (can be repeated)"),
-    file: Optional[Path] = typer.Option(None, "--file", "-f", help="Read content from file"),
+    tags: list[str] = typer.Option([], "--tag", "-T", help="Tag(s) (can be repeated)"),
+    from_file: bool = typer.Option(False, "--file", "-f", help="Read content from file"),
     sensitive: bool = typer.Option(
         False, "--sensitive", "-s", help="Mark as sensitive (encrypted)"
     ),
@@ -55,17 +58,18 @@ def add(
     """Add a new snippet."""
     config = get_config()
 
-    if file:
+    if from_file:
         if content != "":
             console.print(
                 "[yellow]Warning: both content and --file given; ignoring content.[/yellow]"
             )
-        if not file.exists():
-            console.print(f"[red]File not found: {file}[/red]")
+        file_path = Path(content)
+        if not file_path.exists():
+            console.print(f"[red]File not found: {file_path}[/red]")
             raise typer.Exit(code=1)
-        content = file.read_text(encoding="utf-8")
+        content = file_path.read_text(encoding="utf-8")
         if not title:
-            title = file.stem
+            title = file_path.stem
 
     # Infer language from extension if not provided
     if not language and title:
@@ -85,7 +89,7 @@ def add(
         language = lang_map.get(suffix, "unknown")
 
     # Normalise tags (support comma‑separated values)
-    normalized_tags: List[str] = []
+    normalized_tags: list[str] = []
     for tag in tags:
         normalized_tags.extend(t.strip() for t in tag.split(",") if t.strip())
 
@@ -107,11 +111,11 @@ def add(
             content="",  # Clear plaintext when encrypted
             encrypted_content=encrypted,
             metadata=SnippetMetadata(
-                title=title,
-                description=description,
+                title=title or "Untitled",
+                description=description or "",
                 language=lang_enum,
             ),
-            tags=tags,
+            tags=normalized_tags,
         )
         console.print(
             f"[green]Added encrypted snippet:[/green] [bold]{snippet.metadata.title}[/bold]"
@@ -120,18 +124,119 @@ def add(
         snippet = Snippet(
             content=content,
             metadata=SnippetMetadata(
-                title=title,
-                description=description,
+                title=title or "Untitled",
+                description=description or "",
                 language=lang_enum,
             ),
-            tags=tags,
+            tags=normalized_tags,
         )
+
+    # Auto-tag and dedup suggestions from existing embeddings before persistence.
+    if not encrypt:
+        auto_tag_enabled = getattr(getattr(config, "auto_tag", None), "enabled", False)
+        dedup_enabled = getattr(getattr(config, "dedup", None), "enabled", False)
+        if auto_tag_enabled or dedup_enabled:
+            search = None
+            try:
+                from snipcontext.core.auto_tag import AutoTagService
+                from snipcontext.core.search import HybridSearch
+            except Exception as exc:  # pragma: no cover - defensive for optional path
+                logger.debug("Auto-tag/dedup setup skipped: %s", exc)
+            else:
+                try:
+                    search = HybridSearch(config)
+                except Exception as exc:  # pragma: no cover
+                    logger.debug("Auto-tag/dedup disabled because search setup failed: %s", exc)
+
+            if search is not None:
+                storage_engine = StorageEngine(config)
+                embedding = None
+
+                # Auto-tag suggestions using the precomputed search/index.
+                if auto_tag_enabled:
+                    service = AutoTagService(
+                        vector_index=search.vector_index,
+                        storage=storage_engine,
+                        config=config.auto_tag,
+                    )
+                    try:
+                        embedding = search.embedder.encode_query(snippet.to_search_text()).flatten()
+                    except Exception as exc:  # pragma: no cover - model/runtime issues
+                        logger.debug("Auto-tag embedding failed: %s", exc)
+                        embedding = None
+                    else:
+                        suggested = service.suggest(embedding.tolist())
+                        if suggested:
+                            merged = sorted({*snippet.tags, *suggested})
+                            if config.auto_tag.auto_accept:
+                                snippet.tags = merged
+                                console.print(
+                                    f"[yellow]Suggested tags: {', '.join(merged)}[/yellow]"
+                                )
+                            else:
+                                console.print(
+                                    f"[yellow]Suggested tags: {', '.join(merged)}[/yellow]"
+                                )
+                                choice = (
+                                    typer.prompt(
+                                        "Accept all, keep existing, or enter tags",
+                                        default="a",
+                                        show_default=True,
+                                    )
+                                    .strip()
+                                    .lower()
+                                )
+                                if choice in {"a", "accept", "y", "yes"}:
+                                    snippet.tags = merged
+                                elif choice in {"e", "existing", "k", "keep"}:
+                                    pass  # keep existing tags
+                                elif choice:
+                                    custom = [
+                                        part.strip()
+                                        for part in choice.replace(",", " ").split()
+                                        if part.strip()
+                                    ]
+                                    if custom:
+                                        snippet.tags = sorted({*snippet.tags, *custom})
+
+                # Dedup check against the single best match.
+                if dedup_enabled and embedding is None:
+                    try:
+                        embedding = search.embedder.encode_query(snippet.to_search_text()).flatten()
+                    except Exception as exc:  # pragma: no cover
+                        logger.debug("Dedup embedding failed: %s", exc)
+                        embedding = None
+
+                if dedup_enabled and embedding is not None:
+                    try:
+                        if getattr(search.vector_index, "is_trained", False):
+                            neighbors = search.vector_index.search(
+                                embedding.reshape(1, -1), top_k=1
+                            )
+                        else:
+                            neighbors = []
+                    except Exception as exc:  # pragma: no cover
+                        logger.debug("Dedup search failed: %s", exc)
+                        neighbors = []
+
+                    if neighbors:
+                        neighbor_id, score = neighbors[0]
+                        if score >= config.dedup.threshold:
+                            try:
+                                neighbor = storage_engine.get(neighbor_id)
+                                neighbor_title = neighbor.metadata.title
+                            except Exception:  # pragma: no cover
+                                neighbor_title = neighbor_id
+                            console.print(
+                                f"[yellow]This looks similar to '{neighbor_title}' "
+                                f"(score: {score:.2f}). Use --force to add anyway.[/yellow]"
+                            )
 
     if not encrypt:
         storage = StorageEngine(config)
-        stored = storage.save(snippet)
+        storage.save(snippet)
         console.print(
-            f"[green]Added snippet: {stored.metadata.title}[/green] [dim]({stored.id[:6]})[/dim]"
+            f"[green]Added snippet: {snippet.metadata.title}[/green] [dim]({snippet.id[:6]})[/dim]"
         )
 
 
@@ -156,7 +261,7 @@ def get(
     )
 
 
-@app.command()
+@app.command(name="list")
 def list_snippets(
     tag: Optional[str] = typer.Option(None, "--tag", "-t", help="Filter by tag"),
     lang: Optional[str] = typer.Option(None, "--lang", "-l", help="Filter by language"),
@@ -287,11 +392,75 @@ def stats() -> None:
     )
 
 
+# -- INDEX -----------------------------------------------------------
+
+
+@app.command()
+def index(
+    force: bool = typer.Option(False, "--force", help="Skip confirmation prompt"),
+) -> None:
+    """Rebuild the search index from all stored snippets."""
+    from snipcontext.config.settings import get_config
+    from snipcontext.core.search import HybridSearch
+    from snipcontext.core.storage import StorageEngine
+
+    config = get_config()
+    storage = StorageEngine(config)
+    snippets = storage.list_all()
+
+    if not snippets:
+        console.print("[yellow]No snippets found. Index will be empty.[/yellow]")
+        if not force:
+            return
+
+    console.print(f"Indexing {len(snippets)} snippets...")
+    search = HybridSearch(config)
+    search.index_snippets(snippets)
+    console.print(f"Index complete. {len(snippets)} snippets indexed.")
+
+
+# -- PROVIDERS -------------------------------------------------------
+
+
+@app.command()
+def providers() -> None:
+    """List available export providers."""
+    table = Table(title="Available Providers", show_header=True, header_style="bold magenta")
+    table.add_column("Name")
+    table.add_column("Description")
+    providers_list = [
+        ("claude", "Anthropic Claude XML format"),
+        ("cursor", "Cursor IDE file-style headers"),
+        ("openai", "Delineated sections for ChatGPT/GPT-4"),
+        ("generic", "Universal Markdown"),
+    ]
+    for name, desc in providers_list:
+        table.add_row(name, desc)
+    console.print(table)
+
+
+# -- CONFIG ----------------------------------------------------------
+
+
+config_app = typer.Typer(help="Manage SnipContext configuration.")
+app.add_typer(config_app, name="config")
+
+
+@config_app.command("path")
+def config_path() -> None:
+    """Show configuration and data directories."""
+    config = get_config()
+    console.print(f"[bold]Config file:[/bold]  {config.config_file_path}")
+    console.print(f"[bold]Data dir:[/bold]     {config.storage.data_dir}")
+    console.print(f"[bold]Snippets:[/bold]    {config.snippets_path}")
+    console.print(f"[bold]Index:[/bold]       {config.index_path}")
+
+
 # -- DEMO -----------------------------------------------------------
 
 
 @app.command()
-def demo():
+def demo() -> None:
     """Run an interactive demo with sample snippets."""
     from snipcontext.core.models import Language, Snippet, SnippetMetadata
     from snipcontext.core.search import HybridSearch

@@ -11,7 +11,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-
 from snipcontext.config.settings import Config, SearchConfig, StorageConfig, reset_config
 from snipcontext.core.models import Language, SearchMode, Snippet, SnippetMetadata
 
@@ -19,7 +18,8 @@ try:
     import sentence_transformers  # noqa: F401
 
     SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
+    # OSError catches torch DLL load failures on Windows without MSVC redist
     SENTENCE_TRANSFORMERS_AVAILABLE = False
 
 

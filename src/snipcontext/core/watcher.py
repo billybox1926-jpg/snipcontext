@@ -12,6 +12,7 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from watchdog.events import FileSystemEventHandler
     from watchdog.observers import Observer
 
 logger = logging.getLogger(__name__)

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.providers.base import ExportFormat
 from snipcontext.providers.claude import ClaudeProvider
