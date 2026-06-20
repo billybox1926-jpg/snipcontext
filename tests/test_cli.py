@@ -5,8 +5,9 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from snipcontext.cli.main import app
 from typer.testing import CliRunner
+
+from snipcontext.cli.main import app
 
 runner = CliRunner()
 
