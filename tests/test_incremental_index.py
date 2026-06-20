@@ -32,7 +32,6 @@ def test_add_snippet_calls_index_snippets_with_updated_list() -> None:
         search.vector_index = MagicMock()
         search.keyword_index = MagicMock()
 
-
     with (
         patch("snipcontext.core.storage.StorageEngine", return_value=storage),
         patch.object(search, "index_snippets"),
