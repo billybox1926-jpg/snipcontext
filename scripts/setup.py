@@ -35,37 +35,42 @@ def main():
 
     # Install in editable mode with dev dependencies
     print("\n[1/4] Installing package in development mode...")
-    run(f"{sys.executable} -m pip install -e \"{project_root}[dev]\"", cwd=project_root)
+    run(f'{sys.executable} -m pip install -e "{project_root}[dev]"', cwd=project_root)
 
     # Verify key dependencies
     print("\n[2/4] Verifying dependencies...")
     try:
         import pydantic
+
         print(f"  pydantic {pydantic.__version__} OK")
     except ImportError:
         print("  WARNING: pydantic not found")
 
     try:
         import typer
+
         print(f"  typer {typer.__version__} OK")
     except ImportError:
         print("  WARNING: typer not found")
 
     try:
         import rich
-        print(f"  rich OK")
+
+        print("  rich OK")
     except ImportError:
         print("  WARNING: rich not found")
 
     try:
         import sentence_transformers
-        print(f"  sentence-transformers OK")
+
+        print("  sentence-transformers OK")
     except ImportError:
         print("  WARNING: sentence-transformers not found (needed for semantic search)")
 
     try:
         import faiss
-        print(f"  faiss OK")
+
+        print("  faiss OK")
     except ImportError:
         print("  WARNING: faiss not found (needed for semantic search)")
 
