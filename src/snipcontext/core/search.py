@@ -259,6 +259,8 @@ class VectorIndex:
         with open(path / "idmap.json", "w") as f:
             json_str = '"' + '", "'.join(self._id_map) + '"'
             f.write(f"[{json_str}]")
+        hash_path = path / "content_hashes.json"
+        hash_path.write_text(json.dumps(self._content_hashes), encoding="utf-8")
         logger.debug("Saved vector index to %s", path)
 
     def load(self, path: Path) -> bool:
