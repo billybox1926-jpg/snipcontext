@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+
 from snipcontext.config.settings import Config, StorageConfig, reset_config
 
 
