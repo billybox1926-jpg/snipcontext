@@ -252,7 +252,7 @@ class StorageEngine:
         """Return normalized tags for a single stored snippet, or an empty tuple if missing."""
         try:
             return tuple(self.get(snippet_id).tags)
-        except Exception:
+        except StorageError:
             return tuple()
 
     def get_all_tags(self) -> list[str]:
@@ -389,16 +389,32 @@ class StorageEngine:
     def vacuum(self) -> int:
         """Remove orphaned files and compress storage.
 
+        Only removes files whose stem is not a valid snippet ID that can
+        be loaded. Corrupted/unreadable files are left alone to prevent
+        data loss.
+
         Returns:
             Number of bytes freed.
         """
         freed = 0
-        valid_ids = {s.id for s in self.iter_all()}
+        valid_ids: set[str] = set()
+        corrupted_ids: set[str] = set()
 
-        # Remove any JSON files that don't correspond to valid snippets
         for path in self.snippets_dir.glob("*.json"):
             snippet_id = path.stem
-            if snippet_id not in valid_ids:
+            try:
+                with open(path, encoding="utf-8") as f:
+                    data = json.load(f)
+                Snippet.model_validate(data)
+                valid_ids.add(snippet_id)
+            except Exception:
+                corrupted_ids.add(snippet_id)
+
+        # Remove only files that are neither valid nor corrupted-valid
+        # (i.e. files that don't correspond to any loadable snippet)
+        for path in self.snippets_dir.glob("*.json"):
+            snippet_id = path.stem
+            if snippet_id not in valid_ids and snippet_id not in corrupted_ids:
                 freed += path.stat().st_size
                 path.unlink()
                 logger.debug("Vacuumed orphaned file: %s", path.name)
