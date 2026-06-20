@@ -39,3 +39,12 @@ Before starting, leave a short comment on the issue describing the scope you pla
 - Bootstrap: `bash scripts/bootstrap.sh`
 - Setup guide: `docs/developer-setup.md`
 - CI workflows: `.github/workflows/`
+
+## Release process
+
+- SnipContext uses PyPI trusted publishing via GitHub Actions OIDC.
+- Tag a release: `git tag vX.Y.Z && git push --tags`
+- The publish workflow triggers automatically on tags matching `v*`.
+- The workflow builds the package and publishes to PyPI without any API token.
+- For testing, use a pre-release tag like `v0.1.0rc1` and publish to TestPyPI when needed.
+- After release, bump the changelog if behavior changed.

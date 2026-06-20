@@ -133,6 +133,10 @@ class VectorIndex:
     def count(self) -> int:
         return self._index.ntotal if self._index else 0
 
+    @property
+    def snippet_ids(self) -> tuple[str, ...]:
+        return tuple(self._id_map)
+
     def build(self, snippets: list[Snippet], embedding_engine: EmbeddingEngine) -> None:
         """Build the FAISS index from a list of snippets.
 
