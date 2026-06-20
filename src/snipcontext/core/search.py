@@ -180,7 +180,7 @@ class VectorIndex:
 
         logger.info("Built FAISS index: %d vectors, %d dims", len(snippets), dimension)
 
-    def add_vector(self, snippet: "Snippet") -> None:
+    def add_vector(self, snippet: Snippet) -> None:
         """Incrementally add a single snippet embedding to the FAISS index."""
         import numpy as np
 

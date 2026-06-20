@@ -35,9 +35,9 @@ def test_add_snippet_calls_index_snippets_with_updated_list() -> None:
 
     with (
         patch("snipcontext.core.storage.StorageEngine", return_value=storage),
-        patch.object(search, "index_snippets") as mock_index,
-        patch.object(search.keyword_index, "build") as mock_kw_build,
-        patch.object(search.keyword_index, "save") as mock_kw_save,
+        patch.object(search, "index_snippets"),
+        patch.object(search.keyword_index, "build"),
+        patch.object(search.keyword_index, "save"),
     ):
         search.add_snippet(snippet_b)
 
