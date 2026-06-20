@@ -94,23 +94,45 @@ def add(
     except ValueError:
         lang_enum = Language.UNKNOWN
 
-    snippet = Snippet(
-        content=content,
-        metadata=SnippetMetadata(
-            title=title or "Untitled",
-            description=description or "",
-            language=lang_enum,
-        ),
-        tags=normalized_tags,
-        sensitive=sensitive or encrypt,
-    )
+    # Handle encryption if requested
+    if encrypt:
+        if not config.encryption.enabled:
+            console.print(
+                "[red]Encryption is not enabled. Set SNIPCONTEXT_ENCRYPT_ENABLED=true[/red]"
+            )
+            raise typer.Exit(1)
+        storage_obj = StorageEngine(config)
+        encrypted = storage_obj.encrypt_content(content)
+        snippet = Snippet(
+            content="",  # Clear plaintext when encrypted
+            encrypted_content=encrypted,
+            metadata=SnippetMetadata(
+                title=title,
+                description=description,
+                language=lang_enum,
+            ),
+            tags=tags,
+        )
+        console.print(
+            f"[green]Added encrypted snippet:[/green] [bold]{snippet.metadata.title}[/bold]"
+        )
+    else:
+        snippet = Snippet(
+            content=content,
+            metadata=SnippetMetadata(
+                title=title,
+                description=description,
+                language=lang_enum,
+            ),
+            tags=tags,
+        )
 
-    storage = StorageEngine(config)
-    stored = storage.save(snippet)
-
-    console.print(
-        f"[green]Added snippet: {stored.metadata.title}[/green] [dim]({stored.id[:6]})[/dim]"
-    )
+    if not encrypt:
+        storage = StorageEngine(config)
+        stored = storage.save(snippet)
+        console.print(
+            f"[green]Added snippet: {stored.metadata.title}[/green] [dim]({stored.id[:6]})[/dim]"
+        )
 
 
 @app.command()
@@ -127,114 +149,89 @@ def get(
 
     console.print(
         Panel(
-            snippet.content,
-            title=f"{snippet.metadata.title} ({snippet.id})",
-            subtitle=f"Language: {snippet.metadata.language.value} | Tags: {snippet.tag_line or '(none)'}",
+            f"[bold]{snippet.metadata.title}[/bold]\n\n{snippet.content}",
+            title="Snippet",
             border_style="blue",
         )
     )
 
 
 @app.command()
-def list(
-    tag: Optional[str] = typer.Option(None, "--tag", "-T", help="Filter by tag"),
-    limit: int = typer.Option(50, "--limit", "-n", help="Maximum number to show"),
+def list_snippets(
+    tag: Optional[str] = typer.Option(None, "--tag", "-t", help="Filter by tag"),
+    lang: Optional[str] = typer.Option(None, "--lang", "-l", help="Filter by language"),
 ) -> None:
-    """List all snippets."""
+    """List saved snippets."""
     config = get_config()
     storage = StorageEngine(config)
     snippets = storage.list_all()
+
     if tag:
         snippets = [s for s in snippets if tag in s.tags]
+    if lang:
+        snippets = [s for s in snippets if s.metadata.language.value == lang]
 
     if not snippets:
-        console.print("[yellow]No snippets found.[/yellow]")
+        console.print("[yellow]No snippets match your filters.[/yellow]")
         return
 
-    table = Table(title="Snippets", show_header=True, header_style="bold magenta")
-    table.add_column("ID", style="dim", width=8)
-    table.add_column("Title")
+    table = Table(title="Snippets")
+    table.add_column("ID", style="dim")
+    table.add_column("Title", style="bold cyan")
     table.add_column("Language")
     table.add_column("Tags")
-    table.add_column("Created")
 
-    for s in snippets[:limit]:
+    for snippet in snippets:
         table.add_row(
-            s.id[:6],
-            s.metadata.title,
-            s.metadata.language.value,
-            s.tag_line or "",
-            s.created_at.strftime("%Y-%m-%d %H:%M"),
+            snippet.id[:6],
+            snippet.metadata.title,
+            snippet.metadata.language.value,
+            ", ".join(snippet.tags) if snippet.tags else "",
         )
+
     console.print(table)
 
 
 @app.command()
 def search(
     query: str = typer.Argument(..., help="Search query"),
-    mode: str = typer.Option(
-        "hybrid", "--mode", "-m", help="Search mode: hybrid, semantic, keyword, tag"
-    ),
-    provider: Optional[str] = typer.Option(
-        None, "--provider", "-p", help="Export provider (claude, cursor, openai, generic)"
-    ),
-    output: Optional[Path] = typer.Option(
-        None, "--output", "-o", help="Output file (default: stdout)"
-    ),
-    top_k: int = typer.Option(10, "--top-k", "-k", help="Number of results"),
+    tag: Optional[str] = typer.Option(None, "--tag", "-t", help="Filter by tag"),
+    lang: Optional[str] = typer.Option(None, "--lang", "-l", help="Filter by language"),
+    limit: int = typer.Option(5, "--limit", "-n", help="Max results"),
 ) -> None:
-    """Search snippets semantically or by keyword/tag."""
+    """Search snippets with hybrid BM25 + vector search."""
     config = get_config()
     storage = StorageEngine(config)
+    all_snippets = storage.list_all()
+
+    if tag:
+        all_snippets = [s for s in all_snippets if tag in s.tags]
+    if lang:
+        all_snippets = [s for s in all_snippets if s.metadata.language.value == lang]
+
+    if not all_snippets:
+        console.print("[yellow]No snippets to search.[/yellow]")
+        return
+
     searcher = HybridSearch(config)
-
-    # If mode is tag, use tag filtering
-    if mode == "tag":
-        results = [s for s in storage.list_all() if query in s.tags]
-        # Convert to SearchResult format for consistent output
-        from snipcontext.core.search import SearchResult
-
-        results = [SearchResult(snippet=s, score=1.0) for s in results]
-    else:
-        searcher.index_snippets(storage.list_all())
-        results = searcher.search(query, mode=mode, top_k=top_k)
+    searcher.index_snippets(all_snippets)
+    results = searcher.search(query)
 
     if not results:
-        console.print("[yellow]No matches found.[/yellow]")
+        console.print("[yellow]No results found.[/yellow]")
         return
 
-    if provider:
-        # Export using provider
-        prov = get_provider(provider)
-        exported = prov.export([r.snippet for r in results])
-        if output:
-            output.write_text(exported, encoding="utf-8")
-            console.print(f"[green]Exported to {output}[/green]")
-        else:
-            console.print(exported)
-        return
-
-    # Display results
-    table = Table(title=f"Search results for '{query}'", show_header=True, header_style="bold cyan")
-    table.add_column("Score", style="dim", width=6)
-    table.add_column("ID", style="dim", width=8)
-    table.add_column("Title")
-    table.add_column("Language")
-
-    for r in results[:top_k]:
-        table.add_row(
-            f"{r.score:.3f}",
-            r.snippet.id[:6],
-            r.snippet.metadata.title,
-            r.snippet.metadata.language.value,
-        )
-    console.print(table)
+    console.print(f"[green]Found {len(results)} results:[/green]")
+    for idx, result in enumerate(results[:limit], start=1):
+        console.print(f"\n[{idx}] {result.snippet.metadata.title} (score: {result.score:.3f})")
+        console.print(result.snippet.content)
+        console.print(f"Tags: {', '.join(result.snippet.tags)}")
 
 
 @app.command()
 def delete(
     snippet_id: str = typer.Argument(..., help="Snippet ID or prefix"),
-    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
+    confirm: bool = typer.Option(False, "--yes", help="Skip confirmation"),
 ) -> None:
     """Delete a snippet."""
     config = get_config()
@@ -244,71 +241,59 @@ def delete(
         console.print(f"[red]Snippet not found: {snippet_id}[/red]")
         raise typer.Exit(code=1)
 
-    if not force:
-        confirm = typer.confirm(f"Delete '{snippet.metadata.title}'?")
-        if not confirm:
-            console.print("[yellow]Aborted.[/yellow]")
-            return
+    if not confirm:
+        if not typer.confirm(f"Delete '{snippet.metadata.title}'?"):
+            raise typer.Exit(0)
 
     storage.delete(snippet.id)
-    console.print(f"[green]Deleted snippet: {snippet.metadata.title}[/green]")
+    console.print(f"[green]Deleted:[/green] {snippet.metadata.title}")
 
 
 @app.command()
 def stats() -> None:
-    """Show statistics about the snippet collection."""
+    """Show collection statistics."""
+    from snipcontext.core.storage import StorageEngine
+
     config = get_config()
     storage = StorageEngine(config)
-    snippets = storage.list_all()
 
-    if not snippets:
-        console.print("[yellow]No snippets found.[/yellow]")
+    s = storage.get_stats()
+    total = s["total_snippets"]
+
+    if total == 0:
+        console.print("[yellow]No snippets in your collection yet.[/yellow]")
+        console.print("Add one with: [bold]sc add 'your code here' --title 'My Snippet'[/bold]")
         return
-
-    total = len(snippets)
-    langs: dict[str, int] = {}
-    tags: dict[str, int] = {}
-    for s in snippets:
-        lang = s.metadata.language.value
-        langs[lang] = langs.get(lang, 0) + 1
-        for t in s.tags:
-            tags[t] = tags.get(t, 0) + 1
-
-    content = f"Total snippets: {total}\n\n" f"[bold]Languages:[/bold]\n" + "\n".join(
-        f"  {lang}: {count}" for lang, count in sorted(langs.items(), key=lambda x: -x[1])
-    ) + "\n\n[bold]Tags:[/bold]\n" + "\n".join(
-        f"  {tag}: {count}" for tag, count in sorted(tags.items(), key=lambda x: -x[1])[:10]
-    )
 
     console.print(
         Panel(
-            content,
+            f"""
+[bold]Collection Overview[/bold]
+  Snippets: {total}
+  Unique Tags: {s["total_tags"]}
+  Languages: {len(s["languages"])}
+
+[bold]By Language:[/bold]
+{chr(10).join(f"  {lang}: {count}" for lang, count in s["languages"].items())}
+
+[bold]Storage:[/bold]
+  Data directory: {config.storage.data_dir}
+  Snippets: {config.snippets_path}
+  Index: {config.index_path}
+            """.strip(),
             title="SnipContext Stats",
             border_style="green",
         )
     )
 
 
-@app.command()
-def providers() -> None:
-    """List available export providers."""
-    table = Table(title="Available Providers", show_header=True, header_style="bold magenta")
-    table.add_column("Name")
-    table.add_column("Description")
-    providers_list = [
-        ("claude", "Anthropic Claude XML format"),
-        ("cursor", "Cursor IDE file‑style headers"),
-        ("openai", "Delineated sections for ChatGPT/GPT‑4"),
-        ("generic", "Universal Markdown"),
-    ]
-    for name, desc in providers_list:
-        table.add_row(name, desc)
-    console.print(table)
+# -- DEMO -----------------------------------------------------------
 
 
 @app.command()
-def demo() -> None:
+def demo():
     """Run an interactive demo with sample snippets."""
+    from snipcontext.core.models import Language, Snippet, SnippetMetadata
     from snipcontext.core.search import HybridSearch
     from snipcontext.core.storage import StorageEngine
 
@@ -399,7 +384,7 @@ def demo() -> None:
     console.print("  [bold]sc list --tag python[/bold]")
     console.print("  [bold]sc export claude[/bold]")
 
-    # Quick search example
+    # Optionally show a quick search example
     searcher = HybridSearch(config)
     searcher.index_snippets(storage.list_all())
     results = searcher.search("http retry")
@@ -409,6 +394,10 @@ def demo() -> None:
         console.print(f"  {top.snippet.metadata.title} (score: {top.score:.3f})")
 
 
-# Entrypoint
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+
 if __name__ == "__main__":
     app()
