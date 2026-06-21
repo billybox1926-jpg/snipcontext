@@ -46,25 +46,17 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        shell: bash
         run: |
           uv venv
-          source .venv/Scripts/activate 2>/dev/null || source .venv/bin/activate
           uv pip install -e ".[all]" pyinstaller
 
       - name: Build binary (full)
         if: "!endsWith(matrix.target, '-minimal')"
-        shell: bash
-        run: |
-          source .venv/Scripts/activate 2>/dev/null || source .venv/bin/activate
-          pyinstaller snipcontext.spec --clean --noconfirm
+        run: uv run pyinstaller snipcontext.spec --clean --noconfirm
 
       - name: Build binary (minimal — no semantic/encryption/web)
         if: endsWith(matrix.target, '-minimal')
-        shell: bash
-        run: |
-          source .venv/Scripts/activate 2>/dev/null || source .venv/bin/activate
-          pyinstaller snipcontext.spec --clean --noconfirm
+        run: uv run pyinstaller snipcontext.spec --clean --noconfirm
 
       - name: Package binary
         shell: bash
