@@ -106,6 +106,90 @@ class TestStatsCommand:
             assert r3.exit_code == 0
             assert "2" in r3.output
 
+    def test_stats_shows_languages(self):
+        """Stats should display language distribution."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            r1, _ = invoke("add", "print('hi')", "--title", "Py", "--lang", "python", env=env)
+            assert r1.exit_code == 0
+            r2, _ = invoke("stats", env=env)
+            assert r2.exit_code == 0
+            assert "python" in r2.output
+
+    def test_stats_shows_tags(self):
+        """Stats should display tag distribution."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            r1, _ = invoke("add", "x", "--title", "T", "--tag", "web", "--tag", "api", env=env)
+            assert r1.exit_code == 0
+            r2, _ = invoke("stats", env=env)
+            assert r2.exit_code == 0
+            assert "web" in r2.output
+
+    def test_stats_detailed_flag(self):
+        """Stats --detailed should show extra analytics sections."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            r1, _ = invoke("add", "x", "--title", "A", "--tag", "test", env=env)
+            assert r1.exit_code == 0
+            r2, _ = invoke("add", "y", "--title", "B", "--tag", "test", env=env)
+            assert r2.exit_code == 0
+            r3, _ = invoke("stats", "--detailed", env=env)
+            assert r3.exit_code == 0
+            assert "Detailed" in r3.output
+
+    def test_stats_json_output(self):
+        """Stats --json should output valid JSON."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            r1, _ = invoke("add", "x", "--title", "A", "--tag", "test", env=env)
+            assert r1.exit_code == 0
+            r2, _ = invoke("stats", "--json", env=env)
+            assert r2.exit_code == 0
+            import json
+            data = json.loads(r2.output)
+            assert data["total_snippets"] == 1
+
+    def test_stats_detailed_json_output(self):
+        """Stats --detailed --json should include detailed fields."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            r1, _ = invoke("add", "x", "--title", "A", "--tag", "test", env=env)
+            assert r1.exit_code == 0
+            r2, _ = invoke("stats", "--detailed", "--json", env=env)
+            assert r2.exit_code == 0
+            import json
+            data = json.loads(r2.output)
+            assert "access_counts" in data
+            assert "size_metrics" in data
+            assert "language_distribution" in data
+            assert "confidence" in data
+
 
 class TestProvidersCommand:
     """Tests for the `providers` command."""

@@ -268,19 +268,41 @@ class StorageEngine:
                 "total_snippets": 0,
                 "total_tags": 0,
                 "languages": {},
+                "tags": {},
                 "oldest": None,
                 "newest": None,
+                "encrypted_count": 0,
+                "deleted_count": 0,
+                "total_size_bytes": 0,
             }
 
         from collections import Counter
 
-        languages = Counter(s.metadata.language.value for s in snippets)
+        languages: Counter = Counter(s.metadata.language.value for s in snippets)
+        tags: Counter = Counter()
+        total_size = 0
+        encrypted_count = 0
+        deleted_count = 0
+
+        for s in snippets:
+            for tag in s.tags:
+                tags[tag] += 1
+            total_size += len(s.content.encode("utf-8"))
+            if s.encrypted_content:
+                encrypted_count += 1
+            if s.deleted:
+                deleted_count += 1
+
         return {
             "total_snippets": len(snippets),
-            "total_tags": len(self.get_all_tags()),
+            "total_tags": len(tags),
             "languages": dict(languages.most_common()),
+            "tags": dict(tags.most_common()),
             "oldest": min(s.created_at for s in snippets).isoformat(),
             "newest": max(s.updated_at for s in snippets).isoformat(),
+            "encrypted_count": encrypted_count,
+            "deleted_count": deleted_count,
+            "total_size_bytes": total_size,
         }
 
     # ------------------------------------------------------------------

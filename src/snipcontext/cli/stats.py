@@ -1,11 +1,13 @@
 """Stats and demo CLI commands."""
 
+import json
 import logging
 
 import typer
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.table import Table
 
 from snipcontext.cli.context import get_context as _get_context
 
@@ -13,39 +15,231 @@ logger = logging.getLogger(__name__)
 console = Console()
 
 
+def _format_size(size_bytes: int) -> str:
+    """Format bytes into human-readable size."""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    if size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    return f"{size_bytes / (1024 * 1024):.1f} MB"
+
+
+def _render_ascii_bar(data: dict[str, int], max_width: int = 30) -> list[str]:
+    """Format a dict of label->count as ASCII bar chart lines."""
+    if not data:
+        return ["  (no data)"]
+    from snipcontext.core.analytics import format_ascii_bar
+    return format_ascii_bar(data, max_width)
+
+
+def _render_basic_stats(s: dict) -> None:
+    """Render basic stats mode with Rich."""
+    total = s["total_snippets"]
+
+    # Language distribution
+    lang_lines = _render_ascii_bar(s.get("languages", {}))
+    lang_section = "\n".join(lang_lines) if lang_lines else "  (no snippets)"
+
+    # Top tags
+    top_tags = dict(list(s.get("tags", {}).items())[:10])
+    tag_lines = [f"  #{tag:<20} {count}" for tag, count in top_tags.items()]
+    tag_section = "\n".join(tag_lines) if tag_lines else "  (no tags)"
+
+    # Dates
+    nl = "\n"
+    date_section = ""
+    if s.get("oldest"):
+        date_section = f"  Oldest: {s['oldest'][:10]}"
+    if s.get("newest"):
+        date_section += f"{nl}  Newest: {s['newest'][:10]}" if date_section else f"  Newest: {s['newest'][:10]}"
+
+    date_block = ""
+    if date_section:
+        date_block = f"[bold]Dates:[/bold]{nl}{date_section}"
+
+    console.print(
+        Panel(
+            f"""[bold]Collection Overview[/bold]
+  Snippets: [cyan]{total}[/cyan]
+  Unique Tags: [cyan]{s.get('total_tags', 0)}[/cyan]
+  Languages: [cyan]{len(s.get('languages', {}))}[/cyan]
+  Encrypted: [cyan]{s.get('encrypted_count', 0)}[/cyan]
+  Size: [cyan]{_format_size(s.get('total_size_bytes', 0))}[/cyan]
+{date_block}
+
+[bold]By Language:[/bold]
+{lang_section}
+
+[bold]Top Tags:[/bold]
+{tag_section}
+
+[bold]Storage:[/bold]
+  Data directory: [dim]{s.get('data_dir', 'N/A')}[/dim]""",
+            title="SnipContext Stats",
+            border_style="green",
+        )
+    )
+
+
+def _render_detailed_stats(d: dict) -> None:
+    """Render detailed stats mode with Rich tables and bar charts."""
+    total = d["total_snippets"]
+
+    console.print(
+        Panel(
+            f"""[bold]Collection Overview[/bold]
+  Snippets: [cyan]{total}[/cyan]
+  Unique Tags: [cyan]{d.get('total_tags', 0)}[/cyan]
+  Languages: [cyan]{len(d.get('languages', {}))}[/cyan]
+  Encrypted: [cyan]{d.get('encrypted_count', 0)}[/cyan]
+  Deleted: [cyan]{d.get('deleted_count', 0)}[/cyan]
+  Size: [cyan]{_format_size(d.get('total_size_bytes', 0))}[/cyan]
+  Avg tags/snippet: [cyan]{d.get('avg_tags_per_snippet', 0)}[/cyan]""",
+            title="SnipContext Stats [bold cyan](Detailed)[/bold cyan]",
+            border_style="green",
+        )
+    )
+
+    # Dates and recent activity
+    dates_section = ""
+    if d.get("oldest"):
+        dates_section = f"  Oldest snippet:  [dim]{d['oldest'][:10]}[/dim]\n"
+    if d.get("newest"):
+        dates_section += f"  Newest snippet:  [dim]{d['newest'][:10]}[/dim]\n"
+    recent = d.get("recent", {})
+    if recent:
+        dates_section += f"  Added this week:  [cyan]{recent.get('this_week', 0)}[/cyan]\n"
+        dates_section += f"  Added this month: [cyan]{recent.get('this_month', 0)}[/cyan]\n"
+        dates_section += f"  Added last 3mo:   [cyan]{recent.get('last_3_months', 0)}[/cyan]"
+    if dates_section:
+        console.print(f"\n[bold]Timeline:[/bold]\n{dates_section}")
+
+    # Language distribution with bar chart
+    lang_dist = d.get("language_distribution", {})
+    if lang_dist:
+        lang_bar_data = {
+            lang: info["count"] for lang, info in list(lang_dist.items())[:10]
+        }
+        bar_lines = _render_ascii_bar(lang_bar_data, max_width=25)
+        console.print("\n[bold]Language Distribution:[/bold]")
+        for line in bar_lines:
+            lang_name = line.split("\u2588")[0].strip() if "\u2588" in line else line
+            bar_part = line[line.index("\u2588"):] if "\u2588" in line else ""
+            count = bar_part.split()[-1] if bar_part.strip() else ""
+            # Reformat with percentage
+            lang_key = lang_name.strip()
+            if lang_key in lang_dist:
+                pct = lang_dist[lang_key]["percent"]
+                console.print(f"  {lang_name:<16} {bar_part} ({pct}%)")
+            else:
+                console.print(line)
+
+    # Tag distribution
+    tags = d.get("tags", {})
+    top_tags = dict(list(tags.items())[:10])
+    if top_tags:
+        tag_bar_lines = _render_ascii_bar(top_tags, max_width=20)
+        console.print("\n[bold]Top Tags:[/bold]")
+        for line in tag_bar_lines:
+            console.print(line)
+
+    # Access counts
+    access = d.get("access_counts", {})
+    if access and (access.get("most_accessed") or access.get("average", 0) > 0):
+        console.print("\n[bold]Access Stats:[/bold]")
+        console.print(f"  Average accesses per snippet: [cyan]{access.get('average', 0)}[/cyan]")
+        most = access.get("most_accessed", [])
+        if most:
+            table = Table(show_header=True, header_style="bold magenta", padding=(0, 1))
+            table.add_column("ID", style="dim", width=8)
+            table.add_column("Title", style="cyan", no_wrap=False)
+            table.add_column("Accesses", style="green", justify="right", width=8)
+            for entry in most:
+                table.add_row(entry["id"], entry["title"], str(entry["count"]))
+            console.print(table)
+
+    # Size metrics
+    size = d.get("size_metrics", {})
+    if size and size.get("largest"):
+        console.print("\n[bold]Size Metrics:[/bold]")
+        console.print(f"  Average lines per snippet: [cyan]{size.get('average_lines', 0)}[/cyan]")
+        console.print(f"  Average characters:        [cyan]{size.get('average_chars', 0)}[/cyan]")
+        table = Table(show_header=True, header_style="bold magenta", padding=(0, 1))
+        table.add_column("ID", style="dim", width=8)
+        table.add_column("Title", style="cyan", no_wrap=False)
+        table.add_column("Lines", style="green", justify="right", width=6)
+        table.add_column("Chars", style="green", justify="right", width=8)
+        for entry in size["largest"]:
+            table.add_row(entry["id"], entry["title"], str(entry["lines"]), str(entry["chars"]))
+        console.print(table)
+
+    # Confidence breakdown
+    confidence = d.get("confidence", {})
+    if confidence:
+        console.print("\n[bold]Confidence Levels:[/bold]")
+        for level, count in confidence.items():
+            console.print(f"  {level:<16} {count}")
+
+    # Version statistics
+    versions = d.get("versions", {})
+    if versions:
+        console.print("\n[bold]Version History:[/bold]")
+        console.print(f"  Average versions per snippet: [cyan]{versions.get('average', 0)}[/cyan]")
+        console.print(f"  Max versions in a snippet:    [cyan]{versions.get('max', 0)}[/cyan]")
+
+    # Authors
+    authors = d.get("authors", {})
+    if authors and len(authors) > 1:
+        console.print("\n[bold]Authors:[/bold]")
+        for author, count in authors.items():
+            console.print(f"  {author:<24} {count}")
+
+
 def register_commands(app: typer.Typer) -> None:
     """Register stats and demo commands on the given Typer app."""
 
     @app.command()  # type: ignore[untyped-decorator]
-    def stats() -> None:
+    def stats(
+        detailed: bool = typer.Option(
+            False, "--detailed", "-d", help="Show detailed analytics"
+        ),
+        json_output: bool = typer.Option(
+            False, "--json", help="Output stats as JSON"
+        ),
+    ) -> None:
         """Show collection statistics."""
         config, storage, _ = _get_context()
-        s = storage.get_stats()
-        total = s["total_snippets"]
-        if total == 0:
-            console.print("[yellow]No snippets in your collection yet.[/yellow]")
-            console.print("Add one with: [bold]sc add 'your code here' --title 'My Snippet'[/bold]")
+        snippets = storage.list_all()
+
+        # Inject storage paths into basic stats
+        basic = storage.get_stats()
+        basic["data_dir"] = str(config.storage.data_dir)
+
+        if json_output:
+            if detailed:
+                from snipcontext.core.analytics import compute_detailed_stats
+                output = compute_detailed_stats(snippets)
+                output["data_dir"] = str(config.storage.data_dir)
+            else:
+                output = basic
+            console.print(json.dumps(output, indent=2, default=str))
             return
-        console.print(
-            Panel(
-                f"""
-[bold]Collection Overview[/bold]
-  Snippets: {total}
-  Unique Tags: {s["total_tags"]}
-  Languages: {len(s["languages"])}
 
-[bold]By Language:[/bold]
-{chr(10).join(f"  {lang}: {count}" for lang, count in s["languages"].items())}
-
-[bold]Storage:[/bold]
-  Data directory: {config.storage.data_dir}
-  Snippets: {config.snippets_path}
-  Index: {config.index_path}
-                """.strip(),
-                title="SnipContext Stats",
-                border_style="green",
+        if len(snippets) == 0:
+            console.print("[yellow]No snippets in your collection yet.[/yellow]")
+            console.print(
+                "Add one with: [bold]sc add 'your code here' --title 'My Snippet'[/bold]"
             )
-        )
+            return
+
+        if detailed:
+            from snipcontext.core.analytics import compute_detailed_stats
+
+            detailed_stats = compute_detailed_stats(snippets)
+            detailed_stats["data_dir"] = str(config.storage.data_dir)
+            _render_detailed_stats(detailed_stats)
+        else:
+            _render_basic_stats(basic)
 
     @app.command()  # type: ignore[untyped-decorator]
     def demo() -> None:
@@ -128,7 +322,7 @@ def register_commands(app: typer.Typer) -> None:
                 tags=tags,
             )
             storage.save(snippet)
-            console.print(f"  [green]✓[/green] {title}")
+            console.print(f"  [green]+[/green] {title}")
 
         console.print("\n[bold]Sample search (semantic):[/bold]")
         try:
