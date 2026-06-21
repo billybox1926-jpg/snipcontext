@@ -760,7 +760,7 @@ class TestMultiQueryAndGrouping:
         results = searcher.search("code", top_k=10, mode="keyword")
         groups = HybridSearch.group_results(results, group_by="language", per_group=1)
 
-        for key, group in groups.items():
+        for _key, group in groups.items():
             assert len(group) <= 1
 
     def test_multi_search_with_explain(self, temp_config):

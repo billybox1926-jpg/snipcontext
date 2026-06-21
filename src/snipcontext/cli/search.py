@@ -68,7 +68,7 @@ def search(
         console.print(f"[green]Indexed {len(snippets)} snippets[/green]")
 
     # Parse filter flags
-    lang_list = [l.strip() for l in lang.split(",") if l.strip()] if lang else None
+    lang_list = [item.strip() for item in lang.split(",") if item.strip()] if lang else None
     tag_list = [t.strip() for t in tag.split(",") if t.strip()] if tag else None
 
     # Decide single-query vs multi-query

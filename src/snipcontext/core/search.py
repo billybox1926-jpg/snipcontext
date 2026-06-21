@@ -857,10 +857,10 @@ class HybridSearch:
         # Normalise filters
         lang_set: set[str] | None = None
         if lang_filter:
-            lang_set = {l.strip().lower() for l in lang_filter}
+            lang_set = {item.strip().lower() for item in lang_filter}
         tag_set: set[str] | None = None
         if tag_filter:
-            tag_set = {t.strip().lower() for t in tag_filter}
+            tag_set = {tag.strip().lower() for tag in tag_filter}
 
         if no_semantic and mode in (SearchMode.HYBRID, SearchMode.SEMANTIC):
             logger.debug("--no-semantic flag active, forcing keyword search")
@@ -1225,10 +1225,10 @@ class HybridSearch:
         # Apply post-filters
         lang_set: set[str] | None = None
         if lang_filter:
-            lang_set = {l.strip().lower() for l in lang_filter}
+            lang_set = {item.strip().lower() for item in lang_filter}
         tag_set: set[str] | None = None
         if tag_filter:
-            tag_set = {t.strip().lower() for t in tag_filter}
+            tag_set = {tag.strip().lower() for tag in tag_filter}
 
         if lang_set or tag_set:
             merged = self._apply_filters(merged, lang_set, tag_set)
