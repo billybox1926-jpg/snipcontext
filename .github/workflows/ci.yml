@@ -83,8 +83,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -e .
-          pip install -e ".[dev]"
+          pip install -e ".[dev,web]"
 
       - name: Run tests
         shell: bash
@@ -98,6 +97,40 @@ jobs:
         run: |
           export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
           python -m pytest -q --tb=short -m "slow"
+
+  # ── Minimal install (no optional extras) ────────────────────────
+  test-minimal-no-web:
+    name: Minimal (no web/semantic extras)
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies (no optional extras)
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Verify optional deps are unavailable
+        run: |
+          python -c "
+          from snipcontext.web import WEB_AVAILABLE
+          assert WEB_AVAILABLE == False, f'Expected WEB_AVAILABLE=False, got {WEB_AVAILABLE}'
+          from snipcontext.core.search import SEMANTIC_AVAILABLE
+          assert SEMANTIC_AVAILABLE == False, f'Expected SEMANTIC_AVAILABLE=False, got {SEMANTIC_AVAILABLE}'
+          print('OK: both optional deps correctly unavailable')
+          "
+
+      - name: Run tests (web & semantic tests should be skipped)
+        shell: bash
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
+          python -m pytest -q --tb=short -m "not slow"
 
   # ── Build & verify package ───────────────────────────────────────
   build:
