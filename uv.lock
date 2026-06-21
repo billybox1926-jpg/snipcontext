@@ -2664,15 +2664,6 @@ wheels = [
 ]
 
 [[package]]
-name = "python-ulid"
-version = "2.7.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a9/c5/03acac11f80d718da98201dadf6fdcf5aa4001e83bb61a65b6b91baa489c/python_ulid-2.7.0.tar.gz", hash = "sha256:18eb595885140851a490a95b0da4447911ff69fa9f434732067b97f6956f9fe9", size = 25010, upload-time = "2024-06-17T07:21:58.293Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e2/48/90be1411fdbd38d291fa9e97621a60b5576d9122449bce4505ddfcfc9328/python_ulid-2.7.0-py3-none-any.whl", hash = "sha256:c81658e382f69bad8c6d365155c4ae21843ae4226b94f72c12d7adcbb545a251", size = 10788, upload-time = "2024-06-17T07:21:56.602Z" },
-]
-
-[[package]]
 name = "pyyaml"
 version = "6.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -3541,7 +3532,6 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings", version = "2.11.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "pydantic-settings", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "python-ulid" },
     { name = "pyyaml" },
     { name = "rich" },
     { name = "sentence-transformers" },
@@ -3579,9 +3569,8 @@ requires-dist = [
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23,<1.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0,<6.0" },
     { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.14,<4.0" },
-    { name = "python-ulid", specifier = ">=2.0,<3.0" },
     { name = "pyyaml", specifier = ">=6.0,<7.0" },
-    { name = "rich", specifier = ">=13.0,<14.0" },
+    { name = "rich", specifier = ">=13.0,<16.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5.0" },
     { name = "sentence-transformers", specifier = ">=3.0,<4.0" },
     { name = "typer", extras = ["all"], specifier = ">=0.12.0" },

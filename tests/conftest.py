@@ -14,8 +14,12 @@ from snipcontext.config.settings import Config, StorageConfig, reset_config
 def reset_config_cache():
     """Reset the config singleton between tests."""
     reset_config()
+    # Also reset the shared CLI context singleton
+    from snipcontext.cli.context import reset_context
+    reset_context()
     yield
     reset_config()
+    reset_context()
 
 
 @pytest.fixture

@@ -2,6 +2,10 @@
 
 Built with Typer and Rich for beautiful output, tab completion,
 and an excellent developer experience.
+
+Uses a shared context module (cli/context.py) to provide singleton
+instances of Config, StorageEngine, and HybridSearch across all commands.
+This eliminates redundant initialization on every command call.
 """
 
 from __future__ import annotations
@@ -18,8 +22,10 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 
-from snipcontext.config.settings import get_config
 from snipcontext.core.models import Snippet
+
+# Shared context for CLI commands (config, storage, search singletons)
+from snipcontext.cli.context import get_context as _get_context
 
 # Module-level Option constants to avoid B008
 _OPT_TAG = typer.Option(None, "--tag", help="Filter by tag")
@@ -68,13 +74,9 @@ app.add_typer(config_app)
 @app.command()
 def watch() -> None:
     """Watch snippet directory for changes and auto-update the search index."""
-    from snipcontext.core.search import HybridSearch
-    from snipcontext.core.storage import StorageEngine
     from snipcontext.core.watcher import SnippetWatcher
 
-    config = get_config()
-    storage = StorageEngine(config)
-    search = HybridSearch(config)
+    config, storage, search = _get_context()
     watcher = SnippetWatcher(config, search, storage)
     watcher.start()
 
@@ -149,7 +151,7 @@ def _init_config_and_plugins() -> tuple:
     """Initialize config and plugin manager."""
     from snipcontext.plugins.base import PluginManager
 
-    config = get_config()
+    config, _, _ = _get_context()
     pm = PluginManager()
     pm.load_builtin_providers()
     pm.discover()
@@ -165,12 +167,17 @@ def _init_config_and_plugins() -> tuple:
 def main(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
     debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
+    reload: bool = typer.Option(False, "--reload", help="Force reload of config and search index"),
 ) -> None:
     """SnipContext — save, search, and export your best code for LLMs."""
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
     elif verbose:
         logging.getLogger().setLevel(logging.INFO)
+    if reload:
+        from snipcontext.cli.context import reset_context
+        reset_context()
+        logger.debug("Shared context reset via --reload flag")
 
 
 # -- ADD -------------------------------------------------------------
@@ -195,9 +202,8 @@ def add(
 ) -> None:
     """Add a new code snippet to your collection."""
     from snipcontext.core.models import Language, SnippetMetadata
-    from snipcontext.core.storage import StorageEngine
 
-    config = get_config()
+    config, storage, search = _get_context()
 
     # Handle encryption flags
     if sensitive:
@@ -276,8 +282,7 @@ def add(
                 "[red]Encryption is not enabled. Set SNIPCONTEXT_ENCRYPT_ENABLED=true[/red]"
             )
             raise typer.Exit(1)
-        storage_obj = StorageEngine(config)
-        encrypted = storage_obj.encrypt_content(content)
+        encrypted = storage.encrypt_content(content)
         snippet = Snippet(
             content="",  # Clear plaintext when encrypted
             encrypted_content=encrypted,
@@ -307,27 +312,19 @@ def add(
     auto_tag_enabled = getattr(getattr(config, "auto_tag", None), "enabled", False)
     dedup_enabled = getattr(getattr(config, "dedup", None), "enabled", False)
     if (auto_tag_enabled or dedup_enabled) and not encrypt:
-        search = None
         try:
             from snipcontext.core.auto_tag import AutoTagService
-            from snipcontext.core.search import HybridSearch
         except Exception as exc:  # pragma: no cover - defensive for optional path
             logger.debug("Auto-tag/dedup setup skipped: %s", exc)
         else:
-            try:
-                search = HybridSearch(config)
-            except Exception as exc:  # pragma: no cover
-                logger.debug("Auto-tag/dedup disabled because search setup failed: %s", exc)
-
-        if search is not None:
-            storage_engine = StorageEngine(config)
+            # Use the shared search instance (already initialized)
             embedding = None
 
             # Auto-tag suggestions using the precomputed search/index.
             if auto_tag_enabled:
                 service = AutoTagService(
                     vector_index=search.vector_index,
-                    storage=storage_engine,
+                    storage=storage,
                     config=config.auto_tag,
                 )
                 try:
@@ -368,7 +365,7 @@ def add(
                     neighbor_id, score = neighbors[0]
                     if score >= config.dedup.threshold:
                         try:
-                            neighbor = storage_engine.get(neighbor_id)
+                            neighbor = storage.get(neighbor_id)
                             title = neighbor.metadata.title
                         except Exception:  # pragma: no cover
                             title = neighbor_id
@@ -381,7 +378,6 @@ def add(
 
     snippet = snippet.model_copy(update={"tags": final_tags})
 
-    storage = StorageEngine(config)
     storage.save(snippet)
 
     console.print(f"[green]Added snippet:[/green] [bold]{snippet.metadata.title}[/bold]")
@@ -398,10 +394,9 @@ def get(
     raw: bool = typer.Option(False, "--raw", "-r", help="Print only code, no metadata"),
 ) -> None:
     """Retrieve a snippet by ID."""
-    from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
+    from snipcontext.core.storage import SnippetNotFoundError
 
-    config = get_config()
-    storage = StorageEngine(config)
+    config, storage, _ = _get_context()
 
     # Try exact match first, then prefix match
     try:
@@ -445,12 +440,8 @@ def search(
     fuzzy: bool = typer.Option(False, "--fuzzy", help="Enable fuzzy matching for keyword search"),
 ) -> None:
     """Search snippets with semantic + keyword hybrid search."""
-    from snipcontext.core.search import HybridSearch
-    from snipcontext.core.storage import StorageEngine
 
-    config = get_config()
-    storage = StorageEngine(config)
-    searcher = HybridSearch(config)
+    config, storage, searcher = _get_context()
 
     # Build or load index
     if index or not searcher.indices_ready:
@@ -499,10 +490,8 @@ def list_snippets(
     ),
 ) -> None:
     """List all snippets with optional filters."""
-    from snipcontext.core.storage import StorageEngine
 
-    config = get_config()
-    storage = StorageEngine(config)
+    config, storage, _ = _get_context()
 
     snippets = storage.list_all()
 
@@ -567,10 +556,9 @@ def edit(
     message: str = typer.Option("", "--message", help="Version bump message"),
 ) -> None:
     """Edit an existing snippet."""
-    from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
+    from snipcontext.core.storage import SnippetNotFoundError
 
-    config = get_config()
-    storage = StorageEngine(config)
+    config, storage, _ = _get_context()
 
     try:
         snippet = storage.get(snippet_id)
@@ -611,10 +599,9 @@ def delete(
     force: Annotated[bool, typer.Option(help="Skip confirmation")] = False,
 ) -> None:
     """Delete a snippet."""
-    from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
+    from snipcontext.core.storage import SnippetNotFoundError
 
-    config = get_config()
-    storage = StorageEngine(config)
+    config, storage, _ = _get_context()
 
     try:
         snippet = storage.get(snippet_id)
@@ -642,12 +629,9 @@ def export(
     top_k: int = _OPT_TOP_K,
 ) -> None:
     """Export snippets in LLM-optimized format."""
-    from snipcontext.core.search import HybridSearch
-    from snipcontext.core.storage import StorageEngine
     from snipcontext.plugins.base import PluginManager
 
-    config = get_config()
-    storage = StorageEngine(config)
+    config, storage, searcher = _get_context()
 
     pm = PluginManager()
     pm.load_builtin_providers()
@@ -669,7 +653,6 @@ def export(
             except Exception:
                 console.print(f"[yellow]Warning: snippet not found: {sid}[/yellow]")
     elif query:
-        searcher = HybridSearch(config)
         if not searcher.indices_ready:
             all_s = storage.list_all()
             if all_s:
@@ -700,11 +683,8 @@ def index(
     force: Annotated[bool, typer.Option("--force", help="Skip confirmation prompt")] = False,
 ) -> None:
     """Rebuild the search index from all stored snippets."""
-    from snipcontext.core.search import HybridSearch
-    from snipcontext.core.storage import StorageEngine
 
-    config = get_config()
-    storage = StorageEngine(config)
+    config, storage, search = _get_context()
     snippets = storage.list_all()
 
     if not snippets:
@@ -713,7 +693,6 @@ def index(
             return
 
     console.print(f"Indexing {len(snippets)} snippets...")
-    search = HybridSearch(config)
     search.index_snippets(snippets)
     console.print(f"Index complete. {len(snippets)} snippets indexed.")
 
@@ -725,13 +704,8 @@ def build_index(
     ] = False,
 ) -> None:
     """Build or rebuild the semantic search index."""
-    from snipcontext.core.search import HybridSearch
-    from snipcontext.core.storage import StorageEngine
 
-    config = get_config()
-    storage = StorageEngine(config)
-    searcher = HybridSearch(config)
-
+    config, storage, searcher = _get_context()
     snippets = storage.list_all()
     if not snippets:
         console.print("[yellow]No snippets found. Add some first![/yellow]")
@@ -754,11 +728,8 @@ def build_index(
 @app.command()
 def stats() -> None:
     """Show collection statistics."""
-    from snipcontext.core.storage import StorageEngine
 
-    config = get_config()
-    storage = StorageEngine(config)
-
+    config, storage, _ = _get_context()
     s = storage.get_stats()
     total = s["total_snippets"]
 
@@ -796,11 +767,8 @@ def stats() -> None:
 def demo() -> None:
     """Run an interactive demo with sample snippets."""
     from snipcontext.core.models import Language, Snippet, SnippetMetadata
-    from snipcontext.core.search import HybridSearch
-    from snipcontext.core.storage import StorageEngine
 
-    config = get_config()
-    storage = StorageEngine(config)
+    config, storage, _ = _get_context()
 
     # Do not overwrite existing data silently
     existing = storage.list_all()
@@ -889,9 +857,7 @@ def demo() -> None:
 
     console.print("\n[bold]Sample search (semantic):[/bold]")
     try:
-        from snipcontext.core.search import HybridSearch
-
-        searcher = HybridSearch(config)
+        _, _, searcher = _get_context()
         if searcher.indices_ready:
             query = "async python"
             results = searcher.search(query, top_k=3)
@@ -958,7 +924,7 @@ def providers() -> None:
 @config_app.command("show")
 def config_show() -> None:
     """Show current configuration."""
-    config = get_config()
+    config, _, _ = _get_context()
     import yaml
 
     payload = config.model_dump(mode="json")
@@ -977,7 +943,7 @@ def config_init(
     force: Annotated[bool, typer.Option("--force", "-f", help="Overwrite existing config")] = False,
 ) -> None:
     """Initialize configuration file with defaults."""
-    config = get_config()
+    config, _, _ = _get_context()
     if config.config_file_path.exists() and not force:
         console.print(f"[yellow]Config already exists at {config.config_file_path}[/yellow]")
         console.print("Use --force to overwrite.")
@@ -990,7 +956,7 @@ def config_init(
 @config_app.command("path")
 def config_path() -> None:
     """Show configuration and data directories."""
-    config = get_config()
+    config, _, _ = _get_context()
     console.print(f"[bold]Config file:[/bold]  {config.config_file_path}")
     console.print(f"[bold]Data dir:[/bold]     {config.storage.data_dir}")
     console.print(f"[bold]Snippets:[/bold]    {config.snippets_path}")
@@ -1007,10 +973,8 @@ def encrypt(
     snippet_id: str = typer.Argument(..., help="Snippet ID to encrypt"),
 ) -> None:
     """Encrypt a snippet's content for secure storage."""
-    from snipcontext.config.settings import get_config
-    from snipcontext.core.storage import StorageEngine
 
-    config = get_config()
+    config, storage, _ = _get_context()
     if not config.encryption.enabled:
         console.print("[red]Encryption is not enabled. Set SNIPCONTEXT_ENCRYPT_ENABLED=true[/red]")
         console.print(
@@ -1018,7 +982,6 @@ def encrypt(
         )
         raise typer.Exit(1)
 
-    storage = StorageEngine()
     try:
         snippet = storage.get(snippet_id)
     except Exception:
@@ -1030,8 +993,7 @@ def encrypt(
         return
 
     try:
-        storage_obj = StorageEngine()
-        encrypted = storage_obj.encrypt_content(snippet.content)
+        encrypted = storage.encrypt_content(snippet.content)
         snippet.encrypted_content = encrypted
         snippet.content = ""  # Clear plaintext
         storage.save(snippet)
@@ -1046,9 +1008,8 @@ def decrypt(
     snippet_id: str = typer.Argument(..., help="Snippet ID to decrypt"),
 ) -> None:
     """Decrypt a snippet's content for viewing/editing."""
-    from snipcontext.core.storage import StorageEngine
 
-    storage = StorageEngine()
+    _, storage, _ = _get_context()
     try:
         snippet = storage.get(snippet_id)
     except Exception:
@@ -1060,8 +1021,7 @@ def decrypt(
         return
 
     try:
-        storage_obj = StorageEngine()
-        decrypted = storage_obj.decrypt_content(snippet.encrypted_content)
+        decrypted = storage.decrypt_content(snippet.encrypted_content)
         snippet.content = decrypted
         snippet.encrypted_content = None
         storage.save(snippet)

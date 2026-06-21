@@ -131,17 +131,15 @@ def test_index_command_with_snippets() -> None:
     snippet1 = _Snippet("snippet-1")
     snippet2 = _Snippet("snippet-2")
 
-    with patch("snipcontext.cli.main.get_config") as mock_get_config:
+    with patch("snipcontext.cli.main._get_context") as mock_get_context:
         mock_config = MagicMock()
-        mock_get_config.return_value = mock_config
-        storage = MagicMock()
-        storage.list_all.return_value = [snippet1, snippet2]
+        mock_storage = MagicMock()
+        mock_storage.list_all.return_value = [snippet1, snippet2]
+        mock_search = MagicMock()
+        mock_get_context.return_value = (mock_config, mock_storage, mock_search)
         with (
-            patch("snipcontext.core.storage.StorageEngine", return_value=storage),
-            patch("snipcontext.core.search.HybridSearch") as mock_search_cls,
             patch("snipcontext.cli.main.console"),
         ):
-            mock_search = mock_search_cls.return_value
             index(force=False)
 
         mock_search.index_snippets.assert_called_once_with([snippet1, snippet2])
@@ -150,19 +148,18 @@ def test_index_command_with_snippets() -> None:
 def test_index_command_empty_no_force_returns() -> None:
     from snipcontext.cli.main import index
 
-    with patch("snipcontext.cli.main.get_config") as mock_get_config:
+    with patch("snipcontext.cli.main._get_context") as mock_get_context:
         mock_config = MagicMock()
-        mock_get_config.return_value = mock_config
-        storage = MagicMock()
-        storage.list_all.return_value = []
+        mock_storage = MagicMock()
+        mock_storage.list_all.return_value = []
+        mock_search = MagicMock()
+        mock_get_context.return_value = (mock_config, mock_storage, mock_search)
         with (
-            patch("snipcontext.core.storage.StorageEngine", return_value=storage),
             patch("snipcontext.cli.main.console") as mock_console,
-            patch("snipcontext.core.search.HybridSearch") as mock_search_cls,
         ):
             index(force=False)
 
-        mock_search_cls.return_value.index_snippets.assert_not_called()
+        mock_search.index_snippets.assert_not_called()
         output = "".join(call.args[0] for call in mock_console.print.call_args_list)
         assert "No snippets found" in output
 
@@ -170,16 +167,15 @@ def test_index_command_empty_no_force_returns() -> None:
 def test_index_command_empty_with_force() -> None:
     from snipcontext.cli.main import index
 
-    with patch("snipcontext.cli.main.get_config") as mock_get_config:
+    with patch("snipcontext.cli.main._get_context") as mock_get_context:
         mock_config = MagicMock()
-        mock_get_config.return_value = mock_config
-        storage = MagicMock()
-        storage.list_all.return_value = []
+        mock_storage = MagicMock()
+        mock_storage.list_all.return_value = []
+        mock_search = MagicMock()
+        mock_get_context.return_value = (mock_config, mock_storage, mock_search)
         with (
-            patch("snipcontext.core.storage.StorageEngine", return_value=storage),
-            patch("snipcontext.core.search.HybridSearch") as mock_search_cls,
             patch("snipcontext.cli.main.console"),
         ):
             index(force=True)
 
-        mock_search_cls.return_value.index_snippets.assert_called_once_with([])
+        mock_search.index_snippets.assert_called_once_with([])

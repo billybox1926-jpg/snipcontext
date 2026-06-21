@@ -15,6 +15,38 @@ When in doubt about how something *should* work, check here first.
 3. **Graceful degradation** — If heavy dependencies (sentence-transformers, faiss-cpu) are unavailable, keyword search still works.
 4. **Never crash on input** — Malformed files, weird encodings, and edge cases are handled with warnings, not crashes.
 5. **Explicit over implicit** — No hidden defaults. If encryption is enabled, the passphrase MUST be set explicitly.
+6. **Shared context** — Config, StorageEngine, and HybridSearch are initialized once and reused across all CLI commands (singleton pattern via `cli/context.py`).
+
+---
+
+## Shared Context Architecture
+
+All CLI commands share a single set of core instances:
+
+| Component | Module | Purpose |
+|-----------|--------|---------|
+| `Config` | `config/settings.py` | Environment-aware configuration (singleton via `@lru_cache`) |
+| `StorageEngine` | `core/storage.py` | JSON file CRUD, encryption, stats |
+| `HybridSearch` | `core/search.py` | FAISS + TF-IDF hybrid search |
+
+### Initialization
+
+- First command call triggers initialization of all three components
+- Subsequent calls reuse existing instances (fast path, no lock contention)
+- Thread-safe via double-checked locking pattern
+
+### Reset
+
+- `reset_context()` clears all three instances (used by `--reload` flag and test fixtures)
+- Tests automatically reset context between each test via `autouse` fixture
+
+### `--reload` Flag
+
+Any command can be invoked with `--reload` to force re-initialization:
+
+```bash
+sc --reload search "query"    # Forces fresh config/storage/search
+```
 
 ---
 
