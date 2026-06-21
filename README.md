@@ -17,6 +17,8 @@ Save, search, tag, and instantly inject your best boilerplate, patterns, and con
 
 > **Local-first** — Open source — Built for humans + AI agents
 
+🎧 **[Stop Feeding Your AI Clipboard Garbage](docs/Stop_Feeding_Your_AI_Clipboard_Garbage.m4a)** — Why SnipContext exists.
+
 ---
 
 ## Why SnipContext?
