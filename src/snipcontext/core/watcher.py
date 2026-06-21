@@ -9,9 +9,11 @@ and degrades gracefully when watchdog is not installed.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+import threading
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
+    from watchdog.events import FileSystemEvent
     from watchdog.observers import Observer
 
 logger = logging.getLogger(__name__)
@@ -29,21 +31,52 @@ except ImportError:  # pragma: no cover - optional dependency
 
 
 class SnippetChangeHandler(FileSystemEventHandler):
-    """React to snippet file changes by rebuilding the search index."""
+    """React to snippet file changes by rebuilding the search index.
 
-    def __init__(self, search_engine, storage_engine) -> None:
+    Uses a debounce mechanism to avoid excessive reindexing during batch
+    operations (git checkout, IDE saves, etc.). Events are collected during
+    a configurable window, then a single reindex is triggered.
+    """
+
+    def __init__(
+        self,
+        search_engine,
+        storage_engine,
+        debounce_seconds: float = 2.0,
+    ) -> None:
         self.search = search_engine
         self.storage = storage_engine
+        self.debounce_seconds = debounce_seconds
+        self._timer: Optional[threading.Timer] = None
+        self._lock = threading.Lock()
 
-    def on_any_event(self, event) -> None:
+    def on_any_event(self, event: FileSystemEvent) -> None:
         if event.is_directory or event.src_path.endswith(".tmp"):
             return
+        with self._lock:
+            if self._timer is not None:
+                self._timer.cancel()
+            self._timer = threading.Timer(
+                self.debounce_seconds, self._do_reindex
+            )
+            self._timer.daemon = True
+            self._timer.start()
+
+    def _do_reindex(self) -> None:
         try:
             snippets = self.storage.list_all()
         except Exception as exc:
             logger.debug("Watcher handler skipped update: %s", exc)
             return
         self.search.rebuild_incremental(snippets)
+        logger.debug("Debounced reindex complete (%d snippets)", len(snippets))
+
+    def cancel(self) -> None:
+        """Cancel any pending reindex timer."""
+        with self._lock:
+            if self._timer is not None:
+                self._timer.cancel()
+                self._timer = None
 
 
 class SnippetWatcher:
@@ -54,6 +87,7 @@ class SnippetWatcher:
         self.search = search_engine
         self.storage = storage_engine
         self.observer: Observer | None = None
+        self._handler: SnippetChangeHandler | None = None
 
     def start(self) -> None:
         """Begin watching the snippets directory for changes.
@@ -68,16 +102,22 @@ class SnippetWatcher:
             print("watchdog not installed. Install with: pip install watchdog")
             return
 
-        handler = SnippetChangeHandler(self.search, self.storage)
+        debounce = getattr(self.config, "watchdog_debounce_seconds", 2.0)
+        self._handler = SnippetChangeHandler(
+            self.search, self.storage, debounce_seconds=debounce
+        )
         self.observer = Observer()
         assert self.observer is not None
-        self.observer.schedule(handler, str(self.config.snippets_path), recursive=False)
+        self.observer.schedule(self._handler, str(self.config.snippets_path), recursive=False)
         self.observer.start()
-        print(f"Watching {self.config.snippets_path} for changes...")
+        print(f"Watching {self.config.snippets_path} for changes (debounce={debounce}s)...")
         try:
             while self.observer.is_alive():
                 self.observer.join(1)
         except KeyboardInterrupt:
             self.observer.stop()
             self.observer.join()
+        finally:
+            if self._handler:
+                self._handler.cancel()
         print("Watcher stopped.")

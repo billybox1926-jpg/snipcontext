@@ -74,6 +74,9 @@ class StorageConfig(BaseSettings):
     watchdog_poll_interval: float = Field(
         default=5.0, ge=0.1, description="Watcher poll interval seconds"
     )
+    watchdog_debounce_seconds: float = Field(
+        default=2.0, ge=0.1, description="Debounce window for file watcher reindex (seconds)"
+    )
 
 
 class ExportConfig(BaseSettings):

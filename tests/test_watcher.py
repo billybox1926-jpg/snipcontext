@@ -40,7 +40,7 @@ def test_watcher_event_triggers_incremental_rebuild() -> None:
 
         search = _Search()
         storage = _Storage()
-        handler = SnippetChangeHandler(search, storage)
+        handler = SnippetChangeHandler(search, storage, debounce_seconds=0.0)
 
         try:
             from watchdog.events import FileCreatedEvent
@@ -50,8 +50,12 @@ def test_watcher_event_triggers_incremental_rebuild() -> None:
             pytest.skip(f"watchdog not available: {exc}")
 
         handler.on_any_event(event)
+        # Wait for debounced reindex (timer fires in separate thread)
+        import time
+        time.sleep(0.1)
 
         assert search.rebuild_called is True
+        handler.cancel()
 
 
 def test_watcher_disabled_config_does_nothing() -> None:
