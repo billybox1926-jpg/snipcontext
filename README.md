@@ -9,6 +9,8 @@
 [![Last Commit](https://img.shields.io/github/last-commit/billybox1926-jpg/snipcontext)](../../commits/master)
 [![Issues](https://img.shields.io/github/issues/billybox1926-jpg/snipcontext)](../../issues)
 
+![SnipContext Infographic](docs/snipcontext-infographic.png)
+
 **AI-powered code snippet & context manager.**
 
 Save, search, tag, and instantly inject your best boilerplate, patterns, and context into any LLM (Claude, Cursor, Grok, Windsurf, etc.).
