@@ -19,6 +19,11 @@ Save, search, tag, and instantly inject your best boilerplate, patterns, and con
 
 🎧 **[Stop Feeding Your AI Clipboard Garbage](docs/Stop_Feeding_Your_AI_Clipboard_Garbage.m4a)** — Why SnipContext exists.
 
+![SnipContext Demo](docs/demo.png)
+
+*Searching, tagging, and exporting code snippets — all from the terminal.*
+*[Watch the animated demo (GIF)](docs/demo.gif)*
+
 ---
 
 ## Why SnipContext?
