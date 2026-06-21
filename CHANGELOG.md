@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-06-21
+
+### Added
+- Shared context singleton for CLI commands — Config, StorageEngine, and HybridSearch initialized once and reused across all commands (`cli/context.py`)
+- Debounce mechanism for file watcher (closes #100)
+- `--reload` flag on any command to force re-initialization of shared context
+- SPEC.md as authoritative behavior contract
+
+### Changed
+- `Optional[X]` replaced with `X | None` syntax (ruff UP045)
+- Publish workflow hardened to use `PYPI_API_TOKEN` instead of OIDC
+
+### Fixed
+- Shared context: `get_config()` was called 19 times, `StorageEngine` instantiated 13 times per session — now singleton
+
 ## [Unreleased]
 
 ### Added
