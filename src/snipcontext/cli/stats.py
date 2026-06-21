@@ -29,6 +29,7 @@ def _render_ascii_bar(data: dict[str, int], max_width: int = 30) -> list[str]:
     if not data:
         return ["  (no data)"]
     from snipcontext.core.analytics import format_ascii_bar
+
     return format_ascii_bar(data, max_width)
 
 
@@ -51,7 +52,9 @@ def _render_basic_stats(s: dict) -> None:
     if s.get("oldest"):
         date_section = f"  Oldest: {s['oldest'][:10]}"
     if s.get("newest"):
-        date_section += f"{nl}  Newest: {s['newest'][:10]}" if date_section else f"  Newest: {s['newest'][:10]}"
+        date_section += (
+            f"{nl}  Newest: {s['newest'][:10]}" if date_section else f"  Newest: {s['newest'][:10]}"
+        )
 
     date_block = ""
     if date_section:
@@ -61,10 +64,10 @@ def _render_basic_stats(s: dict) -> None:
         Panel(
             f"""[bold]Collection Overview[/bold]
   Snippets: [cyan]{total}[/cyan]
-  Unique Tags: [cyan]{s.get('total_tags', 0)}[/cyan]
-  Languages: [cyan]{len(s.get('languages', {}))}[/cyan]
-  Encrypted: [cyan]{s.get('encrypted_count', 0)}[/cyan]
-  Size: [cyan]{_format_size(s.get('total_size_bytes', 0))}[/cyan]
+  Unique Tags: [cyan]{s.get("total_tags", 0)}[/cyan]
+  Languages: [cyan]{len(s.get("languages", {}))}[/cyan]
+  Encrypted: [cyan]{s.get("encrypted_count", 0)}[/cyan]
+  Size: [cyan]{_format_size(s.get("total_size_bytes", 0))}[/cyan]
 {date_block}
 
 [bold]By Language:[/bold]
@@ -74,7 +77,7 @@ def _render_basic_stats(s: dict) -> None:
 {tag_section}
 
 [bold]Storage:[/bold]
-  Data directory: [dim]{s.get('data_dir', 'N/A')}[/dim]""",
+  Data directory: [dim]{s.get("data_dir", "N/A")}[/dim]""",
             title="SnipContext Stats",
             border_style="green",
         )
@@ -89,12 +92,12 @@ def _render_detailed_stats(d: dict) -> None:
         Panel(
             f"""[bold]Collection Overview[/bold]
   Snippets: [cyan]{total}[/cyan]
-  Unique Tags: [cyan]{d.get('total_tags', 0)}[/cyan]
-  Languages: [cyan]{len(d.get('languages', {}))}[/cyan]
-  Encrypted: [cyan]{d.get('encrypted_count', 0)}[/cyan]
-  Deleted: [cyan]{d.get('deleted_count', 0)}[/cyan]
-  Size: [cyan]{_format_size(d.get('total_size_bytes', 0))}[/cyan]
-  Avg tags/snippet: [cyan]{d.get('avg_tags_per_snippet', 0)}[/cyan]""",
+  Unique Tags: [cyan]{d.get("total_tags", 0)}[/cyan]
+  Languages: [cyan]{len(d.get("languages", {}))}[/cyan]
+  Encrypted: [cyan]{d.get("encrypted_count", 0)}[/cyan]
+  Deleted: [cyan]{d.get("deleted_count", 0)}[/cyan]
+  Size: [cyan]{_format_size(d.get("total_size_bytes", 0))}[/cyan]
+  Avg tags/snippet: [cyan]{d.get("avg_tags_per_snippet", 0)}[/cyan]""",
             title="SnipContext Stats [bold cyan](Detailed)[/bold cyan]",
             border_style="green",
         )
@@ -117,14 +120,12 @@ def _render_detailed_stats(d: dict) -> None:
     # Language distribution with bar chart
     lang_dist = d.get("language_distribution", {})
     if lang_dist:
-        lang_bar_data = {
-            lang: info["count"] for lang, info in list(lang_dist.items())[:10]
-        }
+        lang_bar_data = {lang: info["count"] for lang, info in list(lang_dist.items())[:10]}
         bar_lines = _render_ascii_bar(lang_bar_data, max_width=25)
         console.print("\n[bold]Language Distribution:[/bold]")
         for line in bar_lines:
             lang_name = line.split("\u2588")[0].strip() if "\u2588" in line else line
-            bar_part = line[line.index("\u2588"):] if "\u2588" in line else ""
+            bar_part = line[line.index("\u2588") :] if "\u2588" in line else ""
             count = bar_part.split()[-1] if bar_part.strip() else ""
             # Reformat with percentage
             lang_key = lang_name.strip()
@@ -200,12 +201,8 @@ def register_commands(app: typer.Typer) -> None:
 
     @app.command()  # type: ignore[untyped-decorator]
     def stats(
-        detailed: bool = typer.Option(
-            False, "--detailed", "-d", help="Show detailed analytics"
-        ),
-        json_output: bool = typer.Option(
-            False, "--json", help="Output stats as JSON"
-        ),
+        detailed: bool = typer.Option(False, "--detailed", "-d", help="Show detailed analytics"),
+        json_output: bool = typer.Option(False, "--json", help="Output stats as JSON"),
     ) -> None:
         """Show collection statistics."""
         config, storage, _ = _get_context()
@@ -218,6 +215,7 @@ def register_commands(app: typer.Typer) -> None:
         if json_output:
             if detailed:
                 from snipcontext.core.analytics import compute_detailed_stats
+
                 output = compute_detailed_stats(snippets)
                 output["data_dir"] = str(config.storage.data_dir)
             else:
@@ -227,9 +225,7 @@ def register_commands(app: typer.Typer) -> None:
 
         if len(snippets) == 0:
             console.print("[yellow]No snippets in your collection yet.[/yellow]")
-            console.print(
-                "Add one with: [bold]sc add 'your code here' --title 'My Snippet'[/bold]"
-            )
+            console.print("Add one with: [bold]sc add 'your code here' --title 'My Snippet'[/bold]")
             return
 
         if detailed:

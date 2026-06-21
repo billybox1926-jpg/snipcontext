@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+
 from snipcontext.web.app import create_app
 
 

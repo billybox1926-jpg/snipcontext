@@ -11,6 +11,7 @@ pytest.importorskip("fastapi")
 pytest.importorskip("uvicorn", reason="uvicorn[standard] required for web tests")
 
 from fastapi.testclient import TestClient
+
 from snipcontext.cli.context import reset_context
 from snipcontext.web.app import create_app
 

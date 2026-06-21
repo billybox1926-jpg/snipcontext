@@ -104,9 +104,7 @@ class TestKeywordIndex:
         assert results == []
 
 
-@pytest.mark.skipif(
-    not SEMANTIC_AVAILABLE, reason="semantic search dependencies not installed"
-)
+@pytest.mark.skipif(not SEMANTIC_AVAILABLE, reason="semantic search dependencies not installed")
 @pytest.mark.slow
 class TestEmbeddingEngine:
     """Tests for the embedding engine."""
@@ -148,9 +146,7 @@ class TestEmbeddingEngine:
         assert abs(norm - 1.0) < 0.01
 
 
-@pytest.mark.skipif(
-    not SEMANTIC_AVAILABLE, reason="semantic search dependencies not installed"
-)
+@pytest.mark.skipif(not SEMANTIC_AVAILABLE, reason="semantic search dependencies not installed")
 @pytest.mark.slow
 class TestVectorIndex:
     """Tests for FAISS vector index."""
@@ -179,9 +175,7 @@ class TestVectorIndex:
         assert not idx.is_trained
 
 
-@pytest.mark.skipif(
-    not SEMANTIC_AVAILABLE, reason="semantic search dependencies not installed"
-)
+@pytest.mark.skipif(not SEMANTIC_AVAILABLE, reason="semantic search dependencies not installed")
 @pytest.mark.slow
 class TestHybridSearch:
     """Integration tests for hybrid search."""
@@ -332,12 +326,16 @@ class TestSemanticAvailabilityFlag:
         # hybrid without no_semantic — keyword fallback when deps missing
         results_kw = searcher.search("react component", top_k=3, mode="hybrid")
         # hybrid with no_semantic=True — explicitly forces keyword
-        results_no_sem = searcher.search("react component", top_k=3, mode="hybrid", no_semantic=True)
+        results_no_sem = searcher.search(
+            "react component", top_k=3, mode="hybrid", no_semantic=True
+        )
         assert len(results_no_sem) > 0
         assert len(results_kw) == len(results_no_sem)
 
         # semantic mode with no_semantic=True — should fall back to keyword
-        results_sem_forced = searcher.search("react component", top_k=3, mode="semantic", no_semantic=True)
+        results_sem_forced = searcher.search(
+            "react component", top_k=3, mode="semantic", no_semantic=True
+        )
         assert len(results_sem_forced) > 0
 
     def test_bm25_scores_normalized(self, temp_config):
@@ -412,9 +410,7 @@ class TestSearchFiltersAndScoring:
         searcher = HybridSearch(temp_config)
         searcher.index_snippets(snippets)
 
-        results = searcher.search(
-            "authenticate", top_k=10, mode="keyword", lang_filter=["python"]
-        )
+        results = searcher.search("authenticate", top_k=10, mode="keyword", lang_filter=["python"])
         assert len(results) > 0
         for r in results:
             assert r.snippet.metadata.language.value == "python"
@@ -452,9 +448,7 @@ class TestSearchFiltersAndScoring:
         searcher = HybridSearch(temp_config)
         searcher.index_snippets(snippets)
 
-        results = searcher.search(
-            "anything", top_k=10, mode="keyword", lang_filter=["go"]
-        )
+        results = searcher.search("anything", top_k=10, mode="keyword", lang_filter=["go"])
         assert results == []
 
     def test_tag_filter_and_logic(self, temp_config):
@@ -551,9 +545,7 @@ class TestSearchFiltersAndScoring:
         searcher.index_snippets([old_snippet, new_snippet])
 
         results_normal = searcher.search("function", top_k=2, mode="keyword")
-        results_boosted = searcher.search(
-            "function", top_k=2, mode="keyword", boost_recent=True
-        )
+        results_boosted = searcher.search("function", top_k=2, mode="keyword", boost_recent=True)
 
         # Both should return results
         assert len(results_normal) > 0
@@ -578,9 +570,7 @@ class TestSearchFiltersAndScoring:
         searcher = HybridSearch(temp_config)
         searcher.index_snippets(snippets)
 
-        results = searcher.search(
-            "authentication", top_k=3, mode="keyword", explain=True
-        )
+        results = searcher.search("authentication", top_k=3, mode="keyword", explain=True)
         assert len(results) > 0
         for r in results:
             assert r.explanation is not None
@@ -627,9 +617,7 @@ class TestMultiQueryAndGrouping:
         searcher.index_snippets(snippets)
 
         # Two queries that may overlap on some snippets
-        results = searcher.multi_search(
-            ["authentication", "security"], top_k=10, mode="keyword"
-        )
+        results = searcher.multi_search(["authentication", "security"], top_k=10, mode="keyword")
         # Check no duplicate snippet IDs
         ids = [r.snippet.id for r in results]
         assert len(ids) == len(set(ids)), "Multi-search returned duplicates"

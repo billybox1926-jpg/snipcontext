@@ -20,7 +20,10 @@ def register_commands(app: typer.Typer) -> None:
 
 
 def search(
-    queries: list[str] = typer.Argument(..., help="Search query(ies). Multiple queries trigger multi-search merge. Use query^N for weight (e.g. http^2)."),
+    queries: list[str] = typer.Argument(
+        ...,
+        help="Search query(ies). Multiple queries trigger multi-search merge. Use query^N for weight (e.g. http^2).",
+    ),
     mode: str = typer.Option(
         "hybrid", "--mode", "-m", help="Search mode: semantic, keyword, hybrid, tag"
     ),
@@ -42,9 +45,7 @@ def search(
     boost_recent: bool = typer.Option(
         False, "--boost-recent", help="Weight newer snippets higher in rankings"
     ),
-    explain: bool = typer.Option(
-        False, "--explain", help="Show scoring breakdown for each result"
-    ),
+    explain: bool = typer.Option(False, "--explain", help="Show scoring breakdown for each result"),
     group_by: str = typer.Option(
         None, "--group-by", help="Group results: language, tag, or source"
     ),
@@ -124,7 +125,9 @@ def search(
                     f"[dim](score: {result.score:.3f})[/dim]"
                 )
                 if explain and result.explanation:
-                    console.print(f"    [dim]rrf: {result.explanation.get('rrf_score', 'N/A')}[/dim]")
+                    console.print(
+                        f"    [dim]rrf: {result.explanation.get('rrf_score', 'N/A')}[/dim]"
+                    )
             console.print()
     else:
         # Flat output

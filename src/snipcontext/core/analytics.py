@@ -110,15 +110,16 @@ def compute_detailed_stats(snippets: list[Any]) -> dict[str, Any]:
     access_list = [(s.id[:8], s.metadata.title, s.access_count) for s in snippets]
     access_list.sort(key=lambda item: item[2], reverse=True)
     most_accessed = access_list[:5]
-    least_accessed = [item for item in access_list if item[2] > 0][-5:] if any(
-        item[2] > 0 for item in access_list
-    ) else []
+    least_accessed = (
+        [item for item in access_list if item[2] > 0][-5:]
+        if any(item[2] > 0 for item in access_list)
+        else []
+    )
     avg_access = sum(item[2] for item in access_list) / len(access_list)
 
     # Size metrics
     size_list = [
-        (s.id[:8], s.metadata.title, len(s.content.splitlines()), len(s.content))
-        for s in snippets
+        (s.id[:8], s.metadata.title, len(s.content.splitlines()), len(s.content)) for s in snippets
     ]
     size_list.sort(key=lambda item: item[3], reverse=True)
     largest = size_list[:5]
@@ -140,6 +141,7 @@ def compute_detailed_stats(snippets: list[Any]) -> dict[str, Any]:
 
     # Timeline — weekly and monthly counts based on created_at
     from datetime import UTC
+
     now = datetime.now(UTC)
     if snippets:
         # Use the same timezone as the snippets
@@ -194,12 +196,10 @@ def compute_detailed_stats(snippets: list[Any]) -> dict[str, Any]:
         **basic,
         "access_counts": {
             "most_accessed": [
-                {"id": item[0], "title": item[1], "count": item[2]}
-                for item in most_accessed
+                {"id": item[0], "title": item[1], "count": item[2]} for item in most_accessed
             ],
             "least_accessed": [
-                {"id": item[0], "title": item[1], "count": item[2]}
-                for item in least_accessed
+                {"id": item[0], "title": item[1], "count": item[2]} for item in least_accessed
             ],
             "average": round(avg_access, 2),
         },
@@ -214,12 +214,8 @@ def compute_detailed_stats(snippets: list[Any]) -> dict[str, Any]:
         "confidence": dict(confidence.most_common()),
         "versions": {"average": round(avg_versions, 2), "max": max_versions},
         "avg_tags_per_snippet": round(avg_tags, 2),
-        "timeline_weekly": dict(
-            sorted(weekly.items(), key=lambda item: item[0], reverse=True)
-        ),
-        "timeline_monthly": dict(
-            sorted(monthly.items(), key=lambda item: item[0], reverse=True)
-        ),
+        "timeline_weekly": dict(sorted(weekly.items(), key=lambda item: item[0], reverse=True)),
+        "timeline_monthly": dict(sorted(monthly.items(), key=lambda item: item[0], reverse=True)),
         "recent": {
             "this_week": added_this_week,
             "this_month": added_this_month,

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+
 from snipcontext.core.snippet_ops import (
     create_snippet,
     delete_snippet,

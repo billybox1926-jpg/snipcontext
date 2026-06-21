@@ -381,11 +381,19 @@ def register_commands(app: typer.Typer) -> None:
 
         # Check if any changes were requested
         has_changes = any(
-            [edit_content is not None, title is not None, description is not None,
-             language is not None, add_tags, remove_tags]
+            [
+                edit_content is not None,
+                title is not None,
+                description is not None,
+                language is not None,
+                add_tags,
+                remove_tags,
+            ]
         )
         if not has_changes:
-            console.print("[yellow]No changes specified. Use options like --title, --content, --tag, etc.[/yellow]")
+            console.print(
+                "[yellow]No changes specified. Use options like --title, --content, --tag, etc.[/yellow]"
+            )
             raise typer.Exit(0)
 
         # Build change summary for confirmation
@@ -405,7 +413,9 @@ def register_commands(app: typer.Typer) -> None:
 
         # Confirmation prompt (unless --force)
         if not force:
-            console.print(f"[cyan]Editing:[/cyan] {snippet.metadata.title} [dim]({snippet.id})[/dim]")
+            console.print(
+                f"[cyan]Editing:[/cyan] {snippet.metadata.title} [dim]({snippet.id})[/dim]"
+            )
             console.print(f"  [dim]Changes: {', '.join(changes)}[/dim]")
             if not _confirm_action("Apply these changes?"):
                 console.print("Cancelled.")

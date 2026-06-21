@@ -167,6 +167,7 @@ class TestStatsCommand:
             r2, _ = invoke("stats", "--json", env=env)
             assert r2.exit_code == 0
             import json
+
             data = json.loads(r2.output)
             assert data["total_snippets"] == 1
 
@@ -184,6 +185,7 @@ class TestStatsCommand:
             r2, _ = invoke("stats", "--detailed", "--json", env=env)
             assert r2.exit_code == 0
             import json
+
             data = json.loads(r2.output)
             assert "access_counts" in data
             assert "size_metrics" in data
@@ -294,7 +296,14 @@ class TestEditCommand:
     def _add_and_get_id(self, env):
         """Helper: add a snippet and return its ID from the output."""
         result, _ = invoke(
-            "add", "print('hello')", "--title", "Hello", "--tag", "python", "--lang", "python",
+            "add",
+            "print('hello')",
+            "--title",
+            "Hello",
+            "--tag",
+            "python",
+            "--lang",
+            "python",
             env=env,
         )
         assert result.exit_code == 0, f"Add failed: {result.output}"
@@ -364,9 +373,7 @@ class TestEditCommand:
             sid = self._add_and_get_id(env)
             assert sid is not None
 
-            result, _ = invoke(
-                "edit", sid, "--tag", "cli", "--tag", "demo", "--force", env=env
-            )
+            result, _ = invoke("edit", sid, "--tag", "cli", "--tag", "demo", "--force", env=env)
             assert result.exit_code == 0
             assert "Updated" in result.output
             assert "cli" in result.output or "demo" in result.output
@@ -399,9 +406,7 @@ class TestEditCommand:
             sid = self._add_and_get_id(env)
             assert sid is not None
 
-            result, _ = invoke(
-                "edit", sid, "--content", "print('updated')", "--force", env=env
-            )
+            result, _ = invoke("edit", sid, "--content", "print('updated')", "--force", env=env)
             assert result.exit_code == 0
             assert "Updated" in result.output
 
@@ -433,9 +438,7 @@ class TestEditCommand:
             sid = self._add_and_get_id(env)
             assert sid is not None
 
-            result, _ = invoke(
-                "edit", sid, "--desc", "A hello world example", "--force", env=env
-            )
+            result, _ = invoke("edit", sid, "--desc", "A hello world example", "--force", env=env)
             assert result.exit_code == 0
             assert "Updated" in result.output
 
@@ -473,9 +476,7 @@ class TestEditCommand:
             sid = self._add_and_get_id(env)
             assert sid is not None
 
-            result, _ = invoke(
-                "edit", sid, "--title", "X", "--tag", "newtag", input="y", env=env
-            )
+            result, _ = invoke("edit", sid, "--title", "X", "--tag", "newtag", input="y", env=env)
             assert result.exit_code == 0
             # Should show change summary before asking to confirm
             assert "Changes:" in result.output

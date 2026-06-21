@@ -1033,9 +1033,7 @@ class HybridSearch:
         return recalculated
 
     @staticmethod
-    def _attach_explanations(
-        results: list[SearchResult], mode: str
-    ) -> list[SearchResult]:
+    def _attach_explanations(results: list[SearchResult], mode: str) -> list[SearchResult]:
         """Attach scoring breakdown dicts to each result."""
         from datetime import datetime, timezone
 
@@ -1098,7 +1096,6 @@ class HybridSearch:
                 break
 
         return search_results
-
 
     # -------------------------------------------------------------------
     # Multi-query search & result grouping
