@@ -1,0 +1,112 @@
+name: Build Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Build PyInstaller binaries for each platform ─────────────────
+  build-binary:
+    name: Build (${{ matrix.os }}, ${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x86_64
+            artifact: snipcontext-linux-x86_64
+          - os: ubuntu-latest
+            target: linux-x86_64-minimal
+            artifact: snipcontext-linux-x86_64-minimal
+          - os: windows-latest
+            target: windows-x86_64
+            artifact: snipcontext-windows-x86_64
+          - os: macos-latest
+            target: macos-x86_64
+            artifact: snipcontext-macos-x86_64
+          - os: macos-latest
+            target: macos-arm64
+            artifact: snipcontext-macos-arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          source .venv/bin/activate 2>/dev/null || .venv\Scripts\activate
+          uv pip install -e ".[all]" pyinstaller
+
+      - name: Build binary (full)
+        if: "!endsWith(matrix.target, '-minimal')"
+        shell: bash
+        run: |
+          source .venv/bin/activate 2>/dev/null || .venv\Scripts\activate
+          pyinstaller snipcontext.spec --clean --noconfirm
+
+      - name: Build binary (minimal — no semantic/encryption/web)
+        if: endsWith(matrix.target, '-minimal')
+        shell: bash
+        run: |
+          source .venv/bin/activate 2>/dev/null || .venv\Scripts\activate
+          pyinstaller snipcontext.spec --clean --noconfirm \
+            --exclude-module sentence_transformers \
+            --exclude-module faiss \
+            --exclude-module cryptography \
+            --exclude-module fastapi \
+            --exclude-module uvicorn \
+            --exclude-module prompt_toolkit
+
+      - name: Package binary
+        shell: bash
+        run: |
+          mkdir -p packaged
+          if [ -f dist/snipcontext ]; then
+            tar czf packaged/${{ matrix.artifact }}.tar.gz -C dist snipcontext
+          elif [ -f dist/snipcontext.exe ]; then
+            cd dist && zip ../packaged/${{ matrix.artifact }}.zip snipcontext.exe && cd ..
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: packaged/
+          retention-days: 7
+
+  # ── Create GitHub Release with binaries ──────────────────────────
+  release:
+    name: Create Release
+    needs: build-binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets/
+          merge-multiple: true
+
+      - name: List release assets
+        run: find release-assets/ -type f | sort
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true

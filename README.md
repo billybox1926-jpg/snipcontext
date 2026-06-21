@@ -111,6 +111,54 @@ pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 >    doskey snip=python -m snipcontext $*
 >    ```
 
+### Standalone Binary
+
+Two options for running without a Python environment:
+
+**Option 1 — `uv tool` (recommended, lightweight):**
+
+```bash
+# Core features only (keyword search, export)
+uv tool install snipcontext
+
+# All features (semantic search, encryption, TUI, web)
+uv tool install "snipcontext[all]"
+
+# Use directly — uv manages the venv invisibly
+snipcontext add "print('hello')" --title "Hello"
+```
+
+**Option 2 — Pre-built binary (no Python needed):**
+
+Download from the [latest GitHub Release](https://github.com/billybox1926-jpg/snipcontext/releases). Two variants are available for each platform:
+
+| Variant | Includes | Size (approx.) |
+|---------|----------|---------------|
+| `snipcontext-<platform>` | Everything (semantic, encryption, TUI, web) | ~200MB |
+| `snipcontext-<platform>-minimal` | Core only (keyword search, export) | ~80MB |
+
+```bash
+# Linux / macOS
+chmod +x snipcontext
+./snipcontext search "hello world"
+
+# Windows
+snipcontext.exe search "hello world"
+```
+
+**Build from source:**
+
+```bash
+# Using Make
+make build-binary           # full build
+make build-binary-minimal   # core-only build
+
+# Using PyInstaller directly
+pip install pyinstaller
+pyinstaller snipcontext.spec
+# Output: dist/snipcontext (or dist/snipcontext.exe)
+```
+
 ### Security Considerations
 
 - **Encryption at rest:** Uses Fernet (AES-128-CBC with HMAC) with PBKDF2 key derivation (100k iterations). Passphrase is read from `SNIPCONTEXT_ENCRYPTION_PASSPHRASE` env var — **never pass it on the command line** (shell history leak).
