@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# snipcontext — POSIX shell wrapper for source-checkout / dev installs.
+# Forwards all arguments to the snipcontext Python module.
+
+set -euo pipefail
+
+exec python3 -m snipcontext "$@"

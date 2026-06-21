@@ -118,12 +118,14 @@ path = "src/snipcontext/__init__.py"
 include = [
     "/src/snipcontext",
     "/tests",
+    "/scripts",
     "/README.md",
     "/pyproject.toml",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/snipcontext"]
+artifacts = ["scripts/snipcontext.cmd"]
 
 [tool.hatch.build]
 exclude = [
@@ -169,6 +171,7 @@ disable_error_code = [
     "no-any-return",
     "type-arg",
     "no-untyped-call",
+    "untyped-decorator",
 ]
 
 [[tool.mypy.overrides]]

@@ -96,7 +96,20 @@ pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 >
 > **ARM / Android / Termux:** The `semantic` and `encryption` extras require Rust to build native wheels. On platforms without pre-built wheels (ARM64, Android/Termux), install the core package only and use keyword search + export features. Semantic search and encryption gracefully degrade with clear error messages when their dependencies are missing.
 
-> **⚠️ Windows Users:** Windows has a built-in `sc.exe` (Service Control) that shadows the `sc` CLI entry point. Use the full command name `snipcontext` instead, or run via `python -m snipcontext`.
+> **Windows Users:** The short alias `sc` is shadowed by the Windows built-in `sc.exe` (Service Control). Three workarounds are available:
+>
+> 1. **Full command name** — always works after installation:
+>    ```powershell
+>    snipcontext add "print('hello')" --title "Hello" --tag python
+>    ```
+> 2. **Wrapper script** — shipped automatically with `pip install`; adds `snipcontext.cmd` to your Scripts directory:
+>    ```powershell
+>    snipcontext.cmd search "hello world"
+>    ```
+> 3. **Shell alias** — for quick access in the current session:
+>    ```cmd
+>    doskey snip=python -m snipcontext $*
+>    ```
 
 ### Security Considerations
 
@@ -107,7 +120,7 @@ pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 - **No network calls:** All processing is local. No data leaves your machine.
 
 ```bash
-# Windows: use the full command name
+# Windows: use the full command name or the .cmd wrapper
 snipcontext add "print('hello')" --title "Hello" --tag python
 snipcontext search "hello world"
 snipcontext list
