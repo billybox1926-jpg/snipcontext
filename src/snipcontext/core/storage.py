@@ -310,13 +310,20 @@ class StorageEngine:
         enc_config = self._config.encryption
         salt = enc_config.get_or_create_salt()
 
-        # Use a fixed passphrase from environment or derive from a stable source
-        # In production, this should come from a secure key management system
+        # Passphrase must be set explicitly via env var — no default fallback.
+        # A default would provide a false sense of security.
         import os
 
-        passphrase = os.environ.get(
-            "SNIPCONTEXT_ENCRYPTION_PASSPHRASE", "snipcontext-default-passphrase"
-        )
+        passphrase = os.environ.get("SNIPCONTEXT_ENCRYPTION_PASSPHRASE")
+        if not passphrase:
+            raise EncryptionError(
+                "encrypt/decrypt",
+                original_error=RuntimeError(
+                    "SNIPCONTEXT_ENCRYPTION_PASSPHRASE env var must be set "
+                    "when encryption is enabled. "
+                    "Example: export SNIPCONTEXT_ENCRYPTION_PASSPHRASE=$(head -c 32 /dev/urandom | base64)"
+                ),
+            )
         passphrase_bytes = passphrase.encode()
 
         kdf = PBKDF2HMAC(
