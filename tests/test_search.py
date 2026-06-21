@@ -608,3 +608,180 @@ class TestSearchFiltersAndScoring:
         assert len(results) > 0
         for r in results:
             assert r.explanation is None
+
+
+class TestMultiQueryAndGrouping:
+    """Tests for multi-query search, query weights, and result grouping (Issue #32)."""
+
+    def test_multi_search_deduplicates(self, temp_config):
+        """Multi-query should deduplicate snippets appearing in multiple queries."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        # Two queries that may overlap on some snippets
+        results = searcher.multi_search(
+            ["authentication", "security"], top_k=10, mode="keyword"
+        )
+        # Check no duplicate snippet IDs
+        ids = [r.snippet.id for r in results]
+        assert len(ids) == len(set(ids)), "Multi-search returned duplicates"
+        assert len(results) > 0
+
+    def test_multi_search_weighted_queries(self, temp_config):
+        """Query with ^2 weight should influence ranking differently than unweighted."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        # Weighted vs unweighted should produce different rankings
+        results_unweighted = searcher.multi_search(
+            ["authentication", "database"], top_k=5, mode="keyword"
+        )
+        results_weighted = searcher.multi_search(
+            ["authentication^3", "database"], top_k=5, mode="keyword"
+        )
+        assert len(results_unweighted) > 0
+        assert len(results_weighted) > 0
+
+    def test_parse_query_weights(self, temp_config):
+        """_parse_query_weights should handle ^N syntax correctly."""
+        from snipcontext.core.search import HybridSearch
+
+        assert HybridSearch._parse_query_weights(["http^2", "error"]) == [
+            ("http", 2.0),
+            ("error", 1.0),
+        ]
+        assert HybridSearch._parse_query_weights(["python"]) == [
+            ("python", 1.0),
+        ]
+        assert HybridSearch._parse_query_weights(["api^3", "rest^1.5"]) == [
+            ("api", 3.0),
+            ("rest", 1.5),
+        ]
+        # Invalid weight defaults to 1.0
+        assert HybridSearch._parse_query_weights(["test^abc"]) == [
+            ("test", 1.0),
+        ]
+
+    def test_multi_search_empty_queries(self, temp_config):
+        """Empty query list should return empty results."""
+        from snipcontext.core.search import HybridSearch
+
+        searcher = HybridSearch(temp_config)
+        results = searcher.multi_search([], mode="keyword")
+        assert results == []
+
+    def test_group_by_language(self, temp_config):
+        """Grouping by language should create correct groups."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        results = searcher.search("code function", top_k=10, mode="keyword")
+        groups = HybridSearch.group_results(results, group_by="language")
+
+        # Should have at least a python group
+        assert "python" in groups
+        assert len(groups["python"]) > 0
+
+    def test_group_by_tag(self, temp_config):
+        """Grouping by tag should create correct groups."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        results = searcher.search("code", top_k=10, mode="keyword")
+        groups = HybridSearch.group_results(results, group_by="tag")
+
+        # Should have at least one tag group
+        assert len(groups) > 0
+
+    def test_group_by_source(self, temp_config):
+        """Grouping by source should group all as 'local' (no source_url)."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        results = searcher.search("code", top_k=10, mode="keyword")
+        groups = HybridSearch.group_results(results, group_by="source")
+
+        assert "local" in groups
+        assert len(groups["local"]) > 0
+
+    def test_group_by_per_group_limit(self, temp_config):
+        """per_group should limit results within each group."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        results = searcher.search("code", top_k=10, mode="keyword")
+        groups = HybridSearch.group_results(results, group_by="language", per_group=1)
+
+        for key, group in groups.items():
+            assert len(group) <= 1
+
+    def test_multi_search_with_explain(self, temp_config):
+        """Multi-search with explain should attach RRF scores."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        results = searcher.multi_search(
+            ["authentication", "security"], top_k=5, mode="keyword", explain=True
+        )
+        assert len(results) > 0
+        for r in results:
+            assert r.explanation is not None
+            assert "rrf_score" in r.explanation
+            assert "num_queries" in r.explanation
+            assert r.explanation["num_queries"] == 2

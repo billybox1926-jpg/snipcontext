@@ -1098,3 +1098,180 @@ class HybridSearch:
                 break
 
         return search_results
+
+
+    # -------------------------------------------------------------------
+    # Multi-query search & result grouping
+    # -------------------------------------------------------------------
+
+    @staticmethod
+    def _parse_query_weights(
+        queries: list[str],
+    ) -> list[tuple[str, float]]:
+        """Parse ``query^weight`` syntax into (query, weight) pairs.
+
+        Examples::
+
+            ["http^2", "error"]       -> [("http", 2.0), ("error", 1.0)]
+            ["python"]                -> [("python", 1.0)]
+            ["api^3", "rest^1.5"]     -> [("api", 3.0), ("rest", 1.5)]
+        """
+        parsed: list[tuple[str, float]] = []
+        for q in queries:
+            if "^" in q:
+                parts = q.rsplit("^", 1)
+                try:
+                    weight = float(parts[1])
+                except ValueError:
+                    weight = 1.0
+                parsed.append((parts[0], weight))
+            else:
+                parsed.append((q, 1.0))
+        return parsed
+
+    def multi_search(
+        self,
+        queries: list[str],
+        top_k: int | None = None,
+        mode: SearchMode | str | None = None,
+        min_score: float | None = None,
+        fuzzy: bool = False,
+        no_semantic: bool = False,
+        lang_filter: list[str] | None = None,
+        tag_filter: list[str] | None = None,
+        boost_recent: bool = False,
+        explain: bool = False,
+    ) -> list[SearchResult]:
+        """Run multiple queries, merge results with dedup and weighted scores.
+
+        Each query is run independently via :meth:`search`.  Scores for the
+        same snippet across queries are combined using a weighted reciprocal
+        rank fusion (RRF).  The weight from ``query^N`` syntax multiplies
+        the query's contribution.
+
+        Args:
+            queries: List of query strings (optionally with ``^weight`` suffix).
+            top_k: Maximum number of results.
+            mode: Search strategy.
+            min_score: Minimum relevance score.
+            fuzzy: Enable fuzzy matching.
+            no_semantic: Force keyword-only mode.
+            lang_filter: Filter by language.
+            tag_filter: Filter by tags (AND).
+            boost_recent: Weight newer snippets higher.
+            explain: Attach scoring breakdown.
+
+        Returns:
+            Merged, deduplicated, ranked list of SearchResults.
+        """
+        if not queries:
+            return []
+
+        parsed = self._parse_query_weights(queries)
+        top_k = top_k or self._config.search.top_k
+        k = 60  # RRF constant
+
+        # Collect per-query results
+        per_query: list[list[SearchResult]] = []
+        for query_text, _weight in parsed:
+            results = self.search(
+                query_text,
+                top_k=top_k,
+                mode=mode,
+                min_score=min_score,
+                fuzzy=fuzzy,
+                no_semantic=no_semantic,
+                explain=False,  # explanation added after merge
+            )
+            per_query.append(results)
+
+        # Weighted Reciprocal Rank Fusion
+        snippet_scores: dict[str, float] = {}
+        snippet_map: dict[str, SearchResult] = {}
+
+        for qi, results in enumerate(per_query):
+            query_weight = parsed[qi][1]
+            for rank, r in enumerate(results, start=1):
+                sid = r.snippet.id
+                rrf = query_weight / (k + rank)
+                snippet_scores[sid] = snippet_scores.get(sid, 0.0) + rrf
+                if sid not in snippet_map or r.score > snippet_map[sid].score:
+                    snippet_map[sid] = r
+
+        # Sort by combined RRF score (descending)
+        sorted_ids = sorted(snippet_scores.items(), key=lambda x: x[1], reverse=True)
+
+        # Rebuild SearchResults with fused score
+        merged: list[SearchResult] = []
+        for sid, rrf_score in sorted_ids[:top_k]:
+            r = snippet_map[sid]
+            merged.append(
+                SearchResult(
+                    snippet=r.snippet,
+                    score=r.score,
+                    matched_by=r.matched_by,
+                    highlights=r.highlights,
+                    explanation={
+                        "rrf_score": round(rrf_score, 4),
+                        "original_score": round(r.score, 4),
+                        "matched_by": r.matched_by,
+                        "num_queries": len(parsed),
+                    }
+                    if explain
+                    else None,
+                )
+            )
+
+        # Apply post-filters
+        lang_set: set[str] | None = None
+        if lang_filter:
+            lang_set = {l.strip().lower() for l in lang_filter}
+        tag_set: set[str] | None = None
+        if tag_filter:
+            tag_set = {t.strip().lower() for t in tag_filter}
+
+        if lang_set or tag_set:
+            merged = self._apply_filters(merged, lang_set, tag_set)
+
+        if boost_recent and merged:
+            merged = self._apply_recency_boost(merged)
+
+        return merged
+
+    @staticmethod
+    def group_results(
+        results: list[SearchResult],
+        group_by: str,
+        per_group: int = 3,
+    ) -> dict[str, list[SearchResult]]:
+        """Group search results by a snippet attribute.
+
+        Args:
+            results: Flat list of SearchResults.
+            group_by: One of ``"language"``, ``"tag"``, ``"source"``.
+            per_group: Maximum results per group.
+
+        Returns:
+            Dict mapping group key to list of SearchResults.
+        """
+        groups: dict[str, list[SearchResult]] = {}
+        for r in results:
+            s = r.snippet
+            if group_by == "language":
+                key = s.metadata.language.value
+            elif group_by == "tag":
+                key = s.tags[0] if s.tags else "untagged"
+            elif group_by == "source":
+                key = s.metadata.source_url or "local"
+            else:
+                key = "other"
+
+            if key not in groups:
+                groups[key] = []
+            if len(groups[key]) < per_group:
+                groups[key].append(r)
+
+        def _group_score(items: list[SearchResult]) -> float:
+            return sum(r.score for r in items)
+
+        return dict(sorted(groups.items(), key=lambda x: _group_score(x[1]), reverse=True))

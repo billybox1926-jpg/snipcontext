@@ -20,7 +20,7 @@ def register_commands(app: typer.Typer) -> None:
 
 
 def search(
-    query: str = typer.Argument(..., help="Search query"),
+    queries: list[str] = typer.Argument(..., help="Search query(ies). Multiple queries trigger multi-search merge. Use query^N for weight (e.g. http^2)."),
     mode: str = typer.Option(
         "hybrid", "--mode", "-m", help="Search mode: semantic, keyword, hybrid, tag"
     ),
@@ -45,8 +45,18 @@ def search(
     explain: bool = typer.Option(
         False, "--explain", help="Show scoring breakdown for each result"
     ),
+    group_by: str = typer.Option(
+        None, "--group-by", help="Group results: language, tag, or source"
+    ),
 ) -> None:
-    """Search snippets with semantic + keyword hybrid search."""
+    """Search snippets with semantic + keyword hybrid search.
+
+    Accepts one or more queries.  When multiple queries are given they are
+    merged using weighted Reciprocal Rank Fusion (RRF).  Append ``^N`` to
+    a query to give it N-times weight, e.g. ``"http^2" "error"``.
+
+    Use --group-by to organise results by language, tag, or source.
+    """
     config, storage, searcher = _get_context()
     if index or not searcher.indices_ready:
         console.print("[yellow]Building search index...[/yellow]")
@@ -61,8 +71,8 @@ def search(
     lang_list = [l.strip() for l in lang.split(",") if l.strip()] if lang else None
     tag_list = [t.strip() for t in tag.split(",") if t.strip()] if tag else None
 
-    results = searcher.search(
-        query,
+    # Decide single-query vs multi-query
+    common_kwargs = dict(
         top_k=top_k,
         mode=mode,
         min_score=threshold,
@@ -73,8 +83,18 @@ def search(
         boost_recent=boost_recent,
         explain=explain,
     )
+
+    if len(queries) == 1:
+        # Single query — use the fast path
+        results = searcher.search(queries[0], **common_kwargs)
+        query_label = queries[0]
+    else:
+        # Multi-query — use RRF merge
+        results = searcher.multi_search(queries, **common_kwargs)
+        query_label = ", ".join(queries)
+
     if not results:
-        console.print(f"[yellow]No results for '{query}'[/yellow]")
+        console.print(f"[yellow]No results for '{query_label}'[/yellow]")
         if not fuzzy:
             console.print("[dim]Try with --fuzzy for approximate matching[/dim]")
         if threshold and threshold > 0.1:
@@ -82,16 +102,42 @@ def search(
         if lang_list or tag_list:
             console.print("[dim]Try removing --lang or --tag filters to broaden results[/dim]")
         raise typer.Exit(0)
-    console.print(
-        f"\n[bold]{len(results)} results[/bold] for '[cyan]{query}[/cyan]' ([dim]{mode}[/dim]):\n"
-    )
-    for i, result in enumerate(results, 1):
-        _print_snippet(result.snippet, score=result.score, idx=i)
-        if explain and result.explanation:
-            console.print("  [dim]── explain ──[/dim]")
-            for key, val in result.explanation.items():
-                console.print(f"  [dim]{key}: {val}[/dim]")
-        console.print()
+
+    # Grouped output
+    if group_by:
+        groups = searcher.group_results(results, group_by=group_by)
+        if not groups:
+            console.print(f"[yellow]No grouped results for '{query_label}'[/yellow]")
+            raise typer.Exit(0)
+
+        console.print(
+            f"\n[bold]{len(results)} results[/bold] for "
+            f"'[cyan]{query_label}[/cyan]' "
+            f"([dim]{mode}, grouped by {group_by}[/dim]):\n"
+        )
+        for group_key, group_results in groups.items():
+            console.print(f"[bold]## {group_key}[/bold] ({len(group_results)} results)")
+            for i, result in enumerate(group_results, 1):
+                console.print(
+                    f"  [yellow]{i}.[/yellow] "
+                    f"[cyan]{result.snippet.metadata.title}[/cyan] "
+                    f"[dim](score: {result.score:.3f})[/dim]"
+                )
+                if explain and result.explanation:
+                    console.print(f"    [dim]rrf: {result.explanation.get('rrf_score', 'N/A')}[/dim]")
+            console.print()
+    else:
+        # Flat output
+        console.print(
+            f"\n[bold]{len(results)} results[/bold] for '[cyan]{query_label}[/cyan]' ([dim]{mode}[/dim]):\n"
+        )
+        for i, result in enumerate(results, 1):
+            _print_snippet(result.snippet, score=result.score, idx=i)
+            if explain and result.explanation:
+                console.print("  [dim]── explain ──[/dim]")
+                for key, val in result.explanation.items():
+                    console.print(f"  [dim]{key}: {val}[/dim]")
+            console.print()
 
 
 def index(
