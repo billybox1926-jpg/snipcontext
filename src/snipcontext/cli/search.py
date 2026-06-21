@@ -73,25 +73,35 @@ def search(
     tag_list = [t.strip() for t in tag.split(",") if t.strip()] if tag else None
 
     # Decide single-query vs multi-query
-    common_kwargs = dict(
-        top_k=top_k,
-        mode=mode,
-        min_score=threshold,
-        fuzzy=fuzzy,
-        no_semantic=no_semantic,
-        lang_filter=lang_list,
-        tag_filter=tag_list,
-        boost_recent=boost_recent,
-        explain=explain,
-    )
-
     if len(queries) == 1:
         # Single query — use the fast path
-        results = searcher.search(queries[0], **common_kwargs)
+        results = searcher.search(
+            queries[0],
+            top_k=top_k,
+            mode=mode,
+            min_score=threshold,
+            fuzzy=fuzzy,
+            no_semantic=no_semantic,
+            lang_filter=lang_list,
+            tag_filter=tag_list,
+            boost_recent=boost_recent,
+            explain=explain,
+        )
         query_label = queries[0]
     else:
         # Multi-query — use RRF merge
-        results = searcher.multi_search(queries, **common_kwargs)
+        results = searcher.multi_search(
+            queries,
+            top_k=top_k,
+            mode=mode,
+            min_score=threshold,
+            fuzzy=fuzzy,
+            no_semantic=no_semantic,
+            lang_filter=lang_list,
+            tag_filter=tag_list,
+            boost_recent=boost_recent,
+            explain=explain,
+        )
         query_label = ", ".join(queries)
 
     if not results:
