@@ -321,16 +321,16 @@ class VectorIndex:
         except Exception as exc:
             logger.warning("Failed to load vector index from %s: %s", path, exc)
             # Clean up potentially corrupted files
-            try:
-                if index_file.exists():
-                    index_file.unlink()
-                if idmap_file.exists():
-                    idmap_file.unlink()
-                hash_file = path / "content_hashes.json"
-                if hash_file.exists():
-                    hash_file.unlink()
-            except Exception:
-                pass
+            for _file in (index_file, idmap_file, path / "content_hashes.json"):
+                try:
+                    if _file.exists():
+                        _file.unlink()
+                except OSError as cleanup_err:
+                    logger.warning(
+                        "Failed to clean up corrupted index file %s: %s",
+                        _file.name,
+                        cleanup_err,
+                    )
             return False
 
     def _embed_fn(self, text: str) -> np.ndarray:
@@ -535,8 +535,11 @@ class KeywordIndex:
             try:
                 if index_file.exists():
                     index_file.unlink()
-            except Exception:
-                pass
+            except OSError as cleanup_err:
+                logger.warning(
+                    "Failed to clean up corrupted keyword index file: %s",
+                    cleanup_err,
+                )
             return False
 
 
