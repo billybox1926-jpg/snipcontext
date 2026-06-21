@@ -252,7 +252,7 @@ class VectorIndex:
         scores, indices = self._index.search(query_embedding, top_k)
 
         results: list[tuple[str, float]] = []
-        for score, idx in zip(scores[0], indices[0]):
+        for score, idx in zip(scores[0], indices[0], strict=False):
             if idx < 0 or idx >= len(self._id_map):
                 continue
             if score < min_score:

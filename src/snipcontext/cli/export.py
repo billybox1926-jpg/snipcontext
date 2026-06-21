@@ -19,7 +19,7 @@ console = Console()
 def register_commands(app: typer.Typer) -> None:
     """Register export and provider commands."""
 
-    @app.command()
+    @app.command()  # type: ignore[untyped-decorator]
     def export(
         query: str | None = typer.Option(None, "--query", "-q", help="Export search results"),
         ids: list[str] = typer.Option([], "--id", help="Export specific snippet IDs"),
@@ -63,7 +63,7 @@ def register_commands(app: typer.Typer) -> None:
         else:
             console.print(Markdown(formatted))
 
-    @app.command()
+    @app.command()  # type: ignore[untyped-decorator]
     def providers() -> None:
         """List available export providers."""
         pm = PluginManager()

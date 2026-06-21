@@ -15,7 +15,7 @@ console = Console()
 def register_commands(app: typer.Typer) -> None:
     """Register encryption commands."""
 
-    @app.command()
+    @app.command()  # type: ignore[untyped-decorator]
     def encrypt(
         snippet_id: str = typer.Argument(..., help="Snippet ID to encrypt"),
     ) -> None:
@@ -43,7 +43,7 @@ def register_commands(app: typer.Typer) -> None:
             console.print(f"[red]Encryption failed: {exc}[/red]")
             raise typer.Exit(1) from exc
 
-    @app.command()
+    @app.command()  # type: ignore[untyped-decorator]
     def decrypt(
         snippet_id: str = typer.Argument(..., help="Snippet ID to decrypt"),
     ) -> None:
