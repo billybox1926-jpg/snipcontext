@@ -1,9 +1,8 @@
 name: Publish to PyPI
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
 
 jobs:
   pypi-publish:
@@ -22,7 +21,37 @@ jobs:
       - name: Install build tools
         run: |
           python -m pip install --upgrade pip
-          pip install build
+          pip install build requests
+
+      - name: Check version is new
+        run: |
+          python - <<'EOF'
+          import requests
+          import sys
+          import re
+
+          # Extract version from __init__.py
+          with open("src/snipcontext/__init__.py") as f:
+              content = f.read()
+          match = re.search(r'__version__\s*=\s*"([^"]+)"', content)
+          if not match:
+              print("ERROR: Could not find __version__ in __init__.py")
+              sys.exit(1)
+          version = match.group(1)
+
+          # Check if version already exists on PyPI
+          pkg = "snipcontext"
+          url = f"https://pypi.org/pypi/{pkg}/json"
+          r = requests.get(url, timeout=10)
+
+          if r.status_code == 200:
+              releases = r.json().get("releases", {})
+              if version in releases:
+                  print(f"ERROR: Version {version} already exists on PyPI")
+                  sys.exit(1)
+
+          print(f"OK: Version {version} is new, proceeding with publish")
+          EOF
 
       - name: Build package
         run: python -m build
@@ -31,3 +60,9 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Verify install
+        run: |
+          pip install snipcontext --no-cache-dir
+          python -c "import snipcontext; print(f'snipcontext {snipcontext.__version__} installed successfully')"
+          snipcontext --help
