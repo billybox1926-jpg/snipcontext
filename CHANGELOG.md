@@ -20,6 +20,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Shared context: `get_config()` was called 19 times, `StorageEngine` instantiated 13 times per session — now singleton
 
+## [0.2.5] - 2026-06-22
+
+### Added
+- Interactive TUI mode (`tui/` module) — full terminal UI with commands, completer, and formatter
+- Project board automation (`.github/workflows/project-automation.yml`) — auto-adds issues to board on open/close
+- Sprint + Priority custom fields on project board with full issue tagging
+
+### Fixed
+- Snippet content sanitization to prevent XSS in downstream rendering (closes #93)
+  - New `core/sanitization.py` module: `sanitize_text()`, `sanitize_code()`, `sanitize_html()`, `sanitize_for_display()`
+  - Applied to all export providers (generic, openai, cursor, claude) and CLI display
+  - Prevents code-fence breakout, HTML injection, ANSI escape injection, Rich markup injection
+
 ## [Unreleased]
 
 ### Added
