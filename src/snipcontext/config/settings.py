@@ -160,6 +160,10 @@ class DedupConfig(BaseSettings):
         le=1.0,
         description="Minimum cosine similarity to trigger a deduplication warning",
     )
+    auto_accept: bool = Field(
+        default=False,
+        description="Auto-accept dedup warnings without interactive prompt",
+    )
 
 
 class Config(BaseSettings):

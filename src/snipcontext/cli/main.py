@@ -339,9 +339,12 @@ def add(
                     suggested = service.suggest(embedding.tolist())
                     if suggested:
                         merged = sorted({*final_tags, *suggested})
-                        accepted = _accept_auto_tags(merged, final_tags)
-                        if accepted is not None:
-                            final_tags = accepted
+                        if config.auto_tag.auto_accept:
+                            final_tags = merged
+                        else:
+                            accepted = _accept_auto_tags(merged, final_tags)
+                            if accepted is not None:
+                                final_tags = accepted
 
             # Dedup check against the single best match.
             if dedup_enabled and embedding is None:
@@ -372,8 +375,9 @@ def add(
                         console.print(
                             f"[yellow]This looks similar to '{title}' (id: {neighbor_id}). Add anyway?[/yellow]"
                         )
-                        if not typer.confirm("Add anyway?", default=False):
-                            raise typer.Exit(0)
+                        if not config.dedup.auto_accept:
+                            if not typer.confirm("Add anyway?", default=False):
+                                raise typer.Exit(0)
 
     snippet = snippet.model_copy(update={"tags": final_tags})
 
