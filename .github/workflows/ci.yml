@@ -83,8 +83,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
+          pip install -e ".[dev,web]"
           pip install -e .
-          pip install -e ".[dev]"
 
       - name: Run tests
         shell: bash
@@ -98,6 +98,72 @@ jobs:
         run: |
           export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
           python -m pytest -q --tb=short -m "slow"
+
+  # ── Minimal install (no semantic deps) ──────────────────────────
+  test-minimal:
+    name: Test minimal install (no semantic deps)
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies (minimal — no semantic extras)
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Verify optional deps are NOT installed
+        run: |
+          python -c "
+          try:
+              import sentence_transformers
+              print('ERROR: sentence_transformers should not be installed')
+              raise SystemExit(1)
+          except ImportError:
+              print('OK: sentence_transformers not installed (expected)')
+
+          try:
+              import faiss
+              print('ERROR: faiss should not be installed')
+              raise SystemExit(1)
+          except ImportError:
+              print('OK: faiss not installed (expected)')
+
+          try:
+              import fastapi
+              print('ERROR: fastapi should not be installed')
+              raise SystemExit(1)
+          except ImportError:
+              print('OK: fastapi not installed (expected)')
+          "
+
+      - name: Run tests (non-slow only)
+        shell: bash
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
+          python -m pytest -q --tb=short -m "not slow" --cov=src/snipcontext --cov-report=term-missing
+
+      - name: Verify optional-dep modules import cleanly
+        shell: bash
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
+          python -c "
+          from snipcontext.core.search import SEMANTIC_AVAILABLE, HybridSearch, KeywordIndex
+          assert not SEMANTIC_AVAILABLE, 'SEMANTIC_AVAILABLE should be False'
+          print('OK: SEMANTIC_AVAILABLE=False')
+
+          from snipcontext.web import WEB_AVAILABLE
+          assert not WEB_AVAILABLE, 'WEB_AVAILABLE should be False'
+          print('OK: WEB_AVAILABLE=False')
+
+          from snipcontext.core.models import SearchMode
+          print('OK: all search/web classes importable without optional deps')
+          "
 
   # ── Build & verify package ───────────────────────────────────────
   build:

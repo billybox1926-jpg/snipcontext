@@ -14,14 +14,7 @@ import pytest
 
 from snipcontext.config.settings import Config, SearchConfig, StorageConfig, reset_config
 from snipcontext.core.models import Language, SearchMode, Snippet, SnippetMetadata
-
-try:
-    import sentence_transformers  # noqa: F401
-
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except (ImportError, OSError):
-    # OSError catches torch DLL load failures on Windows without MSVC redist
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
+from snipcontext.core.search import SEMANTIC_AVAILABLE
 
 
 def create_snippets():
@@ -112,7 +105,7 @@ class TestKeywordIndex:
 
 
 @pytest.mark.skipif(
-    not SENTENCE_TRANSFORMERS_AVAILABLE, reason="sentence-transformers not installed"
+    not SEMANTIC_AVAILABLE, reason="semantic search dependencies not installed"
 )
 @pytest.mark.slow
 class TestEmbeddingEngine:
@@ -156,7 +149,7 @@ class TestEmbeddingEngine:
 
 
 @pytest.mark.skipif(
-    not SENTENCE_TRANSFORMERS_AVAILABLE, reason="sentence-transformers not installed"
+    not SEMANTIC_AVAILABLE, reason="semantic search dependencies not installed"
 )
 @pytest.mark.slow
 class TestVectorIndex:
@@ -187,7 +180,7 @@ class TestVectorIndex:
 
 
 @pytest.mark.skipif(
-    not SENTENCE_TRANSFORMERS_AVAILABLE, reason="sentence-transformers not installed"
+    not SEMANTIC_AVAILABLE, reason="semantic search dependencies not installed"
 )
 @pytest.mark.slow
 class TestHybridSearch:
@@ -279,3 +272,46 @@ class TestHybridSearch:
         searcher = HybridSearch(temp_config)
         results = searcher.search("anything", top_k=3)
         assert results == []
+
+
+class TestSemanticAvailabilityFlag:
+    """Tests that the SEMANTIC_AVAILABLE flag is correctly exported and usable."""
+
+    def test_flag_is_bool(self):
+        from snipcontext.core.search import SEMANTIC_AVAILABLE
+
+        assert isinstance(SEMANTIC_AVAILABLE, bool)
+
+    def test_keyword_search_works_without_semantic(self, temp_config):
+        """Keyword search must work regardless of whether semantic deps are installed."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        # Keyword mode always works
+        results = searcher.search("authentication jwt", top_k=3, mode=SearchMode.KEYWORD)
+        assert len(results) > 0
+
+    def test_hybrid_fallback_without_semantic(self, temp_config):
+        """Hybrid mode should fall back to keyword-only when semantic is unavailable."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        # Hybrid mode should still return results (keyword-only fallback)
+        results = searcher.search("database connection pool", top_k=3)
+        assert len(results) > 0

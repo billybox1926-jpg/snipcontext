@@ -35,6 +35,27 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# Detect optional semantic search dependencies at import time.
+# When these are missing, HybridSearch gracefully falls back to keyword-only.
+# ---------------------------------------------------------------------------
+try:
+    import faiss  # noqa: F401
+
+    _FAISS_AVAILABLE = True
+except ImportError:
+    _FAISS_AVAILABLE = False
+
+try:
+    import sentence_transformers  # noqa: F401
+
+    _SENTENCE_TRANSFORMERS_AVAILABLE = True
+except (ImportError, OSError):
+    # OSError catches torch DLL load failures on Windows without MSVC redist
+    _SENTENCE_TRANSFORMERS_AVAILABLE = False
+
+SEMANTIC_AVAILABLE = _FAISS_AVAILABLE and _SENTENCE_TRANSFORMERS_AVAILABLE
+
+# ---------------------------------------------------------------------------
 # Embedding engine
 # ---------------------------------------------------------------------------
 
@@ -55,6 +76,11 @@ class EmbeddingEngine:
     def model(self) -> SentenceTransformer:
         """Lazy-load the sentence-transformers model."""
         if self._model is None:
+            if not SEMANTIC_AVAILABLE:
+                raise ImportError(
+                    "Semantic search requires the 'sentence-transformers' package. "
+                    "Install it with: pip install snipcontext[semantic]"
+                )
             logger.info("Loading embedding model: %s", self._model_name)
             from sentence_transformers import SentenceTransformer
 
@@ -143,6 +169,12 @@ class VectorIndex:
         This encodes all snippets, creates a FAISS index, and populates
         the ID mapping.
         """
+        if not SEMANTIC_AVAILABLE:
+            raise ImportError(
+                "Vector index (FAISS) is unavailable. "
+                "Install semantic search dependencies with: pip install snipcontext[semantic]"
+            )
+
         import faiss
 
         if not snippets:
@@ -186,6 +218,12 @@ class VectorIndex:
 
     def add_vector(self, snippet: Snippet, embedding_engine: EmbeddingEngine | None = None) -> None:
         """Incrementally add a single snippet embedding to the FAISS index."""
+        if not SEMANTIC_AVAILABLE:
+            raise ImportError(
+                "Vector index (FAISS) is unavailable. "
+                "Install semantic search dependencies with: pip install snipcontext[semantic]"
+            )
+
         import numpy as np
 
         if snippet.id in self._id_to_idx:
@@ -216,6 +254,9 @@ class VectorIndex:
 
     def remove_vector(self, snippet_id: str) -> None:
         """Remove a single snippet from the FAISS index."""
+        if not SEMANTIC_AVAILABLE:
+            return
+
         import faiss
 
         if self._index is None or snippet_id not in self._id_to_idx:
@@ -240,7 +281,7 @@ class VectorIndex:
         Returns:
             List of (snippet_id, score) tuples, sorted by score descending.
         """
-        if not self.is_trained:
+        if not self.is_trained or not SEMANTIC_AVAILABLE:
             return []
 
         import faiss
@@ -267,7 +308,7 @@ class VectorIndex:
 
     def save(self, path: Path) -> None:
         """Save the FAISS index and ID mapping to disk."""
-        if self._index is None:
+        if self._index is None or not SEMANTIC_AVAILABLE:
             return
         path.mkdir(parents=True, exist_ok=True)
         import faiss
@@ -285,6 +326,8 @@ class VectorIndex:
         Returns:
             True if loaded successfully, False otherwise.
         """
+        if not SEMANTIC_AVAILABLE:
+            return False
 
         index_file = path / "vector.faiss"
         idmap_file = path / "idmap.json"
@@ -334,6 +377,11 @@ class VectorIndex:
             return False
 
     def _embed_fn(self, text: str) -> np.ndarray:
+        if not SEMANTIC_AVAILABLE:
+            raise ImportError(
+                "Semantic embedding requires 'sentence-transformers'. "
+                "Install it with: pip install snipcontext[semantic]"
+            )
         from sentence_transformers import SentenceTransformer
 
         model = SentenceTransformer(
@@ -627,6 +675,13 @@ class HybridSearch:
         self._embed_cache: dict[str, np.ndarray] = {}
         self._keyword_dirty: bool = False
 
+        if not SEMANTIC_AVAILABLE:
+            logger.warning(
+                "Semantic search dependencies (sentence-transformers, faiss-cpu) are not "
+                "installed. Search will use keyword-only mode. For full hybrid search, "
+                "install with: pip install snipcontext[semantic]"
+            )
+
     def load_indices(self) -> tuple[bool, bool]:
         """Load existing search indices from disk if available.
 
@@ -641,15 +696,21 @@ class HybridSearch:
 
     @property
     def indices_ready(self) -> bool:
-        """Return True if both semantic and keyword indices are trained.
+        """Return True if the required search indices are trained.
 
-        Attempts to load from disk if neither index is currently trained.
+        When semantic deps are available, both semantic and keyword indices
+        must be ready.  When they are missing, only the keyword index is
+        required.  Attempts to load from disk if not currently trained.
         """
-        if self.vector_index.is_trained and self.keyword_index.is_trained:
+        if self.keyword_index.is_trained:
+            if SEMANTIC_AVAILABLE:
+                return self.vector_index.is_trained
             return True
         # Try loading from disk
         sem_loaded, kw_loaded = self.load_indices()
-        return sem_loaded and kw_loaded
+        if SEMANTIC_AVAILABLE:
+            return sem_loaded and kw_loaded
+        return kw_loaded
 
     def index_snippets(self, snippets: list[Snippet]) -> None:
         """Build both semantic and keyword indices."""
@@ -660,11 +721,13 @@ class HybridSearch:
             if not snippets:
                 return
 
-            self.vector_index.build([s for s in snippets if not s.deleted], self.embedder)
-            if not self.vector_index.is_trained:
-                raise RuntimeError("Vector index build failed after merging snippets")
+            # Rebuild semantic index if deps available
+            if SEMANTIC_AVAILABLE:
+                self.vector_index.build([s for s in snippets if not s.deleted], self.embedder)
+                if not self.vector_index.is_trained:
+                    raise RuntimeError("Vector index build failed after merging snippets")
+                self.vector_index.save(self._config.index_path)
 
-            self.vector_index.save(self._config.index_path)
             self.keyword_index.build([s for s in snippets if not s.deleted])
             if not self.keyword_index.is_trained:
                 raise RuntimeError("Keyword index build failed after merging snippets")
@@ -705,17 +768,20 @@ class HybridSearch:
     def add_snippet(self, snippet: Snippet) -> None:
         """Incrementally add or update a single snippet in the index.
 
-        Vector index is updated immediately. Keyword index is marked dirty
-        and rebuilt lazily on next keyword/hybrid search or explicit save.
+        Vector index is updated immediately (if semantic deps available).
+        Keyword index is marked dirty and rebuilt lazily on next keyword/hybrid
+        search or explicit save.
         """
-        self.vector_index.add_vector(snippet, self.embedder)
-        self.vector_index.save(self._config.index_path)
+        if SEMANTIC_AVAILABLE:
+            self.vector_index.add_vector(snippet, self.embedder)
+            self.vector_index.save(self._config.index_path)
         self._keyword_dirty = True
 
     def remove_snippet(self, snippet_id: str) -> None:
-        """Remove a snippet from the vector index and mark keyword index dirty."""
-        self.vector_index.remove_vector(snippet_id)
-        self.vector_index.save(self._config.index_path)
+        """Remove a snippet from the vector index (if available) and mark keyword index dirty."""
+        if SEMANTIC_AVAILABLE:
+            self.vector_index.remove_vector(snippet_id)
+            self.vector_index.save(self._config.index_path)
         self._keyword_dirty = True
 
     def rebuild_keyword_index(self, snippets: list[Snippet]) -> None:
@@ -785,6 +851,13 @@ class HybridSearch:
         self, query: str, top_k: int, min_score: float, storage: StorageEngine
     ) -> list[SearchResult]:
         """Pure semantic search path."""
+        if not SEMANTIC_AVAILABLE:
+            logger.warning(
+                "Semantic search requested but dependencies are not installed. "
+                "Falling back to keyword search. Install with: pip install snipcontext[semantic]"
+            )
+            return self._keyword_search(query, top_k, min_score, False, storage)
+
         query_embedding = self.embedder.encode_query(query)
         raw = self.vector_index.search(query_embedding, top_k=top_k * 2, min_score=min_score)
         return self._hydrate(raw, "semantic", top_k, storage)
@@ -810,7 +883,7 @@ class HybridSearch:
 
         # Semantic results (if index available)
         sem_scores: dict[str, float] = {}
-        if self.vector_index.is_trained:
+        if SEMANTIC_AVAILABLE and self.vector_index.is_trained:
             try:
                 query_embedding = self.embedder.encode_query(query)
                 sem_raw = self.vector_index.search(
@@ -818,7 +891,7 @@ class HybridSearch:
                 )
                 sem_scores = dict(sem_raw)
             except Exception:
-                pass  # Fall back to keyword-only
+                logger.debug("Semantic search failed, falling back to keyword-only")
 
         # Keyword results
         kw_raw = self.keyword_index.search(query, top_k=top_k * 3, min_score=min_score, fuzzy=fuzzy)

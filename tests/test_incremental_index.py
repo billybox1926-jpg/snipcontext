@@ -36,6 +36,7 @@ def test_add_snippet_calls_vector_index_add_vector() -> None:
     with (
         patch("snipcontext.core.storage.StorageEngine", return_value=storage),
         patch.object(search.vector_index, "save") as mock_save,
+        patch("snipcontext.core.search.SEMANTIC_AVAILABLE", True),
     ):
         search.add_snippet(snippet_b)
 
@@ -61,6 +62,7 @@ def test_remove_snippet_calls_vector_index_remove_vector() -> None:
     with (
         patch("snipcontext.core.storage.StorageEngine", return_value=storage),
         patch.object(search.vector_index, "save") as mock_save,
+        patch("snipcontext.core.search.SEMANTIC_AVAILABLE", True),
     ):
         search.remove_snippet("snippet-a")
 
