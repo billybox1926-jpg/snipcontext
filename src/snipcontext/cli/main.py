@@ -22,17 +22,19 @@ from snipcontext.config.settings import get_config
 from snipcontext.core.models import Snippet
 
 # Module-level Option constants to avoid B008
-_OPT_TAG = typer.Option(None, "--tag", "-t", help="Filter by tag")
+_OPT_TAG = typer.Option(None, "--tag", help="Filter by tag")
 _OPT_LANG = typer.Option(None, "--lang", "-l", help="Filter by language")
 _OPT_TAGS = typer.Option([], "--tag", help="Tags (repeatable)")
 _OPT_CONTENT = typer.Option(None, "--content", "-c", help="New code content")
-_OPT_TITLE = typer.Option(None, "--title", "-t", help="New title")
+_OPT_TITLE = typer.Option(None, "--title", help="New title")
 _OPT_DESC = typer.Option(None, "--desc", "-d", help="New description")
 _OPT_ADD_TAGS = typer.Option([], "--add-tag", help="Add tags")
 _OPT_REMOVE_TAGS = typer.Option([], "--remove-tag", help="Remove tags")
 _OPT_QUERY = typer.Option(None, "--query", "-q", help="Export search results")
 _OPT_IDS = typer.Option([], "--id", help="Export specific snippet IDs")
 _OPT_OUTPUT = typer.Option(None, "--output", "-o", help="Output file (default: stdout)")
+_OPT_PROVIDER = typer.Option("generic", "--provider", "-p", help="Export format provider")
+_OPT_TOP_K = typer.Option(10, "--limit", "-n", help="Max results for query export")
 
 # Configure logging with Rich
 logging.basicConfig(
@@ -179,16 +181,16 @@ def add(
     content: str | None = typer.Argument(
         None, help="Code content or path to file (reads from stdin if omitted)"
     ),
-    title: str = typer.Option("", "--title", "-t", help="Snippet title"),
+    title: str = typer.Option("", "--title", help="Snippet title"),
     description: str = typer.Option("", "--desc", "-d", help="Short description"),
     language: str = typer.Option("", "--lang", "-l", help="Programming language"),
     tags: list[str] = _OPT_TAGS,
-    from_file: bool = typer.Option(False, "--file", "-f", help="Read content from file path"),
+    from_file: bool = typer.Option(False, "--file", "-F", help="Read content from file path"),
     encrypt: bool = typer.Option(
         False, "--encrypt", "-e", help="Encrypt content for secure storage"
     ),
     sensitive: bool = typer.Option(
-        False, "--sensitive", "-s", help="Mark as sensitive (implies --encrypt)"
+        False, "--sensitive", help="Mark as sensitive (implies --encrypt)"
     ),
 ) -> None:
     """Add a new code snippet to your collection."""
@@ -437,7 +439,7 @@ def search(
         None, "--threshold", "-t", help="Minimum relevance score (0.0-1.0)"
     ),
     fuzzy: bool = typer.Option(
-        False, "--fuzzy", "-f", help="Enable fuzzy matching for keyword search"
+        False, "--fuzzy", help="Enable fuzzy matching for keyword search"
     ),
 ) -> None:
     """Search snippets with semantic + keyword hybrid search."""
@@ -560,7 +562,7 @@ def edit(
     description: str | None = _OPT_DESC,
     add_tags: list[str] = _OPT_ADD_TAGS,
     remove_tags: list[str] = _OPT_REMOVE_TAGS,
-    message: str = typer.Option("", "--message", "-m", help="Version bump message"),
+    message: str = typer.Option("", "--message", help="Version bump message"),
 ) -> None:
     """Edit an existing snippet."""
     from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
@@ -627,13 +629,6 @@ def delete(
 
 
 # -- EXPORT ----------------------------------------------------------
-
-# Module-level Option constants to avoid B008
-_OPT_QUERY = typer.Option(None, "--query", "-q", help="Export search results")
-_OPT_IDS = typer.Option([], "--id", help="Export specific snippet IDs")
-_OPT_PROVIDER = typer.Option("generic", "--provider", "-p", help="Export format provider")
-_OPT_OUTPUT = typer.Option(None, "--output", "-o", help="Output file (default: stdout)")
-_OPT_TOP_K = typer.Option(10, "--limit", "-n", help="Max results for query export")
 
 
 @app.command()
