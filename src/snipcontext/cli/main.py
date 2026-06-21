@@ -924,10 +924,12 @@ def providers() -> None:
 @config_app.command("show")  # type: ignore[untyped-decorator]
 def config_show() -> None:
     """Show current configuration."""
+    from snipcontext.core.config_ops import get_config_values
+
     config, _, _ = _get_context()
+    payload = get_config_values(config)
     import yaml
 
-    payload = config.model_dump(mode="json")
     console.print(
         Panel(
             yaml.safe_dump(payload, default_flow_style=False, sort_keys=False),
@@ -956,11 +958,14 @@ def config_init(
 @config_app.command("path")  # type: ignore[untyped-decorator]
 def config_path() -> None:
     """Show configuration and data directories."""
+    from snipcontext.core.config_ops import get_config_paths
+
     config, _, _ = _get_context()
-    console.print(f"[bold]Config file:[/bold]  {config.config_file_path}")
-    console.print(f"[bold]Data dir:[/bold]     {config.storage.data_dir}")
-    console.print(f"[bold]Snippets:[/bold]    {config.snippets_path}")
-    console.print(f"[bold]Index:[/bold]       {config.index_path}")
+    paths = get_config_paths(config)
+    console.print(f"[bold]Config file:[/bold]  {paths['config_file']}")
+    console.print(f"[bold]Data dir:[/bold]     {paths['data_dir']}")
+    console.print(f"[bold]Snippets:[/bold]    {paths['snippets']}")
+    console.print(f"[bold]Index:[/bold]       {paths['index']}")
 
 
 # ---------------------------------------------------------------------------
