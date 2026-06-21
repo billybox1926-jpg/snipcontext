@@ -12,11 +12,8 @@ Each test invokes a command with known inputs and captures:
 
 from __future__ import annotations
 
-import json
-import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
@@ -205,7 +202,9 @@ class TestAdd:
         env = _env(env_dir)
         result = runner.invoke(app, ["add", "--title", "Empty"], env=env, input="\n")
         # Should error or prompt for content
-        assert result.exit_code != 0 or "Error" in result.output or "content" in result.output.lower()
+        assert (
+            result.exit_code != 0 or "Error" in result.output or "content" in result.output.lower()
+        )
 
 
 # ── GET ────────────────────────────────────────────────────────────────

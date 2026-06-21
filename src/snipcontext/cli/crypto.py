@@ -22,8 +22,12 @@ def register_commands(app: typer.Typer) -> None:
         """Encrypt a snippet's content for secure storage."""
         config, storage, _ = _get_context()
         if not config.encryption.enabled:
-            console.print("[red]Encryption is not enabled. Set SNIPCONTEXT_ENCRYPT_ENABLED=true[/red]")
-            console.print("[dim]See: https://github.com/billybox1926-jpg/snipcontext/wiki/Encryption[/dim]")
+            console.print(
+                "[red]Encryption is not enabled. Set SNIPCONTEXT_ENCRYPT_ENABLED=true[/red]"
+            )
+            console.print(
+                "[dim]See: https://github.com/billybox1926-jpg/snipcontext/wiki/Encryption[/dim]"
+            )
             raise typer.Exit(1)
         try:
             snippet = storage.get(snippet_id)

@@ -24,7 +24,9 @@ def register_commands(app: typer.Typer) -> None:
         query: str | None = typer.Option(None, "--query", "-q", help="Export search results"),
         ids: list[str] = typer.Option([], "--id", help="Export specific snippet IDs"),
         provider: str = typer.Option("generic", "--provider", "-p", help="Export format provider"),
-        output: str | None = typer.Option(None, "--output", "-o", help="Output file (default: stdout)"),
+        output: str | None = typer.Option(
+            None, "--output", "-o", help="Output file (default: stdout)"
+        ),
         top_k: int = typer.Option(10, "--limit", "-n", help="Max results for query export"),
     ) -> None:
         """Export snippets in LLM-optimized format."""

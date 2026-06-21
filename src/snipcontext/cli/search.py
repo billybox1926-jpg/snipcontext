@@ -21,10 +21,14 @@ def register_commands(app: typer.Typer) -> None:
 
 def search(
     query: str = typer.Argument(..., help="Search query"),
-    mode: str = typer.Option("hybrid", "--mode", "-m", help="Search mode: semantic, keyword, hybrid, tag"),
+    mode: str = typer.Option(
+        "hybrid", "--mode", "-m", help="Search mode: semantic, keyword, hybrid, tag"
+    ),
     top_k: int = typer.Option(10, "--limit", "-n", help="Max results"),
     index: bool = typer.Option(False, "--index", "-i", help="Force reindex before search"),
-    threshold: float = typer.Option(None, "--threshold", "-t", help="Minimum relevance score (0.0-1.0)"),
+    threshold: float = typer.Option(
+        None, "--threshold", "-t", help="Minimum relevance score (0.0-1.0)"
+    ),
     fuzzy: bool = typer.Option(False, "--fuzzy", help="Enable fuzzy matching for keyword search"),
 ) -> None:
     """Search snippets with semantic + keyword hybrid search."""
@@ -45,7 +49,9 @@ def search(
         if threshold and threshold > 0.1:
             console.print(f"[dim]Try lowering --threshold (currently {threshold})[/dim]")
         raise typer.Exit(0)
-    console.print(f"\n[bold]{len(results)} results[/bold] for '[cyan]{query}[/cyan]' ([dim]{mode}[/dim]):\n")
+    console.print(
+        f"\n[bold]{len(results)} results[/bold] for '[cyan]{query}[/cyan]' ([dim]{mode}[/dim]):\n"
+    )
     for i, result in enumerate(results, 1):
         _print_snippet(result.snippet, score=result.score, idx=i)
         console.print()
@@ -76,7 +82,9 @@ def build_index(
         console.print("[yellow]No snippets found. Add some first![/yellow]")
         return
     if not force and searcher.indices_ready:
-        console.print(f"[yellow]Index already exists ({len(snippets)} snippets). Use --force to rebuild.[/yellow]")
+        console.print(
+            f"[yellow]Index already exists ({len(snippets)} snippets). Use --force to rebuild.[/yellow]"
+        )
         return
     console.print(f"Building index for {len(snippets)} snippets...")
     searcher.index_snippets(snippets)
