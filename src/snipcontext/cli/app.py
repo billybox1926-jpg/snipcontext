@@ -6,8 +6,10 @@ Creates the root Typer app and registers all domain sub-commands.
 from __future__ import annotations
 
 import logging
+import sys
 
 import typer
+from rich.console import Console
 from rich.logging import RichHandler
 
 from snipcontext.cli.context import reset_context
@@ -69,6 +71,21 @@ register_crypto(app)
 register_watch(app)
 register_stats(app)
 register_config(config_app)
+
+
+@app.command()
+def repl(
+    script: str | None = typer.Option(None, "--script", help="Run a TUI script file and exit"),
+) -> None:
+    """Start the interactive SnipContext shell."""
+    try:
+        from snipcontext.tui.app import run
+    except ImportError as exc:
+        console = Console()
+        console.print("[red]The interactive shell requires the optional 'tui' extra.[/red]")
+        console.print("Install it with: pip install snipcontext[tui]")
+        raise typer.Exit(1) from exc
+    sys.exit(run())
 
 
 if __name__ == "__main__":
