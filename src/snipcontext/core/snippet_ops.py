@@ -238,11 +238,15 @@ def edit_snippet(
     content: str | None = None,
     title: str | None = None,
     description: str | None = None,
+    language: str | None = None,
     add_tags: list[str] | None = None,
     remove_tags: list[str] | None = None,
     message: str = "",
 ) -> Snippet:
     """Edit an existing snippet.
+
+    Supports partial updates — only the fields that are explicitly provided
+    will be changed; all others remain untouched.
 
     Args:
         storage: Storage engine instance.
@@ -250,6 +254,7 @@ def edit_snippet(
         content: New content (optional).
         title: New title (optional).
         description: New description (optional).
+        language: New programming language (optional).
         add_tags: Tags to add (optional).
         remove_tags: Tags to remove (optional).
         message: Version bump message.
@@ -262,22 +267,38 @@ def edit_snippet(
     """
     snippet = storage.get(snippet_id)
 
-    snippet.bump_version(message or f"Edit: {title or 'metadata update'}")
-
-    if content:
-        snippet.content = content
+    change_desc = "metadata update"
     if title:
+        change_desc = title
+    elif content:
+        change_desc = "content update"
+    elif language:
+        change_desc = "language update"
+    elif add_tags or remove_tags:
+        change_desc = "tag update"
+    elif description:
+        change_desc = "description update"
+    snippet.bump_version(message or f"Edit: {change_desc}")
+
+    if content is not None:
+        snippet.content = content
+    if title is not None:
         snippet.metadata.title = title
-    if description:
+    if description is not None:
         snippet.metadata.description = description
+    if language is not None:
+        try:
+            snippet.metadata.language = Language(language)
+        except ValueError:
+            snippet.metadata.language = Language.UNKNOWN
     if add_tags:
         for t in add_tags:
             snippet.merge_tags([t])
     if remove_tags:
         for t in remove_tags:
-            t = t.strip().lstrip("#").lower()
-            if t in snippet.tags:
-                snippet.tags.remove(t)
+            normalized = t.strip().lstrip("#").lower()
+            if normalized in snippet.tags:
+                snippet.tags.remove(normalized)
                 snippet.tags.sort()
 
     snippet.touch()

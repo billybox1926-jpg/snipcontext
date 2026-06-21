@@ -5,6 +5,7 @@ Each handler is a thin wrapper that parses args, calls core functions, and forma
 """
 
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -320,34 +321,112 @@ def register_commands(app: typer.Typer) -> None:
         content: str | None = typer.Option(None, "--content", "-c", help="New code content"),
         title: str | None = typer.Option(None, "--title", help="New title"),
         description: str | None = typer.Option(None, "--desc", "-d", help="New description"),
-        add_tags: list[str] = typer.Option([], "--add-tag", help="Add tags"),
+        language: str | None = typer.Option(None, "--lang", "-l", help="New language"),
+        add_tags: list[str] = typer.Option([], "--tag", "--add-tag", help="Add tags (repeatable)"),
         remove_tags: list[str] = typer.Option([], "--remove-tag", help="Remove tags"),
+        from_file: bool = typer.Option(False, "--file", "-F", help="Read content from file"),
+        interactive: bool = typer.Option(False, "--interactive", "-i", help="Open in $EDITOR"),
+        force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt"),
         message: str = typer.Option("", "--message", help="Version bump message"),
     ) -> None:
-        """Edit an existing snippet."""
+        """Edit an existing snippet.
+
+        Supports partial updates — only specified fields are changed.
+        Use --tag to add tags, --remove-tag to remove them.
+        Use --interactive to open the snippet in $EDITOR for full editing.
+        """
+        from snipcontext.core.snippet_ops import edit_snippet
+
         config, storage, _ = _get_context()
         try:
             snippet = storage.get(snippet_id)
         except SnippetNotFoundError as err:
             console.print(f"[red]Snippet not found: {snippet_id}[/red]")
             raise typer.Exit(1) from err
-        snippet.bump_version(message or f"Edit: {title or 'metadata update'}")
-        if content:
-            snippet.content = content
-        if title:
-            snippet.metadata.title = title
-        if description:
-            snippet.metadata.description = description
-        for t in add_tags:
-            snippet.merge_tags([t])
-        for t in remove_tags:
-            t = t.strip().lstrip("#").lower()
-            if t in snippet.tags:
-                snippet.tags.remove(t)
-                snippet.tags.sort()
-        snippet.touch()
-        storage.save(snippet)
-        console.print(f"[green]Updated:[/green] {snippet.metadata.title} [dim]({snippet_id})[/dim]")
+
+        # Resolve content from file
+        edit_content = content
+        if from_file and content:
+            path = Path(content)
+            if not path.exists():
+                console.print(f"[red]File not found: {content}[/red]")
+                raise typer.Exit(1)
+            edit_content = path.read_text()
+            if not language:
+                language = _EXT_LANG_MAP.get(path.suffix.lstrip(".").lower(), "")
+
+        # Interactive mode: open in $EDITOR
+        if interactive:
+            import tempfile
+
+            editor = os.environ.get("EDITOR", "vi")
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".snippet", prefix="sc-edit-", delete=False
+            ) as tmp:
+                tmp.write(snippet.content)
+                tmp_path = tmp.name
+            try:
+                os.system(f'{editor} "{tmp_path}"')
+                edit_content = Path(tmp_path).read_text()
+            finally:
+                Path(tmp_path).unlink(missing_ok=True)
+
+            # Detect if content changed
+            if edit_content == snippet.content:
+                console.print("[yellow]No changes detected. Exiting.[/yellow]")
+                raise typer.Exit(0)
+            if not language and edit_content:
+                # Auto-detect language from content if not specified
+                pass
+
+        # Check if any changes were requested
+        has_changes = any(
+            [edit_content is not None, title is not None, description is not None,
+             language is not None, add_tags, remove_tags]
+        )
+        if not has_changes:
+            console.print("[yellow]No changes specified. Use options like --title, --content, --tag, etc.[/yellow]")
+            raise typer.Exit(0)
+
+        # Build change summary for confirmation
+        changes: list[str] = []
+        if edit_content is not None:
+            changes.append("content")
+        if title is not None:
+            changes.append(f"title -> {title}")
+        if description is not None:
+            changes.append("description")
+        if language is not None:
+            changes.append(f"language -> {language}")
+        if add_tags:
+            changes.append(f"+tags: {', '.join(add_tags)}")
+        if remove_tags:
+            changes.append(f"-tags: {', '.join(remove_tags)}")
+
+        # Confirmation prompt (unless --force)
+        if not force:
+            console.print(f"[cyan]Editing:[/cyan] {snippet.metadata.title} [dim]({snippet.id})[/dim]")
+            console.print(f"  [dim]Changes: {', '.join(changes)}[/dim]")
+            if not _confirm_action("Apply these changes?"):
+                console.print("Cancelled.")
+                raise typer.Exit(0)
+
+        # Delegate to core function
+        updated = edit_snippet(
+            storage,
+            snippet.id,
+            content=edit_content,
+            title=title,
+            description=description,
+            language=language or None,
+            add_tags=add_tags if add_tags else None,
+            remove_tags=remove_tags if remove_tags else None,
+            message=message,
+        )
+
+        console.print(f"[green]Updated:[/green] {updated.metadata.title} [dim]({snippet.id})[/dim]")
+        console.print(f"  [dim]Tags: {updated.tag_line or '(none)'}[/dim]")
+        console.print(f"  [dim]Language: {updated.metadata.language.value}[/dim]")
 
     @app.command()  # type: ignore[untyped-decorator]
     def delete(

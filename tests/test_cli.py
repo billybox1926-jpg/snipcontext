@@ -202,3 +202,217 @@ class TestDedupIntegration:
             assert r2.exit_code == 0
             assert "Added snippet" in r2.output
             assert "This looks similar to" not in r2.output
+
+
+class TestEditCommand:
+    """Tests for the `edit` command (Issue #2 — Improved Snippet Editing UX)."""
+
+    def _add_and_get_id(self, env):
+        """Helper: add a snippet and return its ID from the output."""
+        result, _ = invoke(
+            "add", "print('hello')", "--title", "Hello", "--tag", "python", "--lang", "python",
+            env=env,
+        )
+        assert result.exit_code == 0, f"Add failed: {result.output}"
+        # Extract ID from output line like "ID: abcdef1234..."
+        for line in result.output.splitlines():
+            if "ID:" in line:
+                return line.split("ID:")[-1].strip()
+        return None
+
+    def test_edit_title_with_confirmation(self):
+        """Edit title — should prompt for confirmation and succeed with 'y'."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            result, _ = invoke("edit", sid, "--title", "New Title", input="y", env=env)
+            assert result.exit_code == 0
+            assert "Updated" in result.output
+
+    def test_edit_title_force_skip_confirmation(self):
+        """Edit with --force should skip confirmation prompt."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            result, _ = invoke("edit", sid, "--title", "Forced Title", "--force", env=env)
+            assert result.exit_code == 0
+            assert "Updated" in result.output
+
+    def test_edit_cancelled(self):
+        """Edit with 'n' at confirmation should cancel and not save."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            result, _ = invoke("edit", sid, "--title", "Cancelled Title", input="n", env=env)
+            assert result.exit_code == 0
+            assert "Cancelled" in result.output
+
+    def test_edit_add_tags(self):
+        """Edit with --tag should add tags to snippet."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            result, _ = invoke(
+                "edit", sid, "--tag", "cli", "--tag", "demo", "--force", env=env
+            )
+            assert result.exit_code == 0
+            assert "Updated" in result.output
+            assert "cli" in result.output or "demo" in result.output
+
+    def test_edit_remove_tags(self):
+        """Edit with --remove-tag should remove a tag."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            result, _ = invoke("edit", sid, "--remove-tag", "python", "--force", env=env)
+            assert result.exit_code == 0
+            assert "Updated" in result.output
+
+    def test_edit_content(self):
+        """Edit with --content should update snippet content."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            result, _ = invoke(
+                "edit", sid, "--content", "print('updated')", "--force", env=env
+            )
+            assert result.exit_code == 0
+            assert "Updated" in result.output
+
+    def test_edit_language(self):
+        """Edit with --lang should change the language."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            result, _ = invoke("edit", sid, "--lang", "javascript", "--force", env=env)
+            assert result.exit_code == 0
+            assert "Updated" in result.output
+
+    def test_edit_description(self):
+        """Edit with --desc should update the description."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            result, _ = invoke(
+                "edit", sid, "--desc", "A hello world example", "--force", env=env
+            )
+            assert result.exit_code == 0
+            assert "Updated" in result.output
+
+    def test_edit_no_changes(self):
+        """Edit with no changes should exit with message."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            result, _ = invoke("edit", sid, env=env)
+            assert result.exit_code == 0
+            assert "No changes" in result.output
+
+    def test_edit_not_found(self):
+        """Edit with nonexistent ID should error."""
+        result, _ = invoke("edit", "nonexistent999")
+        assert result.exit_code == 1
+        assert "not found" in result.output
+
+    def test_edit_shows_changes_summary(self):
+        """Confirmation prompt should show which fields will change."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            result, _ = invoke(
+                "edit", sid, "--title", "X", "--tag", "newtag", input="y", env=env
+            )
+            assert result.exit_code == 0
+            # Should show change summary before asking to confirm
+            assert "Changes:" in result.output
+
+    def test_edit_from_file(self):
+        """Edit with --file should read content from file path."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            content_file = tmp_path / "edit_content.py"
+            content_file.write_text("def new_function():\n    return 42\n")
+
+            result, _ = invoke(
+                "edit", sid, "--content", str(content_file), "--file", "--force", env=env
+            )
+            assert result.exit_code == 0
+            assert "Updated" in result.output
