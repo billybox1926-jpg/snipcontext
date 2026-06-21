@@ -16,6 +16,7 @@ def reset_config_cache():
     reset_config()
     # Also reset the shared CLI context singleton
     from snipcontext.cli.context import reset_context
+
     reset_context()
     yield
     reset_config()

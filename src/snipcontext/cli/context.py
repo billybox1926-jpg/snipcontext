@@ -52,16 +52,19 @@ def get_context() -> tuple[Config, StorageEngine, HybridSearch]:
         # Double-check after acquiring lock
         if _config is None:
             from snipcontext.config.settings import get_config
+
             _config = get_config()
             logger.debug("Initialized shared Config instance")
 
         if _storage is None:
             from snipcontext.core.storage import StorageEngine
+
             _storage = StorageEngine(_config)
             logger.debug("Initialized shared StorageEngine instance")
 
         if _search is None:
             from snipcontext.core.search import HybridSearch
+
             _search = HybridSearch(_config)
             logger.debug("Initialized shared HybridSearch instance")
 

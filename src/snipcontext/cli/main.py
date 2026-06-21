@@ -22,10 +22,9 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 
-from snipcontext.core.models import Snippet
-
 # Shared context for CLI commands (config, storage, search singletons)
 from snipcontext.cli.context import get_context as _get_context
+from snipcontext.core.models import Snippet
 
 # Module-level Option constants to avoid B008
 _OPT_TAG = typer.Option(None, "--tag", help="Filter by tag")
@@ -176,6 +175,7 @@ def main(
         logging.getLogger().setLevel(logging.INFO)
     if reload:
         from snipcontext.cli.context import reset_context
+
         reset_context()
         logger.debug("Shared context reset via --reload flag")
 
