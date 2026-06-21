@@ -629,9 +629,7 @@ class TestEditCommand:
             assert sid is not None
 
             # Edit: add another custom field
-            result, _ = invoke(
-                "edit", sid, "--custom", "tier=frontend", "--force", env=env
-            )
+            result, _ = invoke("edit", sid, "--custom", "tier=frontend", "--force", env=env)
             assert result.exit_code == 0
 
             get_result, _ = invoke("get", sid, env=env)

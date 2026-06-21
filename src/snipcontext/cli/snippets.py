@@ -133,10 +133,16 @@ def register_commands(app: typer.Typer) -> None:
         description: str = typer.Option("", "--desc", "-d", help="Short description"),
         language: str = typer.Option("", "--lang", "-l", help="Programming language"),
         tags: list[str] = typer.Option([], "--tag", help="Tags (repeatable)"),
-        source: str = typer.Option("", "--source", help="URL or file path where snippet originated"),
-        framework: str = typer.Option("", "--framework", help="Target framework/library (e.g. react, fastapi)"),
+        source: str = typer.Option(
+            "", "--source", help="URL or file path where snippet originated"
+        ),
+        framework: str = typer.Option(
+            "", "--framework", help="Target framework/library (e.g. react, fastapi)"
+        ),
         version: str = typer.Option("", "--version", help="Target framework/library version"),
-        custom: list[str] = typer.Option([], "--custom", help="Custom key=value metadata (repeatable)"),
+        custom: list[str] = typer.Option(
+            [], "--custom", help="Custom key=value metadata (repeatable)"
+        ),
         from_file: bool = typer.Option(False, "--file", "-F", help="Read content from file path"),
         encrypt: bool = typer.Option(False, "--encrypt", "-e", help="Encrypt content"),
         sensitive: bool = typer.Option(False, "--sensitive", help="Mark as sensitive"),
@@ -365,10 +371,14 @@ def register_commands(app: typer.Typer) -> None:
         language: str | None = typer.Option(None, "--lang", "-l", help="New language"),
         source: str | None = typer.Option(None, "--source", help="Source URL or file path"),
         framework: str | None = typer.Option(None, "--framework", help="Target framework/library"),
-        version: str | None = typer.Option(None, "--version", help="Target framework/library version"),
+        version: str | None = typer.Option(
+            None, "--version", help="Target framework/library version"
+        ),
         add_tags: list[str] = typer.Option([], "--tag", "--add-tag", help="Add tags (repeatable)"),
         remove_tags: list[str] = typer.Option([], "--remove-tag", help="Remove tags"),
-        custom: list[str] = typer.Option([], "--custom", help="Custom key=value metadata (repeatable)"),
+        custom: list[str] = typer.Option(
+            [], "--custom", help="Custom key=value metadata (repeatable)"
+        ),
         from_file: bool = typer.Option(False, "--file", "-F", help="Read content from file"),
         interactive: bool = typer.Option(False, "--interactive", "-i", help="Open in $EDITOR"),
         force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt"),

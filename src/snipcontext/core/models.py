@@ -95,9 +95,15 @@ class SnippetMetadata(BaseModel):
     title: str = Field(..., min_length=1, max_length=200, description="Human-readable title")
     description: str = Field(default="", description="What this snippet does and when to use it")
     language: Language = Field(default=Language.UNKNOWN, description="Programming language")
-    source_url: str = Field(default="", description="URL or file path where this snippet originated")
-    framework: str = Field(default="", description="Framework/library this snippet targets (e.g. react, fastapi)")
-    version: str = Field(default="", description="Target framework/library version (e.g. 18.x, 0.100+)")
+    source_url: str = Field(
+        default="", description="URL or file path where this snippet originated"
+    )
+    framework: str = Field(
+        default="", description="Framework/library this snippet targets (e.g. react, fastapi)"
+    )
+    version: str = Field(
+        default="", description="Target framework/library version (e.g. 18.x, 0.100+)"
+    )
     author: str = Field(default="", description="Original author or contributor")
     confidence: Literal["draft", "reviewed", "production", "reference"] = Field(
         default="draft",
