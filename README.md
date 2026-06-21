@@ -71,6 +71,8 @@ pip install -e ".[dev]"
 pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 ```
 
+> **📦 Dependency Footprint:** SnipContext installs `sentence-transformers` and `faiss-cpu` for local semantic search. These are substantial dependencies (~500MB download). If you only need keyword search, the tool still works — semantic features gracefully degrade when these packages are unavailable.
+
 > **⚠️ Windows Users:** Windows has a built-in `sc.exe` (Service Control) that shadows the `sc` CLI entry point. Use the full command name `snipcontext` instead, or run via `python -m snipcontext`.
 
 ```bash
