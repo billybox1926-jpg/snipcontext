@@ -59,15 +59,22 @@ Save, search, tag, and instantly inject your best boilerplate, patterns, and con
 ### Installation
 
 ```bash
-# From PyPI (recommended)
-pip install snipcontext
-
-# Or with uv
+# From PyPI with uv (recommended — faster installs, better dependency resolution)
 uv tool install snipcontext
 
-# From source (after cloning)
-pip install -e ".[dev]"
+# From PyPI with pip
+pip install snipcontext
 
+# From source (after cloning)
+cd snipcontext
+uv sync                    # install all deps (including dev)
+uv run sc --help           # run without activating venv
+
+# Or with pip (traditional)
+pip install -e ".[dev]"
+```
+
+> **💡 Why uv?** This project uses \`uv\` for dependency management (\`uv.lock\` pinned). \`uv sync\` guarantees reproducible installs. \`pip install\` works but may resolve dependencies differently.
 # Or install directly from GitHub
 pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 ```
