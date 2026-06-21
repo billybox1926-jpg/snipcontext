@@ -1,10 +1,9 @@
 * text=auto eol=lf
-
 *.sh text eol=lf
 *.ps1 text eol=crlf
-
 *.png binary
 *.jpg binary
 *.jpeg binary
 *.gif binary
 *.pdf binary
+*.m4a filter=lfs diff=lfs merge=lfs -text
