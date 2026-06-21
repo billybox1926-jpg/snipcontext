@@ -7,10 +7,10 @@ No I/O, no CLI dependencies.
 from __future__ import annotations
 
 from snipcontext.config.settings import Config
-from snipcontext.core.storage import StorageError
+from snipcontext.core.storage import EncryptionError, StorageEngine
 
 
-def encrypt_content(config: Config, storage: "StorageEngine", content: str) -> str:
+def encrypt_content(config: Config, storage: StorageEngine, content: str) -> str:
     """Encrypt content using the configured encryption settings.
 
     Args:
@@ -25,7 +25,7 @@ def encrypt_content(config: Config, storage: "StorageEngine", content: str) -> s
         StorageError: If encryption is not enabled or fails.
     """
     if not config.encryption.enabled:
-        raise StorageError(
+        raise EncryptionError(
             "encrypt",
             original_error=RuntimeError(
                 "Encryption is not enabled. Set SNIPCONTEXT_ENCRYPT_ENABLED=true"
@@ -34,7 +34,7 @@ def encrypt_content(config: Config, storage: "StorageEngine", content: str) -> s
     return storage.encrypt_content(content)
 
 
-def decrypt_content(config: Config, storage: "StorageEngine", encrypted_content: str) -> str:
+def decrypt_content(config: Config, storage: StorageEngine, encrypted_content: str) -> str:
     """Decrypt content using the configured encryption settings.
 
     Args:
@@ -49,7 +49,7 @@ def decrypt_content(config: Config, storage: "StorageEngine", encrypted_content:
         StorageError: If encryption is not enabled or decryption fails.
     """
     if not config.encryption.enabled:
-        raise StorageError(
+        raise EncryptionError(
             "decrypt",
             original_error=RuntimeError(
                 "Encryption is not enabled. Set SNIPCONTEXT_ENCRYPT_ENABLED=true"

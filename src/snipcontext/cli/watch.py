@@ -15,7 +15,7 @@ console = Console()
 def register_commands(app: typer.Typer) -> None:
     """Register file watcher commands."""
 
-    @app.command()
+    @app.command()  # type: ignore[untyped-decorator]
     def watch() -> None:
         """Watch snippet directory for changes and auto-update the search index."""
         config, storage, search = _get_context()

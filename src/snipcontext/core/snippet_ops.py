@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from snipcontext.config.settings import Config
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
 
@@ -165,7 +164,9 @@ def add_snippet(
     Returns:
         The saved Snippet instance.
     """
-    snippet = create_snippet(content, title, description, language, tags, encrypt, encrypted_content)
+    snippet = create_snippet(
+        content, title, description, language, tags, encrypt, encrypted_content
+    )
     storage.save(snippet)
     return snippet
 

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 def get_app() -> typer.Typer:
     try:
-        from snipcontext.cli.main import app
+        from snipcontext.cli.app import app
 
         return app
     except Exception:

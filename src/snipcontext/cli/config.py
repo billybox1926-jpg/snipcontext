@@ -16,7 +16,7 @@ console = Console()
 def register_commands(app: typer.Typer) -> None:
     """Register config commands."""
 
-    @app.command("show")
+    @app.command("show")  # type: ignore[untyped-decorator]
     def config_show() -> None:
         """Show current configuration."""
         config, _, _ = _get_context()
@@ -31,7 +31,7 @@ def register_commands(app: typer.Typer) -> None:
         )
         console.print(f"\n[dim]Config file: {config.config_file_path}[/dim]")
 
-    @app.command("init")
+    @app.command("init")  # type: ignore[untyped-decorator]
     def config_init(
         force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing config"),
     ) -> None:
@@ -44,7 +44,7 @@ def register_commands(app: typer.Typer) -> None:
         config.save_to_file()
         console.print(f"[green]Configuration written to:[/green] {config.config_file_path}")
 
-    @app.command("path")
+    @app.command("path")  # type: ignore[untyped-decorator]
     def config_path() -> None:
         """Show configuration and data directories."""
         config, _, _ = _get_context()

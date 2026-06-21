@@ -54,13 +54,13 @@ def main(
 # ── Register domain commands ───────────────────────────────────────────
 # Each domain module provides a register_commands(app) function.
 
-from snipcontext.cli.snippets import register_commands as register_snippets  # noqa: E402
-from snipcontext.cli.search import register_commands as register_search  # noqa: E402
-from snipcontext.cli.export import register_commands as register_export  # noqa: E402
-from snipcontext.cli.crypto import register_commands as register_crypto  # noqa: E402
-from snipcontext.cli.watch import register_commands as register_watch  # noqa: E402
-from snipcontext.cli.stats import register_commands as register_stats  # noqa: E402
 from snipcontext.cli.config import register_commands as register_config  # noqa: E402
+from snipcontext.cli.crypto import register_commands as register_crypto  # noqa: E402
+from snipcontext.cli.export import register_commands as register_export  # noqa: E402
+from snipcontext.cli.search import register_commands as register_search  # noqa: E402
+from snipcontext.cli.snippets import register_commands as register_snippets  # noqa: E402
+from snipcontext.cli.stats import register_commands as register_stats  # noqa: E402
+from snipcontext.cli.watch import register_commands as register_watch  # noqa: E402
 
 register_snippets(app)
 register_search(app)

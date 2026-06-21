@@ -22,12 +22,31 @@ console = Console()
 
 # Extension-to-language mapping
 _EXT_LANG_MAP: dict[str, str] = {
-    "py": "python", "js": "javascript", "ts": "typescript", "jsx": "jsx",
-    "tsx": "tsx", "html": "html", "css": "css", "java": "java", "go": "go",
-    "rs": "rust", "cpp": "cpp", "c": "c", "cs": "csharp", "php": "php",
-    "rb": "ruby", "swift": "swift", "sql": "sql", "sh": "bash", "yml": "yaml",
-    "yaml": "yaml", "json": "json", "toml": "toml", "md": "markdown",
-    "dockerfile": "dockerfile", "tf": "terraform",
+    "py": "python",
+    "js": "javascript",
+    "ts": "typescript",
+    "jsx": "jsx",
+    "tsx": "tsx",
+    "html": "html",
+    "css": "css",
+    "java": "java",
+    "go": "go",
+    "rs": "rust",
+    "cpp": "cpp",
+    "c": "c",
+    "cs": "csharp",
+    "php": "php",
+    "rb": "ruby",
+    "swift": "swift",
+    "sql": "sql",
+    "sh": "bash",
+    "yml": "yaml",
+    "yaml": "yaml",
+    "json": "json",
+    "toml": "toml",
+    "md": "markdown",
+    "dockerfile": "dockerfile",
+    "tf": "terraform",
 }
 
 
@@ -45,7 +64,9 @@ def _print_snippet(snippet: Snippet, score: float | None = None, idx: int | None
         console.print(f"[dim]Tags:[/dim] {snippet.tag_line}")
     console.print(f"[dim]ID:[/dim] {snippet.id}")
     console.print()
-    lang = snippet.metadata.language.value if snippet.metadata.language.value != "unknown" else "text"
+    lang = (
+        snippet.metadata.language.value if snippet.metadata.language.value != "unknown" else "text"
+    )
     syntax = Syntax(snippet.content, lang, theme="monokai", line_numbers=False, word_wrap=True)
     console.print(syntax)
     console.print()
@@ -57,7 +78,11 @@ def _confirm_action(message: str) -> bool:
 
 def _accept_auto_tags(merged_tags: list[str], existing_tags: list[str]) -> list[str] | None:
     console.print(f"[yellow]Suggested tags: {', '.join(merged_tags)}[/yellow]")
-    choice = typer.prompt("Accept all, keep existing, or enter tags", default="a", show_default=True).strip().lower()
+    choice = (
+        typer.prompt("Accept all, keep existing, or enter tags", default="a", show_default=True)
+        .strip()
+        .lower()
+    )
     if choice in {"a", "accept", "y", "yes"}:
         return merged_tags
     if choice in {"e", "existing", "k", "keep"}:
@@ -71,7 +96,7 @@ def _accept_auto_tags(merged_tags: list[str], existing_tags: list[str]) -> list[
 def register_commands(app: typer.Typer) -> None:
     """Register snippet management commands."""
 
-    @app.command()
+    @app.command()  # type: ignore[untyped-decorator]
     def add(
         content: str | None = typer.Argument(None, help="Code content or path to file"),
         title: str = typer.Option("", "--title", help="Snippet title"),
@@ -116,12 +141,21 @@ def register_commands(app: typer.Typer) -> None:
                 console.print("[red]Encryption is not enabled.[/red]")
                 raise typer.Exit(1)
             encrypted = storage.encrypt_content(content)
-            snippet = Snippet(content="", encrypted_content=encrypted,
-                metadata=SnippetMetadata(title=title, description=description, language=lang_enum), tags=tags)
-            console.print(f"[green]Added encrypted snippet:[/green] [bold]{snippet.metadata.title}[/bold]")
+            snippet = Snippet(
+                content="",
+                encrypted_content=encrypted,
+                metadata=SnippetMetadata(title=title, description=description, language=lang_enum),
+                tags=tags,
+            )
+            console.print(
+                f"[green]Added encrypted snippet:[/green] [bold]{snippet.metadata.title}[/bold]"
+            )
         else:
-            snippet = Snippet(content=content,
-                metadata=SnippetMetadata(title=title, description=description, language=lang_enum), tags=tags)
+            snippet = Snippet(
+                content=content,
+                metadata=SnippetMetadata(title=title, description=description, language=lang_enum),
+                tags=tags,
+            )
         # Auto-tag and dedup
         final_tags = list(snippet.tags)
         auto_tag_enabled = getattr(getattr(config, "auto_tag", None), "enabled", False)
@@ -134,7 +168,9 @@ def register_commands(app: typer.Typer) -> None:
             else:
                 embedding = None
                 if auto_tag_enabled:
-                    service = AutoTagService(vector_index=search.vector_index, storage=storage, config=config.auto_tag)
+                    service = AutoTagService(
+                        vector_index=search.vector_index, storage=storage, config=config.auto_tag
+                    )
                     try:
                         embedding = search.embedder.encode_query(snippet.to_search_text()).flatten()
                     except Exception:
@@ -156,7 +192,11 @@ def register_commands(app: typer.Typer) -> None:
                         pass
                 if dedup_enabled and embedding is not None:
                     try:
-                        neighbors = search.vector_index.search(embedding.reshape(1, -1), top_k=1) if getattr(search.vector_index, "is_trained", False) else []
+                        neighbors = (
+                            search.vector_index.search(embedding.reshape(1, -1), top_k=1)
+                            if getattr(search.vector_index, "is_trained", False)
+                            else []
+                        )
                     except Exception:
                         neighbors = []
                     if neighbors:
@@ -167,8 +207,12 @@ def register_commands(app: typer.Typer) -> None:
                                 nt = neighbor.metadata.title
                             except Exception:
                                 nt = neighbor_id
-                            console.print(f"[yellow]This looks similar to '{nt}' (id: {neighbor_id}). Add anyway?[/yellow]")
-                            if not config.dedup.auto_accept and not typer.confirm("Add anyway?", default=False):
+                            console.print(
+                                f"[yellow]This looks similar to '{nt}' (id: {neighbor_id}). Add anyway?[/yellow]"
+                            )
+                            if not config.dedup.auto_accept and not typer.confirm(
+                                "Add anyway?", default=False
+                            ):
                                 raise typer.Exit(0)
         snippet = snippet.model_copy(update={"tags": final_tags})
         storage.save(snippet)
@@ -176,7 +220,7 @@ def register_commands(app: typer.Typer) -> None:
         console.print(f"   [dim]ID: {snippet.id}[/dim]")
         console.print(f"   [dim]Tags: {snippet.tag_line or '(none)'}[/dim]")
 
-    @app.command()
+    @app.command()  # type: ignore[untyped-decorator]
     def get(
         snippet_id: str = typer.Argument(..., help="Snippet ID or prefix"),
         raw: bool = typer.Option(False, "--raw", "-r", help="Print only code, no metadata"),
@@ -204,11 +248,13 @@ def register_commands(app: typer.Typer) -> None:
         else:
             _print_snippet(snippet)
 
-    @app.command("list")
+    @app.command("list")  # type: ignore[untyped-decorator]
     def list_snippets(
         tag: str | None = typer.Option(None, "--tag", help="Filter by tag"),
         language: str | None = typer.Option(None, "--lang", "-l", help="Filter by language"),
-        sort: str = typer.Option("updated", "--sort", "-s", help="Sort by: updated, created, title, access"),
+        sort: str = typer.Option(
+            "updated", "--sort", "-s", help="Sort by: updated, created, title, access"
+        ),
     ) -> None:
         """List all snippets with optional filters."""
         config, storage, _ = _get_context()
@@ -218,27 +264,43 @@ def register_commands(app: typer.Typer) -> None:
             snippets = [s for s in snippets if tag in s.tags]
         if language:
             snippets = [s for s in snippets if s.metadata.language.value == language.lower()]
-        sort_key = {"updated": lambda s: s.updated_at, "created": lambda s: s.created_at,
-            "title": lambda s: s.metadata.title.lower(), "access": lambda s: s.access_count,
+        sort_key = {
+            "updated": lambda s: s.updated_at,
+            "created": lambda s: s.created_at,
+            "title": lambda s: s.metadata.title.lower(),
+            "access": lambda s: s.access_count,
         }.get(sort, lambda s: s.updated_at)
         snippets.sort(key=sort_key, reverse=(sort in ("updated", "created", "access")))
         if not snippets:
             console.print("[yellow]No snippets found.[/yellow]")
             return
-        table = Table(title=f"Snippets ({len(snippets)} total)", show_header=True, header_style="bold magenta", row_styles=["", "dim"])
+        table = Table(
+            title=f"Snippets ({len(snippets)} total)",
+            show_header=True,
+            header_style="bold magenta",
+            row_styles=["", "dim"],
+        )
         table.add_column("ID", style="dim", no_wrap=True, width=8)
         table.add_column("Title", style="cyan", no_wrap=False)
         table.add_column("Language", style="green", width=12)
         table.add_column("Tags", style="yellow", width=20)
         table.add_column("Updated", style="dim", width=10)
         from datetime import datetime
+
         for s in snippets:
-            updated = s.updated_at.strftime("%Y-%m-%d") if isinstance(s.updated_at, datetime) else "?"
-            table.add_row(s.id[:6], s.metadata.title, s.metadata.language.value,
-                ", ".join(s.tags[:3]) + ("..." if len(s.tags) > 3 else ""), updated)
+            updated = (
+                s.updated_at.strftime("%Y-%m-%d") if isinstance(s.updated_at, datetime) else "?"
+            )
+            table.add_row(
+                s.id[:6],
+                s.metadata.title,
+                s.metadata.language.value,
+                ", ".join(s.tags[:3]) + ("..." if len(s.tags) > 3 else ""),
+                updated,
+            )
         console.print(table)
 
-    @app.command()
+    @app.command()  # type: ignore[untyped-decorator]
     def edit(
         snippet_id: str = typer.Argument(..., help="Snippet ID or prefix"),
         content: str | None = typer.Option(None, "--content", "-c", help="New code content"),
@@ -256,10 +318,14 @@ def register_commands(app: typer.Typer) -> None:
             console.print(f"[red]Snippet not found: {snippet_id}[/red]")
             raise typer.Exit(1) from err
         snippet.bump_version(message or f"Edit: {title or 'metadata update'}")
-        if content: snippet.content = content
-        if title: snippet.metadata.title = title
-        if description: snippet.metadata.description = description
-        for t in add_tags: snippet.merge_tags([t])
+        if content:
+            snippet.content = content
+        if title:
+            snippet.metadata.title = title
+        if description:
+            snippet.metadata.description = description
+        for t in add_tags:
+            snippet.merge_tags([t])
         for t in remove_tags:
             t = t.strip().lstrip("#").lower()
             if t in snippet.tags:
@@ -269,7 +335,7 @@ def register_commands(app: typer.Typer) -> None:
         storage.save(snippet)
         console.print(f"[green]Updated:[/green] {snippet.metadata.title} [dim]({snippet_id})[/dim]")
 
-    @app.command()
+    @app.command()  # type: ignore[untyped-decorator]
     def delete(
         snippet_id: str,
         force: bool = typer.Option(False, help="Skip confirmation"),

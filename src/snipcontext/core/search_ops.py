@@ -6,9 +6,6 @@ No I/O, no CLI dependencies.
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from snipcontext.config.settings import Config
 from snipcontext.core.models import Snippet
 from snipcontext.core.search import HybridSearch
 from snipcontext.core.storage import StorageEngine
