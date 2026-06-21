@@ -141,6 +141,7 @@ def compute_detailed_stats(snippets: list[Any]) -> dict[str, Any]:
 
     # Timeline — weekly and monthly counts based on created_at
     from datetime import timezone
+
     now = datetime.now(timezone.utc)
     if snippets:
         # Use the same timezone as the snippets
