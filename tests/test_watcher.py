@@ -52,6 +52,7 @@ def test_watcher_event_triggers_incremental_rebuild() -> None:
         handler.on_any_event(event)
         # Wait for debounced reindex (timer fires in separate thread)
         import time
+
         time.sleep(0.1)
 
         assert search.rebuild_called is True
