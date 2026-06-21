@@ -82,6 +82,13 @@ a = Analysis(
         "mypy",
         "mkdocs",
         "pre_commit",
+        # Minimal-build exclusions (harmless for full build)
+        "sentence_transformers",
+        "faiss",
+        "cryptography",
+        "fastapi",
+        "uvicorn",
+        "prompt_toolkit",
     ],
     noarchive=False,
     optimize=0,

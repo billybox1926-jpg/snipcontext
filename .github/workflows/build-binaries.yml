@@ -64,13 +64,7 @@ jobs:
         shell: bash
         run: |
           source .venv/bin/activate 2>/dev/null || .venv\Scripts\activate
-          pyinstaller snipcontext.spec --clean --noconfirm \
-            --exclude-module sentence_transformers \
-            --exclude-module faiss \
-            --exclude-module cryptography \
-            --exclude-module fastapi \
-            --exclude-module uvicorn \
-            --exclude-module prompt_toolkit
+          pyinstaller snipcontext.spec --clean --noconfirm
 
       - name: Package binary
         shell: bash
