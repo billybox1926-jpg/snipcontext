@@ -13,8 +13,12 @@ import threading
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from watchdog.events import FileSystemEvent
+    from watchdog.events import FileSystemEvent, FileSystemEventHandler
     from watchdog.observers import Observer
+
+    from snipcontext.config.settings import Config
+    from snipcontext.core.search import HybridSearch
+    from snipcontext.core.storage import StorageEngine
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +44,8 @@ class SnippetChangeHandler(FileSystemEventHandler):
 
     def __init__(
         self,
-        search_engine,
-        storage_engine,
+        search_engine: HybridSearch,
+        storage_engine: StorageEngine,
         debounce_seconds: float = 2.0,
     ) -> None:
         self.search = search_engine
@@ -80,7 +84,12 @@ class SnippetChangeHandler(FileSystemEventHandler):
 class SnippetWatcher:
     """Filesystem watcher that keeps the search index in sync with snippets."""
 
-    def __init__(self, config, search_engine, storage_engine) -> None:
+    def __init__(
+        self,
+        config: Config,
+        search_engine: HybridSearch,
+        storage_engine: StorageEngine,
+    ) -> None:
         self.config = config
         self.search = search_engine
         self.storage = storage_engine

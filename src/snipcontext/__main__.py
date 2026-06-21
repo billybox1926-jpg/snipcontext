@@ -26,7 +26,7 @@ def get_app() -> typer.Typer:
 
         app = typer.Typer(add_completion=True)
 
-        @app.command()
+        @app.command()  # type: ignore[untyped-decorator]
         def demo() -> None:
             """Run the SnipContext demo."""
             print("SnipContext demo not available in minimal runtime.")

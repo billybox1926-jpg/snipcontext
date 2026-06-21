@@ -70,7 +70,7 @@ app.add_typer(config_app)
 # -- WATCH -------------------------------------------------------------
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def watch() -> None:
     """Watch snippet directory for changes and auto-update the search index."""
     from snipcontext.core.watcher import SnippetWatcher
@@ -162,7 +162,7 @@ def _init_config_and_plugins() -> tuple:
 # ---------------------------------------------------------------------------
 
 
-@app.callback()
+@app.callback()  # type: ignore[untyped-decorator]
 def main(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
     debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
@@ -183,7 +183,7 @@ def main(
 # -- ADD -------------------------------------------------------------
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def add(
     content: str | None = typer.Argument(
         None, help="Code content or path to file (reads from stdin if omitted)"
@@ -388,7 +388,7 @@ def add(
 # -- GET -------------------------------------------------------------
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def get(
     snippet_id: str = typer.Argument(..., help="Snippet ID or prefix"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Print only code, no metadata"),
@@ -426,7 +426,7 @@ def get(
 # -- SEARCH ----------------------------------------------------------
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def search(
     query: str = typer.Argument(..., help="Search query"),
     mode: str = typer.Option(
@@ -481,7 +481,7 @@ def search(
 # -- LIST ------------------------------------------------------------
 
 
-@app.command("list")
+@app.command("list")  # type: ignore[untyped-decorator]
 def list_snippets(
     tag: str | None = _OPT_TAG,
     language: str | None = _OPT_LANG,
@@ -545,7 +545,7 @@ def list_snippets(
 # -- EDIT ------------------------------------------------------------
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def edit(
     snippet_id: str = typer.Argument(..., help="Snippet ID or prefix"),
     content: str | None = _OPT_CONTENT,
@@ -593,7 +593,7 @@ def edit(
 # -- DELETE ----------------------------------------------------------
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def delete(
     snippet_id: str,
     force: Annotated[bool, typer.Option(help="Skip confirmation")] = False,
@@ -620,7 +620,7 @@ def delete(
 # -- EXPORT ----------------------------------------------------------
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def export(
     query: str | None = _OPT_QUERY,
     ids: list[str] = _OPT_IDS,
@@ -678,7 +678,7 @@ def export(
 # -- INDEX -----------------------------------------------------------
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def index(
     force: Annotated[bool, typer.Option("--force", help="Skip confirmation prompt")] = False,
 ) -> None:
@@ -697,7 +697,7 @@ def index(
     console.print(f"Index complete. {len(snippets)} snippets indexed.")
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def build_index(
     force: Annotated[
         bool, typer.Option("--force", "-f", help="Force rebuild even if index exists")
@@ -725,7 +725,7 @@ def build_index(
 # -- STATS -----------------------------------------------------------
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def stats() -> None:
     """Show collection statistics."""
 
@@ -763,7 +763,7 @@ def stats() -> None:
 # -- DEMO -----------------------------------------------------------
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def demo() -> None:
     """Run an interactive demo with sample snippets."""
     from snipcontext.core.models import Language, Snippet, SnippetMetadata
@@ -895,7 +895,7 @@ def demo() -> None:
 # -- PROVIDERS -------------------------------------------------------
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def providers() -> None:
     """List available export providers."""
     from snipcontext.plugins.base import PluginManager
@@ -921,7 +921,7 @@ def providers() -> None:
 # ---------------------------------------------------------------------------
 
 
-@config_app.command("show")
+@config_app.command("show")  # type: ignore[untyped-decorator]
 def config_show() -> None:
     """Show current configuration."""
     config, _, _ = _get_context()
@@ -938,7 +938,7 @@ def config_show() -> None:
     console.print(f"\n[dim]Config file: {config.config_file_path}[/dim]")
 
 
-@config_app.command("init")
+@config_app.command("init")  # type: ignore[untyped-decorator]
 def config_init(
     force: Annotated[bool, typer.Option("--force", "-f", help="Overwrite existing config")] = False,
 ) -> None:
@@ -953,7 +953,7 @@ def config_init(
     console.print(f"[green]Configuration written to:[/green] {config.config_file_path}")
 
 
-@config_app.command("path")
+@config_app.command("path")  # type: ignore[untyped-decorator]
 def config_path() -> None:
     """Show configuration and data directories."""
     config, _, _ = _get_context()
@@ -968,7 +968,7 @@ def config_path() -> None:
 # ------------------------------------------------------------------
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def encrypt(
     snippet_id: str = typer.Argument(..., help="Snippet ID to encrypt"),
 ) -> None:
@@ -1003,7 +1003,7 @@ def encrypt(
         raise typer.Exit(1) from exc
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def decrypt(
     snippet_id: str = typer.Argument(..., help="Snippet ID to decrypt"),
 ) -> None:

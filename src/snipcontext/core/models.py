@@ -150,7 +150,7 @@ class Snippet(BaseModel):
             raise ValueError("Either content or encrypted_content must be provided")
         return self
 
-    @field_validator("tags", mode="before")
+    @field_validator("tags", mode="before")  # type: ignore[untyped-decorator]
     @classmethod
     def _normalize_tags(cls, v: list[str]) -> list[str]:
         """Normalize tags to lowercase, deduplicated, sorted."""
