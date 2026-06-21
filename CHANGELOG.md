@@ -40,6 +40,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Applied to all export providers (generic, openai, cursor, claude) and CLI display
   - Prevents code-fence breakout, HTML injection, ANSI escape injection, Rich markup injection
 
+## [0.3.0] - 2026-06-22
+
+### Added
+- **Improved Snippet Editing UX** (closes #2) — partial updates, `--interactive` ($EDITOR), confirmation prompt, `--lang`, `--file`, `--message` flags
+- **Analytics & Stats Command** (closes #18) — `sc stats` with basic and `--detailed` modes: total count, language/tag breakdown, ASCII bar charts, access metrics, storage breakdown, JSON output (`--json`)
+- **Richer Snippet Metadata** (closes #3) — `framework`, `version`, `source_url`, `custom_tags` fields on SnippetMetadata; `--source`, `--framework`, `--version`, `--custom key=value` flags on `sc add` and `sc edit`
+- **Improved Search Filters & Scoring** (closes #4) — `--fuzzy`, `--threshold`, `--lang`, `--tag`, `--boost-recent`, `--explain`, `--no-semantic` flags; recency boost scoring
+- **Multi-Query Search** (closes #32) — space-separated queries with weighted reciprocal rank fusion (`query^N` syntax)
+- **BM25 Keyword Search** (closes #90) — replaced TF-IDF with BM25 for better keyword relevance
+- **Lighter Default Model** (closes #96) — `--no-semantic` flag, lighter model docs
+- **Binary Distribution** (closes #24) — PyInstaller + `uv tool` support
+- **Web API** — bootstrap REST API with FastAPI endpoints for snippets
+- **Interactive TUI** (closes #29) — full terminal UI with command completer
+- `sc index` / `sc build-index` — rebuild search indices
+- `sc watch` — file watchdog for automatic reindexing
+- `sc demo` — seed sample snippets and run interactive demo
+- `sc export` — export to Claude, Cursor, OpenAI, or Generic Markdown
+- `sc stats` — collection analytics with bar charts
+- `sc providers` / `sc config-path` — utility commands
+- Auto-tagging via FAISS embeddings with similarity-based deduplication
+- Soft-delete support with encryption at rest (Fernet/AES-128)
+- Plugin system with entry points for providers and exporters
+- Stdin piping support for `sc add`
+- Multi-Python CI matrix (3.10–3.13)
+
+### Changed
+- Optional dependency groups: `[semantic]`, `[encryption]`, `[tui]`, `[web]`, `[all]`
+- Core CLI works without Rust toolchain (closes #62)
+- Fixed conflicting short options across CLI commands
+
+### Fixed
+- Ruff lint errors E741, B007, B905 across search, CLI, and test modules
+- Mypy arg-type errors in `cli/search.py` — replaced `**dict` unpack with explicit kwargs
+- `datetime.UTC` incompatibility with Python 3.10 — replaced with `timezone.utc`
+- Snippet content XSS sanitization (closes #93)
+- Web API dependency isolation for CI (PR #104)
+- Short option conflicts (`-f`, `-t`, `-s`, `-m`) across commands
+
 ## [Unreleased]
 
 ### Added
