@@ -19,10 +19,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-from cryptography.fernet import Fernet, InvalidToken
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-
 from snipcontext.config.settings import Config, get_config
 from snipcontext.core.models import Snippet
 
@@ -289,7 +285,7 @@ class StorageEngine:
     # Encryption
     # ------------------------------------------------------------------
 
-    def _get_fernet(self) -> Fernet:
+    def _get_fernet(self) -> "Fernet":
         """Create or retrieve a Fernet cipher from the encryption config.
 
         Derives a key from the configured passphrase and salt using PBKDF2.
@@ -300,7 +296,21 @@ class StorageEngine:
 
         Raises:
             EncryptionError: If encryption is not enabled in config.
+            EncryptionError: If cryptography package is not installed.
         """
+        try:
+            from cryptography.fernet import Fernet
+            from cryptography.hazmat.primitives import hashes
+            from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+        except ImportError as exc:
+            raise EncryptionError(
+                "encrypt/decrypt",
+                original_error=RuntimeError(
+                    "The 'cryptography' package is required for encryption. "
+                    "Install it with: pip install snipcontext[encryption]"
+                ),
+            ) from exc
+
         if not self._config.encryption.enabled:
             raise EncryptionError(
                 "encrypt/decrypt",
@@ -371,9 +381,10 @@ class StorageEngine:
             encrypted_bytes = base64.urlsafe_b64decode(encrypted_content.encode())
             decrypted = fernet.decrypt(encrypted_bytes)
             return decrypted.decode()
-        except InvalidToken as exc:
-            raise EncryptionError("decrypt", original_error=exc) from exc
         except Exception as exc:
+            # InvalidToken is a subclass of Exception; _get_fernet() already
+            # handles the ImportError case, so any exception here is a
+            # decryption failure (wrong key, corrupted data, etc.).
             raise EncryptionError("decrypt", original_error=exc) from exc
 
     # ------------------------------------------------------------------

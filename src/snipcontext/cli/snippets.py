@@ -150,7 +150,11 @@ def register_commands(app: typer.Typer) -> None:
             if not config.encryption.enabled:
                 console.print("[red]Encryption is not enabled.[/red]")
                 raise typer.Exit(1)
-            encrypted = storage.encrypt_content(content)
+            try:
+                encrypted = storage.encrypt_content(content)
+            except Exception as exc:
+                console.print(f"[red]Encryption failed: {exc}[/red]")
+                raise typer.Exit(1) from exc
             snippet = Snippet(
                 content="",
                 encrypted_content=encrypted,
