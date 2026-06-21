@@ -501,3 +501,139 @@ class TestEditCommand:
             )
             assert result.exit_code == 0
             assert "Updated" in result.output
+
+    def test_add_with_metadata(self):
+        """Add snippet with --source, --framework, --version, --custom."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            result, _ = invoke(
+                "add",
+                "print('hello')",
+                "--title",
+                "Test Meta",
+                "--lang",
+                "python",
+                "--source",
+                "https://example.com/snippet.py",
+                "--framework",
+                "fastapi",
+                "--version",
+                "0.100+",
+                "--custom",
+                "priority=high",
+                "--custom",
+                "team=backend",
+                env=env,
+            )
+            assert result.exit_code == 0
+
+            # Extract ID from output
+            sid = None
+            for line in result.output.splitlines():
+                if "ID:" in line:
+                    sid = line.split("ID:")[-1].strip()
+            assert sid is not None
+
+            get_result, _ = invoke("get", sid, env=env)
+            assert "fastapi" in get_result.output
+            assert "0.100+" in get_result.output
+            assert "example.com" in get_result.output
+            assert "priority=high" in get_result.output
+
+    def test_edit_framework(self):
+        """Edit with --framework should update the framework field."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            result, _ = invoke("edit", sid, "--framework", "react", "--force", env=env)
+            assert result.exit_code == 0
+            assert "Updated" in result.output
+
+            get_result, _ = invoke("get", sid, env=env)
+            assert "react" in get_result.output
+
+    def test_edit_version(self):
+        """Edit with --version should update the version field."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            result, _ = invoke("edit", sid, "--version", "18.x", "--force", env=env)
+            assert result.exit_code == 0
+
+            get_result, _ = invoke("get", sid, env=env)
+            assert "18.x" in get_result.output
+
+    def test_edit_source(self):
+        """Edit with --source should update the source URL."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            sid = self._add_and_get_id(env)
+            assert sid is not None
+
+            result, _ = invoke(
+                "edit", sid, "--source", "https://github.com/example/repo", "--force", env=env
+            )
+            assert result.exit_code == 0
+
+            get_result, _ = invoke("get", sid, env=env)
+            assert "github.com/example/repo" in get_result.output
+
+    def test_edit_custom_metadata(self):
+        """Edit with --custom should merge custom key-value pairs."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "SNIPCONTEXT_STORAGE__DATA_DIR": str(tmp_path),
+                "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
+                "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
+            }
+            # Add with one custom field
+            add_result, _ = invoke(
+                "add",
+                "x = 1",
+                "--title",
+                "Custom Test",
+                "--custom",
+                "env=staging",
+                env=env,
+            )
+            assert add_result.exit_code == 0
+            sid = None
+            for line in add_result.output.splitlines():
+                if "ID:" in line:
+                    sid = line.split("ID:")[-1].strip()
+            assert sid is not None
+
+            # Edit: add another custom field
+            result, _ = invoke(
+                "edit", sid, "--custom", "tier=frontend", "--force", env=env
+            )
+            assert result.exit_code == 0
+
+            get_result, _ = invoke("get", sid, env=env)
+            assert "env=staging" in get_result.output
+            assert "tier=frontend" in get_result.output

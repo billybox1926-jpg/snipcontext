@@ -239,6 +239,10 @@ def edit_snippet(
     title: str | None = None,
     description: str | None = None,
     language: str | None = None,
+    source: str | None = None,
+    framework: str | None = None,
+    version: str | None = None,
+    custom_tags: dict[str, str] | None = None,
     add_tags: list[str] | None = None,
     remove_tags: list[str] | None = None,
     message: str = "",
@@ -255,6 +259,10 @@ def edit_snippet(
         title: New title (optional).
         description: New description (optional).
         language: New programming language (optional).
+        source: Source URL or file path (optional).
+        framework: Target framework/library (optional).
+        version: Target framework/library version (optional).
+        custom_tags: Custom key-value metadata to merge (optional).
         add_tags: Tags to add (optional).
         remove_tags: Tags to remove (optional).
         message: Version bump message.
@@ -274,10 +282,18 @@ def edit_snippet(
         change_desc = "content update"
     elif language:
         change_desc = "language update"
+    elif source is not None:
+        change_desc = "source update"
+    elif framework is not None:
+        change_desc = "framework update"
+    elif version is not None:
+        change_desc = "version update"
     elif add_tags or remove_tags:
         change_desc = "tag update"
     elif description:
         change_desc = "description update"
+    elif custom_tags:
+        change_desc = "custom metadata update"
     snippet.bump_version(message or f"Edit: {change_desc}")
 
     if content is not None:
@@ -291,6 +307,14 @@ def edit_snippet(
             snippet.metadata.language = Language(language)
         except ValueError:
             snippet.metadata.language = Language.UNKNOWN
+    if source is not None:
+        snippet.metadata.source_url = source
+    if framework is not None:
+        snippet.metadata.framework = framework
+    if version is not None:
+        snippet.metadata.version = version
+    if custom_tags:
+        snippet.metadata.custom_tags.update(custom_tags)
     if add_tags:
         for t in add_tags:
             snippet.merge_tags([t])

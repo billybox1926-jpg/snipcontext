@@ -65,6 +65,15 @@ def _print_snippet(snippet: Snippet, score: float | None = None, idx: int | None
             f"[dim]Description:[/dim] {sanitize_for_display(snippet.metadata.description)}"
         )
     console.print(f"[dim]Language:[/dim] {snippet.metadata.language.value}")
+    if snippet.metadata.framework:
+        console.print(f"[dim]Framework:[/dim] {snippet.metadata.framework}")
+    if snippet.metadata.version:
+        console.print(f"[dim]Version:[/dim] {snippet.metadata.version}")
+    if snippet.metadata.source_url:
+        console.print(f"[dim]Source:[/dim] {snippet.metadata.source_url}")
+    if snippet.metadata.custom_tags:
+        meta_parts = [f"{k}={v}" for k, v in snippet.metadata.custom_tags.items()]
+        console.print(f"[dim]Custom:[/dim] {', '.join(meta_parts)}")
     if snippet.tags:
         console.print(f"[dim]Tags:[/dim] {snippet.tag_line}")
     console.print(f"[dim]ID:[/dim] {snippet.id}")
@@ -85,6 +94,16 @@ def _print_snippet(snippet: Snippet, score: float | None = None, idx: int | None
 
 def _confirm_action(message: str) -> bool:
     return typer.confirm(message, default=False)
+
+
+def _parse_custom(pairs: list[str]) -> dict[str, str]:
+    """Parse 'key=value' CLI args into a dict. Silently skips malformed entries."""
+    result: dict[str, str] = {}
+    for item in pairs:
+        if "=" in item:
+            key, val = item.split("=", 1)
+            result[key.strip()] = val.strip()
+    return result
 
 
 def _accept_auto_tags(merged_tags: list[str], existing_tags: list[str]) -> list[str] | None:
@@ -114,6 +133,10 @@ def register_commands(app: typer.Typer) -> None:
         description: str = typer.Option("", "--desc", "-d", help="Short description"),
         language: str = typer.Option("", "--lang", "-l", help="Programming language"),
         tags: list[str] = typer.Option([], "--tag", help="Tags (repeatable)"),
+        source: str = typer.Option("", "--source", help="URL or file path where snippet originated"),
+        framework: str = typer.Option("", "--framework", help="Target framework/library (e.g. react, fastapi)"),
+        version: str = typer.Option("", "--version", help="Target framework/library version"),
+        custom: list[str] = typer.Option([], "--custom", help="Custom key=value metadata (repeatable)"),
         from_file: bool = typer.Option(False, "--file", "-F", help="Read content from file path"),
         encrypt: bool = typer.Option(False, "--encrypt", "-e", help="Encrypt content"),
         sensitive: bool = typer.Option(False, "--sensitive", help="Mark as sensitive"),
@@ -156,19 +179,37 @@ def register_commands(app: typer.Typer) -> None:
             except Exception as exc:
                 console.print(f"[red]Encryption failed: {exc}[/red]")
                 raise typer.Exit(1) from exc
+            custom_meta = _parse_custom(custom)
             snippet = Snippet(
                 content="",
                 encrypted_content=encrypted,
-                metadata=SnippetMetadata(title=title, description=description, language=lang_enum),
+                metadata=SnippetMetadata(
+                    title=title,
+                    description=description,
+                    language=lang_enum,
+                    source_url=source,
+                    framework=framework,
+                    version=version,
+                    custom_tags=custom_meta,
+                ),
                 tags=tags,
             )
             console.print(
                 f"[green]Added encrypted snippet:[/green] [bold]{snippet.metadata.title}[/bold]"
             )
         else:
+            custom_meta = _parse_custom(custom)
             snippet = Snippet(
                 content=content,
-                metadata=SnippetMetadata(title=title, description=description, language=lang_enum),
+                metadata=SnippetMetadata(
+                    title=title,
+                    description=description,
+                    language=lang_enum,
+                    source_url=source,
+                    framework=framework,
+                    version=version,
+                    custom_tags=custom_meta,
+                ),
                 tags=tags,
             )
         # Auto-tag and dedup
@@ -322,8 +363,12 @@ def register_commands(app: typer.Typer) -> None:
         title: str | None = typer.Option(None, "--title", help="New title"),
         description: str | None = typer.Option(None, "--desc", "-d", help="New description"),
         language: str | None = typer.Option(None, "--lang", "-l", help="New language"),
+        source: str | None = typer.Option(None, "--source", help="Source URL or file path"),
+        framework: str | None = typer.Option(None, "--framework", help="Target framework/library"),
+        version: str | None = typer.Option(None, "--version", help="Target framework/library version"),
         add_tags: list[str] = typer.Option([], "--tag", "--add-tag", help="Add tags (repeatable)"),
         remove_tags: list[str] = typer.Option([], "--remove-tag", help="Remove tags"),
+        custom: list[str] = typer.Option([], "--custom", help="Custom key=value metadata (repeatable)"),
         from_file: bool = typer.Option(False, "--file", "-F", help="Read content from file"),
         interactive: bool = typer.Option(False, "--interactive", "-i", help="Open in $EDITOR"),
         force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt"),
@@ -386,8 +431,12 @@ def register_commands(app: typer.Typer) -> None:
                 title is not None,
                 description is not None,
                 language is not None,
+                source is not None,
+                framework is not None,
+                version is not None,
                 add_tags,
                 remove_tags,
+                custom,
             ]
         )
         if not has_changes:
@@ -406,10 +455,18 @@ def register_commands(app: typer.Typer) -> None:
             changes.append("description")
         if language is not None:
             changes.append(f"language -> {language}")
+        if source is not None:
+            changes.append(f"source -> {source}")
+        if framework is not None:
+            changes.append(f"framework -> {framework}")
+        if version is not None:
+            changes.append(f"version -> {version}")
         if add_tags:
             changes.append(f"+tags: {', '.join(add_tags)}")
         if remove_tags:
             changes.append(f"-tags: {', '.join(remove_tags)}")
+        if custom:
+            changes.append(f"custom: {', '.join(custom)}")
 
         # Confirmation prompt (unless --force)
         if not force:
@@ -429,6 +486,10 @@ def register_commands(app: typer.Typer) -> None:
             title=title,
             description=description,
             language=language or None,
+            source=source,
+            framework=framework,
+            version=version,
+            custom_tags=_parse_custom(custom) if custom else None,
             add_tags=add_tags if add_tags else None,
             remove_tags=remove_tags if remove_tags else None,
             message=message,
