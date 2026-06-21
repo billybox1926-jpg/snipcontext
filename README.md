@@ -19,8 +19,6 @@ Save, search, tag, and instantly inject your best boilerplate, patterns, and con
 
 🎧 **[Stop Feeding Your AI Clipboard Garbage](docs/Stop_Feeding_Your_AI_Clipboard_Garbage.m4a)** — Why SnipContext exists.
 
-🎧 **[Curating Local Code Context for AI Agents](docs/Curating_local_code_context_for_AI_agents.m4a)** — The philosophy behind the tool.
-
 ![SnipContext Demo](docs/demo.png)
 
 *Searching, tagging, and exporting code snippets — all from the terminal.*
