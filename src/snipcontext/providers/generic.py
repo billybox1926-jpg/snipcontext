@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from snipcontext.core.sanitization import sanitize_code, sanitize_text
 from snipcontext.providers.base import BaseProvider, ExportFormat
 
 if TYPE_CHECKING:
@@ -18,7 +19,8 @@ class GenericProvider(BaseProvider):
     format = ExportFormat.MARKDOWN
 
     def export_single(self, snippet: Snippet) -> str:
-        lines = [f"## {snippet.metadata.title or 'Untitled Snippet'}\n"]
+        safe_title = sanitize_text(snippet.metadata.title or "Untitled Snippet")
+        lines = [f"## {safe_title}\n"]
 
         if self.include_metadata:
             meta = self._metadata_block(snippet)
@@ -32,8 +34,9 @@ class GenericProvider(BaseProvider):
         return "\n".join(lines)
 
     def export_batch(self, snippets: list[Snippet], title: str = "Code Context") -> str:
+        safe_title = sanitize_text(title)
         lines = [
-            f"# {title}",
+            f"# {safe_title}",
             "",
             f"> *{len(snippets)} code snippets provided as context*",
             "",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from snipcontext.core.sanitization import sanitize_code, sanitize_text
 from snipcontext.providers.base import BaseProvider, ExportFormat
 
 if TYPE_CHECKING:
@@ -20,28 +21,30 @@ class OpenAIProvider(BaseProvider):
     _DIVIDER = "═" * 40
 
     def export_single(self, snippet: Snippet) -> str:
+        safe_title = sanitize_text(snippet.metadata.title or "Untitled")
         lines = [
             self._DIVIDER,
-            f"SNIPPET: {snippet.metadata.title or 'Untitled'}",
+            f"SNIPPET: {safe_title}",
             self._DIVIDER,
             "",
         ]
 
         if self.include_metadata:
             if snippet.metadata.description:
-                lines.append(f"Description: {snippet.metadata.description}")
+                lines.append(f"Description: {sanitize_text(snippet.metadata.description)}")
             lines.append(f"Language: {snippet.metadata.language.value}")
             if snippet.tags:
-                lines.append(f"Tags: {snippet.tag_line}")
+                lines.append(f"Tags: {', '.join(sanitize_text(t) for t in snippet.tags)}")
             if snippet.metadata.confidence:
                 lines.append(f"Confidence: {snippet.metadata.confidence}")
             lines.append("")
 
         lang = snippet.metadata.language.value
+        safe_content = sanitize_code(snippet.content)
         lines.extend(
             [
                 f"```{lang}",
-                snippet.content,
+                safe_content,
                 "```",
                 "",
             ]
@@ -49,9 +52,10 @@ class OpenAIProvider(BaseProvider):
         return "\n".join(lines)
 
     def export_batch(self, snippets: list[Snippet], title: str = "Code Context") -> str:
+        safe_title = sanitize_text(title)
         lines = [
             f"{self._DIVIDER}{self._DIVIDER}",
-            f"  {title}",
+            f"  {safe_title}",
             f"  {len(snippets)} code snippets provided below",
             "  Use these as reference for your response.",
             f"{self._DIVIDER}{self._DIVIDER}",
