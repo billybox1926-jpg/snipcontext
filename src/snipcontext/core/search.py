@@ -2,7 +2,7 @@
 
 Implements three search strategies:
 1. Semantic Search — dense vector similarity using sentence-transformers + FAISS
-2. Keyword Search — TF-IDF based text matching with scikit-learn
+2. Keyword Search — BM25 (Okapi BM25) ranking with rank_bm25
 3. Hybrid Search — weighted combination of semantic + keyword scores
 
 All processing happens locally — no data leaves the machine.
@@ -26,9 +26,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import faiss
-    from scipy.sparse import spmatrix
+    from rank_bm25 import BM25Okapi
     from sentence_transformers import SentenceTransformer
-    from sklearn.feature_extraction.text import TfidfVectorizer
 
     from snipcontext.core.storage import StorageEngine
 
@@ -399,55 +398,61 @@ class VectorIndex:
 
 
 # ---------------------------------------------------------------------------
-# Keyword index (TF-IDF)
+# Keyword index (BM25)
 # ---------------------------------------------------------------------------
 
 
 class KeywordIndex:
-    """TF-IDF based keyword search index.
+    """BM25 (Okapi BM25) keyword search index.
 
     Provides fast exact and fuzzy text matching for snippet content,
-    titles, descriptions, and tags.
+    titles, descriptions, and tags.  BM25 handles term-frequency saturation
+    and document-length normalization better than TF-IDF for short texts
+    such as code snippets.
     """
 
     def __init__(self, config: Config | None = None) -> None:
         self._config = config or get_config()
-        self._vectorizer: TfidfVectorizer | None = None
-        self._matrix: spmatrix | None = None
+        self._bm25: BM25Okapi | None = None
+        self._corpus: list[list[str]] | None = None
         self._id_map: list[str] = []
         self._texts: list[str] = []
 
     @property
     def is_trained(self) -> bool:
-        return self._vectorizer is not None and self._matrix is not None
+        return self._bm25 is not None and self._corpus is not None
+
+    @staticmethod
+    def _tokenize(text: str) -> list[str]:
+        """Lowercase word-tokenization for BM25 input.
+
+        Uses a simple regex split which handles code identifiers,
+        punctuation boundaries, and unicode word characters.
+        """
+        import re
+
+        return re.findall(r"\w+", text.lower())
 
     def build(self, snippets: list[Snippet]) -> None:
-        """Build the TF-IDF index from snippets."""
-        from sklearn.feature_extraction.text import TfidfVectorizer
+        """Build the BM25 index from snippets."""
+        from rank_bm25 import BM25Okapi
 
         if not snippets:
-            self._vectorizer = None
-            self._matrix = None
+            self._bm25 = None
+            self._corpus = None
             self._id_map = []
+            self._texts = []
             return
 
         texts = [s.to_search_text() for s in snippets]
         self._texts = texts  # Store for fuzzy matching
-        self._vectorizer = TfidfVectorizer(
-            lowercase=True,
-            stop_words="english",
-            ngram_range=(1, 2),  # Unigrams + bigrams
-            max_features=10000,
-            min_df=1,
-            dtype=np.float32,
-        )
-        self._matrix = self._vectorizer.fit_transform(texts)
+        self._corpus = [self._tokenize(t) for t in texts]
+        self._bm25 = BM25Okapi(self._corpus)
         self._id_map = [s.id for s in snippets]
 
         logger.info(
-            "Built keyword index: %d docs, %d terms",
+            "Built keyword index: %d docs (BM25Okapi)",
             len(snippets),
-            len(self._vectorizer.vocabulary_),
         )
 
     def search(
@@ -457,12 +462,17 @@ class KeywordIndex:
         min_score: float = 0.0,
         fuzzy: bool = False,
     ) -> list[tuple[str, float]]:
-        """Search by keyword relevance.
+        """Search by keyword relevance using BM25 scoring.
+
+        BM25 scores are unbounded positive floats.  They are normalized to
+        the [0, 1] range by dividing by the maximum score in the current
+        result set so that they are compatible with ``min_score`` thresholds
+        and hybrid-fusion score ranges.
 
         Args:
             query: The search query string.
             top_k: Maximum number of results.
-            min_score: Minimum similarity score (0.0 to 1.0).
+            min_score: Minimum relevance score (0.0 to 1.0).
             fuzzy: Enable fuzzy matching with rapidfuzz.
 
         Returns:
@@ -471,36 +481,38 @@ class KeywordIndex:
         if not self.is_trained:
             return []
 
-        from sklearn.metrics.pairwise import cosine_similarity
+        assert self._bm25 is not None
+        tokens = self._tokenize(query)
+        raw_scores = self._bm25.get_scores(tokens)
 
-        assert self._vectorizer is not None
-        assert self._matrix is not None
-        query_vec = self._vectorizer.transform([query])
-        similarities = cosine_similarity(query_vec, self._matrix)[0]
+        # Normalize BM25 scores to [0, 1] for min_score compatibility.
+        max_score = float(raw_scores.max())
+        if max_score > 0:
+            scores = raw_scores / max_score
+        else:
+            scores = raw_scores.astype(np.float64)
 
         if fuzzy:
             # Augment with fuzzy matching against original texts
             try:
                 fuzzy_scores = self._fuzzy_search(query, top_k, min_score)
-                # Merge TF-IDF and fuzzy scores
                 for idx, f_score in fuzzy_scores:
-                    # Blend: 70% TF-IDF, 30% fuzzy
-                    tfidf_score = float(similarities[idx]) if idx < len(similarities) else 0.0
-                    blended = 0.7 * tfidf_score + 0.3 * f_score
-                    similarities[idx] = blended
+                    bm25_norm = float(scores[idx]) if idx < len(scores) else 0.0
+                    blended = 0.7 * bm25_norm + 0.3 * f_score
+                    scores[idx] = blended
             except ImportError:
                 pass  # rapidfuzz not available, skip fuzzy matching
 
         # Get top-k indices
-        if top_k >= len(similarities):
-            top_indices = np.argsort(similarities)[::-1]
+        if top_k >= len(scores):
+            top_indices = np.argsort(scores)[::-1]
         else:
-            top_indices = np.argpartition(similarities, -top_k)[-top_k:]
-            top_indices = top_indices[np.argsort(similarities[top_indices])[::-1]]
+            top_indices = np.argpartition(scores, -top_k)[-top_k:]
+            top_indices = top_indices[np.argsort(scores[top_indices])[::-1]]
 
         results: list[tuple[str, float]] = []
         for idx in top_indices:
-            score = float(similarities[idx])
+            score = float(scores[idx])
             if score < min_score:
                 continue
             results.append((self._id_map[idx], score))
@@ -543,8 +555,8 @@ class KeywordIndex:
         with open(path / "keyword_index.pkl", "wb") as f:
             pickle.dump(
                 {
-                    "vectorizer": self._vectorizer,
-                    "matrix": self._matrix,
+                    "bm25": self._bm25,
+                    "corpus": self._corpus,
                     "id_map": self._id_map,
                     "texts": self._texts,
                 },
@@ -561,17 +573,17 @@ class KeywordIndex:
         try:
             with open(index_file, "rb") as f:
                 data = pickle.load(f)
-            self._vectorizer = data["vectorizer"]
-            self._matrix = data["matrix"]
+            self._bm25 = data["bm25"]
+            self._corpus = data["corpus"]
             self._id_map = data["id_map"]
             self._texts = data.get("texts", [])
 
             # Validate index integrity
-            if self._matrix is not None and len(self._id_map) != self._matrix.shape[0]:
+            if self._corpus is not None and len(self._id_map) != len(self._corpus):
                 logger.warning(
-                    "Keyword index ID map length mismatch: %d IDs vs %d rows",
+                    "Keyword index ID map length mismatch: %d IDs vs %d docs",
                     len(self._id_map),
-                    self._matrix.shape[0],
+                    len(self._corpus),
                 )
                 return False
 

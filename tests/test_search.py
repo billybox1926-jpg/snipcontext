@@ -80,7 +80,7 @@ def temp_config():
 
 
 class TestKeywordIndex:
-    """Tests for TF-IDF keyword search."""
+    """Tests for BM25 keyword search."""
 
     def test_build_and_search(self, temp_config):
         from snipcontext.core.search import KeywordIndex
@@ -339,3 +339,58 @@ class TestSemanticAvailabilityFlag:
         # semantic mode with no_semantic=True — should fall back to keyword
         results_sem_forced = searcher.search("react component", top_k=3, mode="semantic", no_semantic=True)
         assert len(results_sem_forced) > 0
+
+    def test_bm25_scores_normalized(self, temp_config):
+        """BM25 raw scores must be normalized to [0, 1]."""
+        from snipcontext.core.search import KeywordIndex
+
+        snippets = create_snippets()
+        idx = KeywordIndex(temp_config)
+        idx.build(snippets)
+
+        results = idx.search("authentication jwt", top_k=5)
+        assert len(results) > 0
+        # All scores should be in [0, 1] after normalization
+        for sid, score in results:
+            assert 0.0 <= score <= 1.0, f"Score {score} for {sid} outside [0, 1]"
+        # Top result should have score == 1.0 (max normalization)
+        assert results[0][1] == 1.0
+
+    def test_bm25_save_load_roundtrip(self, temp_config):
+        """BM25 index survives pickle save/load roundtrip."""
+        import tempfile
+        from pathlib import Path
+
+        from snipcontext.core.search import KeywordIndex
+
+        snippets = create_snippets()
+        idx = KeywordIndex(temp_config)
+        idx.build(snippets)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            idx.save(Path(tmp))
+            idx2 = KeywordIndex(temp_config)
+            loaded = idx2.load(Path(tmp))
+            assert loaded is True
+            assert idx2.is_trained
+
+            # Search results should match
+            results1 = idx.search("authentication jwt", top_k=3)
+            results2 = idx2.search("authentication jwt", top_k=3)
+            assert len(results1) == len(results2)
+            for (sid1, score1), (sid2, score2) in zip(results1, results2):
+                assert sid1 == sid2
+                assert abs(score1 - score2) < 1e-6
+
+    def test_bm25_tokenizer(self, temp_config):
+        """_tokenize should handle code identifiers and unicode."""
+        from snipcontext.core.search import KeywordIndex
+
+        tokens = KeywordIndex._tokenize("def authenticate_user(token):\n    return jwt.decode")
+        assert "def" in tokens
+        assert "authenticate_user" in tokens
+        assert "token" in tokens
+        assert "jwt" in tokens
+        # No punctuation tokens
+        assert "(" not in tokens
+        assert ":" not in tokens
