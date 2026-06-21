@@ -378,7 +378,7 @@ class TestSemanticAvailabilityFlag:
             results1 = idx.search("authentication jwt", top_k=3)
             results2 = idx2.search("authentication jwt", top_k=3)
             assert len(results1) == len(results2)
-            for (sid1, score1), (sid2, score2) in zip(results1, results2):
+            for (sid1, score1), (sid2, score2) in zip(results1, results2, strict=True):
                 assert sid1 == sid2
                 assert abs(score1 - score2) < 1e-6
 
