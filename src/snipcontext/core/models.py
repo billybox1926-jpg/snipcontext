@@ -240,6 +240,10 @@ class SearchResult(BaseModel):
         default_factory=list,
         description="Matched text fragments for display",
     )
+    explanation: dict[str, float | str] | None = Field(
+        default=None,
+        description="Scoring breakdown when --explain is active",
+    )
 
     @property
     def id(self) -> str:

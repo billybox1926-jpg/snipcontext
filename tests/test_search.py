@@ -394,3 +394,217 @@ class TestSemanticAvailabilityFlag:
         # No punctuation tokens
         assert "(" not in tokens
         assert ":" not in tokens
+
+
+class TestSearchFiltersAndScoring:
+    """Tests for --lang, --tag, --boost-recent, and --explain (Issue #4)."""
+
+    def test_lang_filter_python_only(self, temp_config):
+        """--lang python should return only Python snippets."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        results = searcher.search(
+            "authenticate", top_k=10, mode="keyword", lang_filter=["python"]
+        )
+        assert len(results) > 0
+        for r in results:
+            assert r.snippet.metadata.language.value == "python"
+
+    def test_lang_filter_javascript_only(self, temp_config):
+        """--lang javascript should return only JS snippets."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        results = searcher.search(
+            "validation", top_k=10, mode="keyword", lang_filter=["javascript"]
+        )
+        assert len(results) > 0
+        for r in results:
+            assert r.snippet.metadata.language.value == "javascript"
+
+    def test_lang_filter_excludes_mismatches(self, temp_config):
+        """--lang go should return 0 results when no Go snippets exist."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        results = searcher.search(
+            "anything", top_k=10, mode="keyword", lang_filter=["go"]
+        )
+        assert results == []
+
+    def test_tag_filter_and_logic(self, temp_config):
+        """--tag with AND logic requires all tags to be present."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        # auth + security → should match JWT auth and password hashing snippets
+        results = searcher.search(
+            "token password", top_k=10, mode="keyword", tag_filter=["auth", "security"]
+        )
+        assert len(results) > 0
+        for r in results:
+            assert "auth" in r.snippet.tags
+            assert "security" in r.snippet.tags
+
+    def test_tag_filter_partial_match_excluded(self, temp_config):
+        """--tag requiring a non-existent tag should return 0 results."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        results = searcher.search(
+            "anything", top_k=10, mode="keyword", tag_filter=["auth", "nonexistent"]
+        )
+        assert results == []
+
+    def test_combined_lang_and_tag_filter(self, temp_config):
+        """--lang and --tag applied together should respect both."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        results = searcher.search(
+            "password",
+            top_k=10,
+            mode="keyword",
+            lang_filter=["python"],
+            tag_filter=["security"],
+        )
+        for r in results:
+            assert r.snippet.metadata.language.value == "python"
+            assert "security" in r.snippet.tags
+
+    def test_boost_recent_changes_ranking(self, temp_config):
+        """--boost-recent should affect ranking (same query, different order possible)."""
+        from datetime import datetime, timedelta, timezone
+
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        # Create two snippets with different ages
+        old_snippet = Snippet(
+            content="def old_function(): return 'old'",
+            metadata=SnippetMetadata(title="Old Snippet", language=Language.PYTHON),
+            tags=["test"],
+        )
+        # Manually set created_at to 180 days ago
+        old_snippet.created_at = datetime.now(timezone.utc) - timedelta(days=180)
+
+        new_snippet = Snippet(
+            content="def new_function(): return 'new'",
+            metadata=SnippetMetadata(title="New Snippet", language=Language.PYTHON),
+            tags=["test"],
+        )
+
+        storage = StorageEngine(temp_config)
+        storage.save(old_snippet)
+        storage.save(new_snippet)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets([old_snippet, new_snippet])
+
+        results_normal = searcher.search("function", top_k=2, mode="keyword")
+        results_boosted = searcher.search(
+            "function", top_k=2, mode="keyword", boost_recent=True
+        )
+
+        # Both should return results
+        assert len(results_normal) > 0
+        assert len(results_boosted) > 0
+        # The new snippet should have a higher boosted score
+        new_id = new_snippet.id
+        old_id = old_snippet.id
+        boosted_scores = {r.snippet.id: r.score for r in results_boosted}
+        # New snippet should rank higher than old one after boosting
+        assert boosted_scores.get(new_id, 0) > boosted_scores.get(old_id, 0)
+
+    def test_explain_attaches_breakdown(self, temp_config):
+        """--explain should attach an explanation dict to each result."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        results = searcher.search(
+            "authentication", top_k=3, mode="keyword", explain=True
+        )
+        assert len(results) > 0
+        for r in results:
+            assert r.explanation is not None
+            assert "base_score" in r.explanation
+            assert "matched_by" in r.explanation
+            assert "language" in r.explanation
+            assert "tags" in r.explanation
+            assert "age_days" in r.explanation
+            assert "access_count" in r.explanation
+
+    def test_explain_without_flag_is_none(self, temp_config):
+        """Without --explain, explanation should be None."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        results = searcher.search("authentication", top_k=3, mode="keyword")
+        assert len(results) > 0
+        for r in results:
+            assert r.explanation is None

@@ -33,6 +33,18 @@ def search(
     no_semantic: bool = typer.Option(
         False, "--no-semantic", help="Skip semantic search; use keyword-only mode"
     ),
+    lang: str = typer.Option(
+        None, "--lang", "-l", help="Filter by language (comma-separated, e.g. python,typescript)"
+    ),
+    tag: str = typer.Option(
+        None, "--tag", help="Filter by tags (comma-separated, AND logic, e.g. cli,api)"
+    ),
+    boost_recent: bool = typer.Option(
+        False, "--boost-recent", help="Weight newer snippets higher in rankings"
+    ),
+    explain: bool = typer.Option(
+        False, "--explain", help="Show scoring breakdown for each result"
+    ),
 ) -> None:
     """Search snippets with semantic + keyword hybrid search."""
     config, storage, searcher = _get_context()
@@ -44,19 +56,41 @@ def search(
             raise typer.Exit(0)
         searcher.index_snippets(snippets)
         console.print(f"[green]Indexed {len(snippets)} snippets[/green]")
-    results = searcher.search(query, top_k=top_k, mode=mode, min_score=threshold, fuzzy=fuzzy, no_semantic=no_semantic)
+
+    # Parse filter flags
+    lang_list = [l.strip() for l in lang.split(",") if l.strip()] if lang else None
+    tag_list = [t.strip() for t in tag.split(",") if t.strip()] if tag else None
+
+    results = searcher.search(
+        query,
+        top_k=top_k,
+        mode=mode,
+        min_score=threshold,
+        fuzzy=fuzzy,
+        no_semantic=no_semantic,
+        lang_filter=lang_list,
+        tag_filter=tag_list,
+        boost_recent=boost_recent,
+        explain=explain,
+    )
     if not results:
         console.print(f"[yellow]No results for '{query}'[/yellow]")
         if not fuzzy:
             console.print("[dim]Try with --fuzzy for approximate matching[/dim]")
         if threshold and threshold > 0.1:
             console.print(f"[dim]Try lowering --threshold (currently {threshold})[/dim]")
+        if lang_list or tag_list:
+            console.print("[dim]Try removing --lang or --tag filters to broaden results[/dim]")
         raise typer.Exit(0)
     console.print(
         f"\n[bold]{len(results)} results[/bold] for '[cyan]{query}[/cyan]' ([dim]{mode}[/dim]):\n"
     )
     for i, result in enumerate(results, 1):
         _print_snippet(result.snippet, score=result.score, idx=i)
+        if explain and result.explanation:
+            console.print("  [dim]── explain ──[/dim]")
+            for key, val in result.explanation.items():
+                console.print(f"  [dim]{key}: {val}[/dim]")
         console.print()
 
 

@@ -824,6 +824,10 @@ class HybridSearch:
         min_score: float | None = None,
         fuzzy: bool = False,
         no_semantic: bool = False,
+        lang_filter: list[str] | None = None,
+        tag_filter: list[str] | None = None,
+        boost_recent: bool = False,
+        explain: bool = False,
     ) -> list[SearchResult]:
         """Execute search using the specified or default strategy.
 
@@ -834,8 +838,11 @@ class HybridSearch:
             min_score: Minimum relevance score threshold. Defaults to config.min_score.
             fuzzy: Enable fuzzy matching for keyword search.
             no_semantic: If True, force keyword-only mode even when semantic deps
-                are available. Useful for faster searches or when semantic deps
-                are installed but not desired.
+                are available.
+            lang_filter: Only return snippets whose language is in this list.
+            tag_filter: Only return snippets whose tags include ALL of these (AND).
+            boost_recent: Add a recency bonus so newer snippets rank higher.
+            explain: Attach scoring breakdown dict to each SearchResult.
 
         Returns:
             Ranked list of SearchResult objects.
@@ -847,25 +854,48 @@ class HybridSearch:
         min_score = min_score if min_score is not None else self._config.search.min_score
         storage = StorageEngine(self._config)
 
+        # Normalise filters
+        lang_set: set[str] | None = None
+        if lang_filter:
+            lang_set = {l.strip().lower() for l in lang_filter}
+        tag_set: set[str] | None = None
+        if tag_filter:
+            tag_set = {t.strip().lower() for t in tag_filter}
+
         if no_semantic and mode in (SearchMode.HYBRID, SearchMode.SEMANTIC):
             logger.debug("--no-semantic flag active, forcing keyword search")
             mode = SearchMode.KEYWORD
 
         if mode == SearchMode.TAG:
-            return self._tag_search(query, top_k, storage)
+            results = self._tag_search(query, top_k, storage)
+            if lang_set or tag_set:
+                results = self._apply_filters(results, lang_set, tag_set)
+            return results
 
         # Rebuild keyword index lazily if dirty
         if mode in (SearchMode.KEYWORD, SearchMode.HYBRID):
             self._ensure_keyword_index()
 
         if mode == SearchMode.KEYWORD:
-            return self._keyword_search(query, top_k, min_score, fuzzy, storage)
+            results = self._keyword_search(query, top_k, min_score, fuzzy, storage)
+        elif mode == SearchMode.SEMANTIC:
+            results = self._semantic_search(query, top_k, min_score, storage)
+        else:
+            results = self._hybrid_search(query, top_k, min_score, fuzzy, storage)
 
-        if mode == SearchMode.SEMANTIC:
-            return self._semantic_search(query, top_k, min_score, storage)
+        # Apply post-search filters
+        if lang_set or tag_set:
+            results = self._apply_filters(results, lang_set, tag_set)
 
-        # HYBRID mode
-        return self._hybrid_search(query, top_k, min_score, fuzzy, storage)
+        # Apply recency boost
+        if boost_recent and results:
+            results = self._apply_recency_boost(results)
+
+        # Attach explanation
+        if explain and results:
+            results = self._attach_explanations(results, mode.value)
+
+        return results
 
     def _semantic_search(
         self, query: str, top_k: int, min_score: float, storage: StorageEngine
@@ -954,6 +984,83 @@ class HybridSearch:
                 )
             )
         return results
+
+    @staticmethod
+    def _apply_filters(
+        results: list[SearchResult],
+        lang_set: set[str] | None,
+        tag_set: set[str] | None,
+    ) -> list[SearchResult]:
+        """Post-filter results by language and/or tags."""
+        filtered: list[SearchResult] = []
+        for r in results:
+            s = r.snippet
+            if lang_set and s.metadata.language.value.lower() not in lang_set:
+                continue
+            if tag_set and not tag_set.issubset(set(s.tags)):
+                continue
+            filtered.append(r)
+        return filtered
+
+    @staticmethod
+    def _apply_recency_boost(results: list[SearchResult]) -> list[SearchResult]:
+        """Re-rank results with a recency bonus.
+
+        Uses exponential decay: ``bonus = exp(-days/90)`` so snippets from
+        today get ~1.0 bonus, 90 days ago ~0.37, 180 days ~0.14.
+        The bonus is blended 80/20 with the original score.
+        """
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc)
+        recalculated: list[SearchResult] = []
+        for r in results:
+            s = r.snippet
+            age_days = max(0.0, (now - s.created_at).total_seconds() / 86400)
+            recency = float(np.exp(-age_days / 90.0))
+            boosted = 0.8 * r.score + 0.2 * recency
+            # Rebuild the SearchResult with the boosted score
+            recalculated.append(
+                SearchResult(
+                    snippet=s,
+                    score=min(boosted, 1.0),
+                    matched_by=r.matched_by,
+                    highlights=r.highlights,
+                )
+            )
+        # Re-sort by boosted score
+        recalculated.sort(key=lambda x: x.score, reverse=True)
+        return recalculated
+
+    @staticmethod
+    def _attach_explanations(
+        results: list[SearchResult], mode: str
+    ) -> list[SearchResult]:
+        """Attach scoring breakdown dicts to each result."""
+        from datetime import datetime, timezone
+
+        explained: list[SearchResult] = []
+        for r in results:
+            s = r.snippet
+            age_days = max(0.0, (datetime.now(timezone.utc) - s.created_at).total_seconds() / 86400)
+            explanation: dict[str, float | str] = {
+                "base_score": round(r.score, 4),
+                "matched_by": mode,
+                "language": s.metadata.language.value,
+                "tags": ", ".join(s.tags) if s.tags else "(none)",
+                "age_days": round(age_days, 1),
+                "access_count": s.access_count,
+            }
+            explained.append(
+                SearchResult(
+                    snippet=s,
+                    score=r.score,
+                    matched_by=r.matched_by,
+                    highlights=r.highlights,
+                    explanation=explanation,
+                )
+            )
+        return explained
 
     def _hydrate(
         self,
