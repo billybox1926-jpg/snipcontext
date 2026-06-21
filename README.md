@@ -4,6 +4,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Ruff](https://img.shields.io/badge/lint-ruff-261230?logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
 [![Mypy](https://img.shields.io/badge/types-mypy-2C3E50?logo=python&logoColor=white)](https://mypy-lang.org/)
+[![CI](https://github.com/billybox1926-jpg/snipcontext/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 [![Contributors](https://img.shields.io/github/contributors/billybox1926-jpg/snipcontext)](../../graphs/contributors)
 [![Last Commit](https://img.shields.io/github/last-commit/billybox1926-jpg/snipcontext)](../../commits/master)
 [![Issues](https://img.shields.io/github/issues/billybox1926-jpg/snipcontext)](../../issues)
@@ -74,6 +75,13 @@ pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 > **📦 Dependency Footprint:** SnipContext installs `sentence-transformers` and `faiss-cpu` for local semantic search. These are substantial dependencies (~500MB download). If you only need keyword search, the tool still works — semantic features gracefully degrade when these packages are unavailable.
 
 > **⚠️ Windows Users:** Windows has a built-in `sc.exe` (Service Control) that shadows the `sc` CLI entry point. Use the full command name `snipcontext` instead, or run via `python -m snipcontext`.
+
+### Security Considerations
+
+- **Encryption at rest:** Uses Fernet (AES-128-CBC with HMAC) with PBKDF2 key derivation (100k iterations). Passphrase is read from `SNIPCONTEXT_ENCRYPTION_PASSPHRASE` env var — **never pass it on the command line** (shell history leak).
+- **stdin for sensitive content:** Use `sc add --file secret.py` or pipe via stdin (`cat secret.py | sc add --file`) to avoid shell history leaks with `--encrypt`.
+- **Salt:** Auto-generated on first use and persisted to the config file. Back up your config file to avoid losing access to encrypted snippets.
+- **No network calls:** All processing is local. No data leaves your machine.
 
 ```bash
 # Windows: use the full command name
