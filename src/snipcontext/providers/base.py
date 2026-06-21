@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from snipcontext.core.sanitization import sanitize_code, sanitize_html, sanitize_text
+from snipcontext.core.sanitization import sanitize_code, sanitize_text
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet

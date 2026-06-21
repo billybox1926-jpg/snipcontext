@@ -60,7 +60,9 @@ def _print_snippet(snippet: Snippet, score: float | None = None, idx: int | None
         f"\n[bold yellow]{prefix}[/bold yellow][bold cyan]{snippet.metadata.title}[/bold cyan][dim]{score_text}[/dim]"
     )
     if snippet.metadata.description:
-        console.print(f"[dim]Description:[/dim] {sanitize_for_display(snippet.metadata.description)}")
+        console.print(
+            f"[dim]Description:[/dim] {sanitize_for_display(snippet.metadata.description)}"
+        )
     console.print(f"[dim]Language:[/dim] {snippet.metadata.language.value}")
     if snippet.tags:
         console.print(f"[dim]Tags:[/dim] {snippet.tag_line}")
@@ -69,7 +71,13 @@ def _print_snippet(snippet: Snippet, score: float | None = None, idx: int | None
     lang = (
         snippet.metadata.language.value if snippet.metadata.language.value != "unknown" else "text"
     )
-    syntax = Syntax(sanitize_for_display(snippet.content), lang, theme="monokai", line_numbers=False, word_wrap=True)
+    syntax = Syntax(
+        sanitize_for_display(snippet.content),
+        lang,
+        theme="monokai",
+        line_numbers=False,
+        word_wrap=True,
+    )
     console.print(syntax)
     console.print()
 
