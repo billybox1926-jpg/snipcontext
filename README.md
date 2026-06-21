@@ -28,16 +28,19 @@ Save, search, tag, and instantly inject your best boilerplate, patterns, and con
 
 ## Key Features
 
-| Feature | Status |
-|---------|--------|
-| Rich snippet saving with tags, metadata, and versioning | ✅ |
-| **Semantic search** with local embeddings (sentence-transformers + FAISS) | ✅ |
-| **Hybrid search** — semantic + keyword with configurable weights | ✅ |
-| One-command export optimized for major LLMs | ✅ |
-| CLI + Library support (Python) | ✅ |
-| Plugin system for new providers and exporters | ✅ |
-| Git-friendly, local-first storage | ✅ |
-| Import/export for backup and sharing | ✅ |
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Rich snippet saving with tags, metadata, and versioning | ✅ | Full CRUD with soft-delete and encryption |
+| **Semantic search** with local embeddings | ✅ | sentence-transformers + FAISS, runs offline |
+| **Hybrid search** — semantic + keyword fusion | ✅ | Configurable weights, TF-IDF + embeddings |
+| LLM-optimized export providers | ✅ | Claude XML, Cursor, OpenAI, Generic Markdown |
+| Auto-tagging via embeddings | ✅ | Suggests tags based on similar snippets |
+| Similarity-based deduplication | ✅ | Warns when adding near-duplicate snippets |
+| Encryption at rest | ✅ | Fernet (AES-128) with PBKDF2 key derivation |
+| File watchdog / real-time indexing | ✅ | Auto-reindex on file changes |
+| Plugin system | ✅ | Entry points for providers and exporters |
+| CLI + Python library | ✅ | Use from terminal or import as a module |
+| Git-friendly local-first storage | ✅ | One JSON file per snippet, easy to version |
 
 ### Supported LLM Providers
 
@@ -68,24 +71,20 @@ pip install -e ".[dev]"
 pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 ```
 
-#### Windows Users: Use `snipcontext` instead of `sc`
-
-Windows has a built-in `sc.exe` (Service Control) that shadows the `sc` CLI entry point. Use the full command name instead:
+> **⚠️ Windows Users:** Windows has a built-in `sc.exe` (Service Control) that shadows the `sc` CLI entry point. Use the full command name `snipcontext` instead, or run via `python -m snipcontext`.
 
 ```bash
+# Windows: use the full command name
 snipcontext add "print('hello')" --title "Hello" --tag python
 snipcontext search "hello world"
 snipcontext list
 snipcontext stats
-```
 
-Or run via module:
-
-```bash
+# Or run via module
 python -m snipcontext add "print('hello')" --title "Hello" --tag python
 ```
 
-#### Verify Installation
+### Verify Installation
 
 ```bash
 snipcontext --help          # or: python -m snipcontext --help
@@ -93,8 +92,6 @@ snipcontext providers       # List available export providers
 ```
 
 ### CLI Usage
-
-> **Note:** On Windows, use `snipcontext` instead of `sc` (see [Installation](#installation)).
 
 ```bash
 # Add a snippet
@@ -118,6 +115,21 @@ snipcontext list
 
 # Show stats
 snipcontext stats
+
+# Delete a snippet
+snipcontext delete <snippet-id>
+
+# Edit a snippet
+snipcontext edit <snippet-id> --title "New Title" --add-tag python
+
+# Rebuild search index
+snipcontext build-index --force
+
+# Watch for file changes and auto-reindex
+snipcontext watch
+
+# Run the demo
+snipcontext demo
 ```
 
 ### Library Usage
@@ -197,7 +209,7 @@ snipcontext decrypt <snippet-id>
 snipcontext encrypt <snippet-id>
 ```
 
-> **Note:** When encrypted, the plaintext `content` is cleared from storage. The `encrypted_content` field stores the encrypted data. Use `sc decrypt <id>` to restore plaintext for editing.
+> **Note:** When encrypted, the plaintext `content` is cleared from storage. The `encrypted_content` field stores the encrypted data. Use `snipcontext decrypt <id>` to restore plaintext for editing.
 
 ---
 
@@ -208,16 +220,17 @@ SnipContext automatically detects and recovers from index corruption. The `Hybri
 ### Manual Rebuild
 
 ```bash
-# Check if rebuild is needed (skips if index is valid)
-snipcontext rebuild-index
+# Build or rebuild the semantic search index
+snipcontext build-index
 
 # Force rebuild (useful after corruption, dependency changes, or mode switches)
-snipcontext rebuild-index --force
+snipcontext build-index --force
 ```
 
 ### Auto-Recovery
 
 The search engine automatically:
+
 1. **Validates index integrity** on load (checks ID map lengths, matrix dimensions)
 2. **Cleans up corrupted files** (deletes mismatched/corrupted index files)
 3. **Falls back gracefully** — if semantic index unavailable, runs keyword-only search
@@ -225,10 +238,10 @@ The search engine automatically:
 
 ### Watchdog / Real-time Indexing
 
-Run `sc watch` to monitor the snippets directory and automatically reindex when files change:
+Run `snipcontext watch` to monitor the snippets directory and automatically reindex when files change:
 
 ```bash
-sc watch
+snipcontext watch
 ```
 
 Disable via config if you prefer manual rebuilds only:
@@ -242,20 +255,27 @@ export SNIPCONTEXT_WATCHDOG_ENABLED=false
 ## Architecture
 
 ```
-CLI (Typer + Rich)
-  │
-├── Providers (Claude XML / Cursor / OpenAI / Generic Markdown)
-│
-├── Search Engine
-│   ├── Semantic: sentence-transformers + FAISS
-│   ├── Keyword: TF-IDF (scikit-learn)
-│   └── Hybrid: configurable weighted fusion
-│
-├── Storage Engine
-│   └── Git-friendly JSON files per snippet
-│
-└── Data Models (Pydantic v2)
-    └── Snippet / SnippetMetadata / SnippetVersion
+┌─────────────────────────────────────────────────┐
+│                  CLI (Typer + Rich)              │
+├──────────┬──────────┬──────────┬────────────────┤
+│  add     │  search  │  export  │  edit/delete   │
+│  list    │  stats   │  watch   │  demo          │
+└────┬─────┴────┬─────┴────┬─────┴───────┬────────┘
+     │          │          │             │
+     ▼          ▼          ▼             ▼
+┌─────────────────────────────────────────────────┐
+│              Search Engine (HybridSearch)        │
+│  ┌──────────────┐  ┌──────────────────────────┐ │
+│  │   Semantic    │  │       Keyword            │ │
+│  │  FAISS Index  │  │     TF-IDF (sklearn)     │ │
+│  └──────────────┘  └──────────────────────────┘ │
+├─────────────────────────────────────────────────┤
+│              Storage Engine                      │
+│         Git-friendly JSON per snippet            │
+├─────────────────────────────────────────────────┤
+│              Data Models (Pydantic v2)           │
+│     Snippet / SnippetMetadata / Language         │
+└─────────────────────────────────────────────────┘
 ```
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed design documentation.
@@ -275,6 +295,13 @@ export SNIPCONTEXT_EMBED_MODEL_NAME="all-mpnet-base-v2"
 
 # Adjust search weights
 export SNIPCONTEXT_SEARCH_SEMANTIC_WEIGHT="0.8"
+
+# Enable auto-tagging
+export SNIPCONTEXT_AUTO_TAG_ENABLED=true
+
+# Enable deduplication
+export SNIPCONTEXT_DEDUP_ENABLED=true
+export SNIPCONTEXT_DEDUP_THRESHOLD="0.95"
 ```
 
 Or edit `~/.config/SnipContext/snipcontext.yaml`:
@@ -289,6 +316,14 @@ search:
   semantic_weight: 0.7
   keyword_weight: 0.3
   top_k: 10
+
+auto_tag:
+  enabled: true
+  threshold: 0.75
+
+dedup:
+  enabled: true
+  threshold: 0.95
 ```
 
 ---
@@ -327,7 +362,9 @@ pre-commit install
 - [x] Rich CLI with Typer
 - [x] Plugin system with entry points
 - [x] Python library distribution (PyPI)
-- [ ] Real-time index updates (currently requires rebuild)
+- [x] Auto-tagging and deduplication
+- [x] Encryption at rest
+- [x] File watchdog / real-time indexing
 - [ ] Import from GitHub Gists
 - [ ] Import from Git repositories
 - [ ] Snippet templates and scaffolding
@@ -340,40 +377,41 @@ pre-commit install
 
 ```
 snipcontext/
-├── snipcontext/              # Python package
-│   ├── __init__.py           # Package exports
+├── src/snipcontext/          # Python package
+│   ├── __init__.py
 │   ├── __main__.py           # python -m snipcontext
-│   ├── core/                 # Core engine (models, storage, search)
+│   ├── cli/
+│   │   └── main.py           # Typer CLI commands
+│   ├── config/
+│   │   └── settings.py       # Pydantic Settings
+│   ├── core/
 │   │   ├── models.py         # Pydantic data models
 │   │   ├── storage.py        # Git-friendly JSON storage
-│   │   └── search.py         # Semantic + hybrid search
-│   ├── providers/            # LLM export providers
-│   │   ├── base.py           # Provider interface
-│   │   ├── claude.py         # Anthropic Claude XML
-│   │   ├── cursor.py         # Cursor IDE format
-│   │   ├── openai.py         # OpenAI format
-│   │   └── generic.py        # Universal Markdown
-│   ├── plugins/              # Plugin system
+│   │   ├── search.py         # Semantic + hybrid search
+│   │   ├── auto_tag.py       # Embedding-based auto-tagging
+│   │   └── watcher.py        # File watchdog
+│   ├── plugins/
 │   │   └── base.py           # Plugin base + manager
-│   ├── config/               # Configuration
-│   │   └── settings.py       # Pydantic Settings
-│   └── cli/                  # Command-line interface
-│       └── main.py           # Typer CLI commands
-├── tests/                    # Comprehensive test suite
+│   └── providers/
+│       ├── base.py           # Provider interface
+│       ├── claude.py         # Anthropic Claude XML
+│       ├── cursor.py         # Cursor IDE format
+│       ├── openai.py         # OpenAI format
+│       └── generic.py        # Universal Markdown
+├── tests/                    # Test suite
 ├── docs/                     # Documentation
-│   ├── ARCHITECTURE.md       # Design docs
-│   ├── API.md                # Python API reference
-│   └── MAINTAINER.md         # Maintainer guide
-├── pyproject.toml            # Modern Python packaging
-└── README.md                 # This file
+│   ├── ARCHITECTURE.md
+│   ├── API.md
+│   └── MAINTAINER.md
+├── pyproject.toml
+├── CHANGELOG.md
+└── README.md
 ```
 
 ---
 
-## License
+## License & Contributing
 
 MIT License — see [LICENSE](LICENSE) for details.
-
-## Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) first. New contributors should check out our [Good First Issues](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
