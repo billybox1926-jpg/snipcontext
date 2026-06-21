@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import sys
 from pathlib import Path
+from typing import Annotated, Optional
 
 import typer
 from rich.console import Console
@@ -603,7 +604,7 @@ def edit(
 @app.command()
 def delete(
     snippet_id: str = typer.Argument(..., help="Snippet ID or prefix"),
-    force: bool = typer.Option(False, "--force", help="Skip confirmation"),
+    force: Annotated[bool, typer.Option(False, "--force", help="Skip confirmation")],
 ) -> None:
     """Delete a snippet."""
     from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
@@ -699,7 +700,7 @@ def export(
 
 @app.command()
 def index(
-    force: bool = typer.Option(False, "--force", help="Skip confirmation prompt"),
+    force: Annotated[bool, typer.Option(False, "--force", help="Skip confirmation prompt")],
 ) -> None:
     """Rebuild the search index from all stored snippets."""
     from snipcontext.core.search import HybridSearch
@@ -722,7 +723,7 @@ def index(
 
 @app.command()
 def build_index(
-    force: typer.Option(False, "--force", "-f", help="Force rebuild even if index exists"),
+    force: Annotated[bool, typer.Option(False, "--force", "-f", help="Force rebuild even if index exists")],
 ) -> None:
     """Build or rebuild the semantic search index."""
     from snipcontext.core.search import HybridSearch
@@ -974,7 +975,7 @@ def config_show() -> None:
 
 @config_app.command("init")
 def config_init(
-    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing config"),
+    force: Annotated[bool, typer.Option(False, "--force", "-f", help="Overwrite existing config")],
 ) -> None:
     """Initialize configuration file with defaults."""
     config = get_config()
