@@ -126,19 +126,19 @@ def test_mark_deleted_sets_flag_and_saves(tmp_path: Path) -> None:
 
 
 def test_index_command_with_snippets() -> None:
-    from snipcontext.cli.main import index
+    from snipcontext.cli.search import index
 
     snippet1 = _Snippet("snippet-1")
     snippet2 = _Snippet("snippet-2")
 
-    with patch("snipcontext.cli.main._get_context") as mock_get_context:
+    with patch("snipcontext.cli.search._get_context") as mock_get_context:
         mock_config = MagicMock()
         mock_storage = MagicMock()
         mock_storage.list_all.return_value = [snippet1, snippet2]
         mock_search = MagicMock()
         mock_get_context.return_value = (mock_config, mock_storage, mock_search)
         with (
-            patch("snipcontext.cli.main.console"),
+            patch("snipcontext.cli.search.console"),
         ):
             index(force=False)
 
@@ -146,16 +146,16 @@ def test_index_command_with_snippets() -> None:
 
 
 def test_index_command_empty_no_force_returns() -> None:
-    from snipcontext.cli.main import index
+    from snipcontext.cli.search import index
 
-    with patch("snipcontext.cli.main._get_context") as mock_get_context:
+    with patch("snipcontext.cli.search._get_context") as mock_get_context:
         mock_config = MagicMock()
         mock_storage = MagicMock()
         mock_storage.list_all.return_value = []
         mock_search = MagicMock()
         mock_get_context.return_value = (mock_config, mock_storage, mock_search)
         with (
-            patch("snipcontext.cli.main.console") as mock_console,
+            patch("snipcontext.cli.search.console") as mock_console,
         ):
             index(force=False)
 
@@ -165,16 +165,16 @@ def test_index_command_empty_no_force_returns() -> None:
 
 
 def test_index_command_empty_with_force() -> None:
-    from snipcontext.cli.main import index
+    from snipcontext.cli.search import index
 
-    with patch("snipcontext.cli.main._get_context") as mock_get_context:
+    with patch("snipcontext.cli.search._get_context") as mock_get_context:
         mock_config = MagicMock()
         mock_storage = MagicMock()
         mock_storage.list_all.return_value = []
         mock_search = MagicMock()
         mock_get_context.return_value = (mock_config, mock_storage, mock_search)
         with (
-            patch("snipcontext.cli.main.console"),
+            patch("snipcontext.cli.search.console"),
         ):
             index(force=True)
 

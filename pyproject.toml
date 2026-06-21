@@ -64,8 +64,8 @@ dev = [
 ]
 
 [project.scripts]
-snipcontext = "snipcontext.cli.main:app"
-sc = "snipcontext.cli.main:app"
+snipcontext = "snipcontext.cli.app:app"
+sc = "snipcontext.cli.app:app"
 
 [project.entry-points."snipcontext.plugins"]
 # Built-in plugins register here

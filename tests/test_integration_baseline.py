@@ -21,7 +21,7 @@ from unittest.mock import patch
 import pytest
 from typer.testing import CliRunner
 
-from snipcontext.cli.main import app
+from snipcontext.cli.app import app
 from snipcontext.cli.context import reset_context
 
 
