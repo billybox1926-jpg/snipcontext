@@ -88,7 +88,13 @@ pip install -e ".[dev]"
 pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 ```
 
-> **📦 Dependency Footprint:** SnipContext installs `sentence-transformers` and `faiss-cpu` for local semantic search. These are substantial dependencies (~500MB download). If you only need keyword search, the tool still works — semantic features gracefully degrade when these packages are unavailable.
+> **📦 Dependency Footprint:** SnipContext's core (add, list, edit, delete, keyword search, export) has no heavy dependencies. Optional features are split into extras:
+> - `pip install snipcontext[semantic]` — semantic search with sentence-transformers + FAISS (~500MB, requires Rust toolchain on ARM)
+> - `pip install snipcontext[encryption]` — encryption at rest with Fernet/AES-128 (requires Rust toolchain on ARM)
+> - `pip install snipcontext[tui]` — interactive terminal UI
+> - `pip install snipcontext[all]` — all optional features
+>
+> **ARM / Android / Termux:** The `semantic` and `encryption` extras require Rust to build native wheels. On platforms without pre-built wheels (ARM64, Android/Termux), install the core package only and use keyword search + export features. Semantic search and encryption gracefully degrade with clear error messages when their dependencies are missing.
 
 > **⚠️ Windows Users:** Windows has a built-in `sc.exe` (Service Control) that shadows the `sc` CLI entry point. Use the full command name `snipcontext` instead, or run via `python -m snipcontext`.
 

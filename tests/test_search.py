@@ -11,6 +11,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from snipcontext.config.settings import Config, SearchConfig, StorageConfig, reset_config
 from snipcontext.core.models import Language, SearchMode, Snippet, SnippetMetadata
 

@@ -35,7 +35,7 @@ class ClaudeProvider(BaseProvider):
                 )
             lines.append(f"<language>{snippet.metadata.language.value}</language>")
             if snippet.tags:
-                lines.append(f"<tags>{', '.join(snippet.tags)}</tags>")
+                lines.append(f"<tags>{', '.join(html.escape(t) for t in snippet.tags)}</tags>")
             lines.append("</metadata>")
 
         lang = snippet.metadata.language.value

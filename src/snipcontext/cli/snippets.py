@@ -52,13 +52,17 @@ _EXT_LANG_MAP: dict[str, str] = {
 
 def _print_snippet(snippet: Snippet, score: float | None = None, idx: int | None = None) -> None:
     """Pretty-print a snippet with Rich."""
+    from snipcontext.core.sanitization import sanitize_for_display
+
     prefix = f"[{idx}] " if idx else ""
     score_text = f" (score: {score:.3f})" if score else ""
     console.print(
         f"\n[bold yellow]{prefix}[/bold yellow][bold cyan]{snippet.metadata.title}[/bold cyan][dim]{score_text}[/dim]"
     )
     if snippet.metadata.description:
-        console.print(f"[dim]Description:[/dim] {snippet.metadata.description}")
+        console.print(
+            f"[dim]Description:[/dim] {sanitize_for_display(snippet.metadata.description)}"
+        )
     console.print(f"[dim]Language:[/dim] {snippet.metadata.language.value}")
     if snippet.tags:
         console.print(f"[dim]Tags:[/dim] {snippet.tag_line}")
@@ -67,7 +71,13 @@ def _print_snippet(snippet: Snippet, score: float | None = None, idx: int | None
     lang = (
         snippet.metadata.language.value if snippet.metadata.language.value != "unknown" else "text"
     )
-    syntax = Syntax(snippet.content, lang, theme="monokai", line_numbers=False, word_wrap=True)
+    syntax = Syntax(
+        sanitize_for_display(snippet.content),
+        lang,
+        theme="monokai",
+        line_numbers=False,
+        word_wrap=True,
+    )
     console.print(syntax)
     console.print()
 
@@ -140,7 +150,11 @@ def register_commands(app: typer.Typer) -> None:
             if not config.encryption.enabled:
                 console.print("[red]Encryption is not enabled.[/red]")
                 raise typer.Exit(1)
-            encrypted = storage.encrypt_content(content)
+            try:
+                encrypted = storage.encrypt_content(content)
+            except Exception as exc:
+                console.print(f"[red]Encryption failed: {exc}[/red]")
+                raise typer.Exit(1) from exc
             snippet = Snippet(
                 content="",
                 encrypted_content=encrypted,
