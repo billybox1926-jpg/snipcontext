@@ -438,9 +438,7 @@ def search(
     threshold: float = typer.Option(
         None, "--threshold", "-t", help="Minimum relevance score (0.0-1.0)"
     ),
-    fuzzy: bool = typer.Option(
-        False, "--fuzzy", help="Enable fuzzy matching for keyword search"
-    ),
+    fuzzy: bool = typer.Option(False, "--fuzzy", help="Enable fuzzy matching for keyword search"),
 ) -> None:
     """Search snippets with semantic + keyword hybrid search."""
     from snipcontext.core.search import HybridSearch
