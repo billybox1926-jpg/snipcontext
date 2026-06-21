@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from watchdog.events import FileSystemEvent
@@ -47,7 +47,7 @@ class SnippetChangeHandler(FileSystemEventHandler):
         self.search = search_engine
         self.storage = storage_engine
         self.debounce_seconds = debounce_seconds
-        self._timer: Optional[threading.Timer] = None
+        self._timer: threading.Timer | None = None
         self._lock = threading.Lock()
 
     def on_any_event(self, event: FileSystemEvent) -> None:
@@ -56,9 +56,7 @@ class SnippetChangeHandler(FileSystemEventHandler):
         with self._lock:
             if self._timer is not None:
                 self._timer.cancel()
-            self._timer = threading.Timer(
-                self.debounce_seconds, self._do_reindex
-            )
+            self._timer = threading.Timer(self.debounce_seconds, self._do_reindex)
             self._timer.daemon = True
             self._timer.start()
 
@@ -103,9 +101,7 @@ class SnippetWatcher:
             return
 
         debounce = getattr(self.config, "watchdog_debounce_seconds", 2.0)
-        self._handler = SnippetChangeHandler(
-            self.search, self.storage, debounce_seconds=debounce
-        )
+        self._handler = SnippetChangeHandler(self.search, self.storage, debounce_seconds=debounce)
         self.observer = Observer()
         assert self.observer is not None
         self.observer.schedule(self._handler, str(self.config.snippets_path), recursive=False)
