@@ -73,6 +73,7 @@ register_config(config_app)
 # Optional: cryptography commands (requires snipcontext[encryption])
 try:
     from snipcontext.cli.crypto import register_commands as register_crypto  # noqa: E402
+
     register_crypto(app)
 except ImportError:
     pass  # cryptography not installed, skip encrypt/decrypt commands
@@ -91,6 +92,25 @@ def repl(
         console.print("Install it with: pip install snipcontext[tui]")
         raise typer.Exit(1) from exc
     sys.exit(run())
+
+
+@app.command()
+def serve(
+    host: str = typer.Option("127.0.0.1", "--host", help="Bind host"),
+    port: int = typer.Option(8000, "--port", help="Bind port"),
+) -> None:
+    """Start the SnipContext web API server."""
+    try:
+        from snipcontext.web.app import create_app
+    except ImportError as exc:
+        console = Console()
+        console.print(
+            "[red]Web dependencies missing. Install with: pip install snipcontext[web][/red]"
+        )
+        raise typer.Exit(1) from exc
+    import uvicorn
+
+    uvicorn.run(create_app(), host=host, port=port)
 
 
 if __name__ == "__main__":

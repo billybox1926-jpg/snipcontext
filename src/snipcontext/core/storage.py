@@ -19,6 +19,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from cryptography.fernet import Fernet
+
 from snipcontext.config.settings import Config, get_config
 from snipcontext.core.models import Snippet
 
@@ -285,7 +287,7 @@ class StorageEngine:
     # Encryption
     # ------------------------------------------------------------------
 
-    def _get_fernet(self) -> "Fernet":
+    def _get_fernet(self) -> Fernet:
         """Create or retrieve a Fernet cipher from the encryption config.
 
         Derives a key from the configured passphrase and salt using PBKDF2.

@@ -82,4 +82,15 @@ def reset_context() -> None:
         _config = None
         _storage = None
         _search = None
+        _clear_config_cache()
         logger.debug("Reset shared context instances")
+
+
+def _clear_config_cache() -> None:
+    """Clear the settings cache so Config re-reads environment variables."""
+    from snipcontext.config.settings import get_config as _get_config
+
+    try:
+        _get_config.cache_clear()
+    except Exception:
+        pass

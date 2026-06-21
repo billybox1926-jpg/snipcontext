@@ -84,7 +84,6 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -e ".[dev,web]"
-          pip install -e .
 
       - name: Run tests
         shell: bash
@@ -99,9 +98,9 @@ jobs:
           export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
           python -m pytest -q --tb=short -m "slow"
 
-  # ── Minimal install (no semantic deps) ──────────────────────────
+  # ── Minimal install (no optional extras) ──────────────────────────
   test-minimal:
-    name: Test minimal install (no semantic deps)
+    name: Test minimal install (no optional extras)
     needs: quality
     runs-on: ubuntu-latest
     steps:
@@ -112,7 +111,7 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install dependencies (minimal — no semantic extras)
+      - name: Install dependencies (minimal — no optional extras)
         run: |
           pip install --upgrade pip
           pip install -e ".[dev]"
