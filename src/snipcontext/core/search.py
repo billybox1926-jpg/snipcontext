@@ -811,6 +811,7 @@ class HybridSearch:
         mode: SearchMode | str | None = None,
         min_score: float | None = None,
         fuzzy: bool = False,
+        no_semantic: bool = False,
     ) -> list[SearchResult]:
         """Execute search using the specified or default strategy.
 
@@ -820,6 +821,9 @@ class HybridSearch:
             mode: Override search strategy. Defaults to config default_mode.
             min_score: Minimum relevance score threshold. Defaults to config.min_score.
             fuzzy: Enable fuzzy matching for keyword search.
+            no_semantic: If True, force keyword-only mode even when semantic deps
+                are available. Useful for faster searches or when semantic deps
+                are installed but not desired.
 
         Returns:
             Ranked list of SearchResult objects.
@@ -830,6 +834,10 @@ class HybridSearch:
         mode = SearchMode(mode or self._config.search.default_mode)
         min_score = min_score if min_score is not None else self._config.search.min_score
         storage = StorageEngine(self._config)
+
+        if no_semantic and mode in (SearchMode.HYBRID, SearchMode.SEMANTIC):
+            logger.debug("--no-semantic flag active, forcing keyword search")
+            mode = SearchMode.KEYWORD
 
         if mode == SearchMode.TAG:
             return self._tag_search(query, top_k, storage)

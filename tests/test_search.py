@@ -315,3 +315,27 @@ class TestSemanticAvailabilityFlag:
         # Hybrid mode should still return results (keyword-only fallback)
         results = searcher.search("database connection pool", top_k=3)
         assert len(results) > 0
+
+    def test_no_semantic_flag_forces_keyword(self, temp_config):
+        """The no_semantic=True parameter must force keyword mode even for hybrid."""
+        from snipcontext.core.search import HybridSearch
+        from snipcontext.core.storage import StorageEngine
+
+        snippets = create_snippets()
+        storage = StorageEngine(temp_config)
+        for s in snippets:
+            storage.save(s)
+
+        searcher = HybridSearch(temp_config)
+        searcher.index_snippets(snippets)
+
+        # hybrid without no_semantic — keyword fallback when deps missing
+        results_kw = searcher.search("react component", top_k=3, mode="hybrid")
+        # hybrid with no_semantic=True — explicitly forces keyword
+        results_no_sem = searcher.search("react component", top_k=3, mode="hybrid", no_semantic=True)
+        assert len(results_no_sem) > 0
+        assert len(results_kw) == len(results_no_sem)
+
+        # semantic mode with no_semantic=True — should fall back to keyword
+        results_sem_forced = searcher.search("react component", top_k=3, mode="semantic", no_semantic=True)
+        assert len(results_sem_forced) > 0

@@ -30,6 +30,9 @@ def search(
         None, "--threshold", "-t", help="Minimum relevance score (0.0-1.0)"
     ),
     fuzzy: bool = typer.Option(False, "--fuzzy", help="Enable fuzzy matching for keyword search"),
+    no_semantic: bool = typer.Option(
+        False, "--no-semantic", help="Skip semantic search; use keyword-only mode"
+    ),
 ) -> None:
     """Search snippets with semantic + keyword hybrid search."""
     config, storage, searcher = _get_context()
@@ -41,7 +44,7 @@ def search(
             raise typer.Exit(0)
         searcher.index_snippets(snippets)
         console.print(f"[green]Indexed {len(snippets)} snippets[/green]")
-    results = searcher.search(query, top_k=top_k, mode=mode, min_score=threshold, fuzzy=fuzzy)
+    results = searcher.search(query, top_k=top_k, mode=mode, min_score=threshold, fuzzy=fuzzy, no_semantic=no_semantic)
     if not results:
         console.print(f"[yellow]No results for '{query}'[/yellow]")
         if not fuzzy:

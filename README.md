@@ -94,6 +94,13 @@ pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 > - `pip install snipcontext[tui]` — interactive terminal UI
 > - `pip install snipcontext[all]` — all optional features
 >
+> **Lighter embedding model:** The default model is `all-MiniLM-L6-v2` (~80MB). For a lighter alternative, set `SNIPCONTEXT_EMBED_MODEL_NAME=all-MiniLM-L4-v2` (~30MB) or `SNIPCONTEXT_EMBED_MODEL_NAME=paraphrase-MiniLM-L3-v2` (~20MB) before searching.
+>
+> **Skip semantic at runtime:** Even with `pip install snipcontext[semantic]`, use `--no-semantic` to force keyword-only search for faster results:
+> ```bash
+> snipcontext search "hello world" --no-semantic
+> ```
+>
 > **ARM / Android / Termux:** The `semantic` and `encryption` extras require Rust to build native wheels. On platforms without pre-built wheels (ARM64, Android/Termux), install the core package only and use keyword search + export features. Semantic search and encryption gracefully degrade with clear error messages when their dependencies are missing.
 
 > **Windows Users:** The short alias `sc` is shadowed by the Windows built-in `sc.exe` (Service Control). Three workarounds are available:
