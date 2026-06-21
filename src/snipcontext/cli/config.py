@@ -22,6 +22,7 @@ def register_commands(app: typer.Typer) -> None:
         config, _, _ = _get_context()
         payload = get_config_values(config)
         import yaml
+
         console.print(
             Panel(
                 yaml.safe_dump(payload, default_flow_style=False, sort_keys=False),
