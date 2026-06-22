@@ -5,7 +5,8 @@ from __future__ import annotations
 import html
 from typing import TYPE_CHECKING
 
-from snipcontext.providers.base import BaseProvider, ExportFormat
+from snipcontext.providers.base import BaseProvider, ExportFormat, ProviderError
+from snipcontext.plugins.base import PluginManifest
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
@@ -17,6 +18,7 @@ class ClaudeProvider(BaseProvider):
     Uses Anthropic's recommended XML document structure.
     """
 
+    manifest = PluginManifest(name="claude", version="0.1.0")
     name = "claude"
     description = "Anthropic Claude XML format — optimal context structure"
     format = ExportFormat.XML

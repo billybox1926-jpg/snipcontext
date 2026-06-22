@@ -5,15 +5,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from snipcontext.core.sanitization import sanitize_code, sanitize_text
-from snipcontext.providers.base import BaseProvider, ExportFormat
+from snipcontext.plugins.base import PluginManifest
+from snipcontext.providers.base import BaseProvider, ExportFormat, ProviderError
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
 
 
 class OpenAIProvider(BaseProvider):
-    """OpenAI ChatGPT-optimized context provider with clear visual separation."""
+    "OpenAI ChatGPT-optimized context provider with clear visual separation."
 
+    manifest = PluginManifest(name="openai", version="0.1.0")
     name = "openai"
     description = "OpenAI ChatGPT format — clear visual separation"
     format = ExportFormat.PROMPT

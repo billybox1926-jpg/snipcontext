@@ -66,10 +66,31 @@ def register_commands(app: typer.Typer) -> None:
             console.print(Markdown(formatted))
 
     @app.command()  # type: ignore[untyped-decorator]
-    def providers() -> None:
+    def providers(
+        health: bool = typer.Option(False, "--health", help="Run provider health checks"),
+    ) -> None:
         """List available export providers."""
         pm = PluginManager()
         pm.load_builtin_providers()
+        if health:
+            if not pm.list_providers():
+                console.print("[yellow]No providers registered.[/yellow]")
+                raise typer.Exit(1)
+            table = Table(title="Provider Health", show_header=True)
+            table.add_column("Name", style="cyan")
+            table.add_column("Status", style="green")
+            table.add_column("Error", style="red")
+            for name, provider_cls in pm._providers.items():
+                try:
+                    provider = provider_cls()
+                    status = provider.health_check()
+                    error = ""
+                except Exception as exc:
+                    status = "error"
+                    error = str(exc)
+                table.add_row(name, status, error)
+            console.print(table)
+            return
         table = Table(title="Export Providers", show_header=True)
         table.add_column("Name", style="cyan")
         table.add_column("Description", style="white")
@@ -81,10 +102,32 @@ def register_commands(app: typer.Typer) -> None:
         console.print(table)
 
     @app.command()  # type: ignore[untyped-decorator]
-    def plugins() -> None:
-        """List loaded plugins."""
+    def plugins(
+        list_cmd: bool = typer.Option(True, "--list", help="List loaded plugins"),
+        health: bool = typer.Option(False, "--health", help="Run plugin/provider health checks"),
+    ) -> None:
+        """Plugin management commands."""
         pm = PluginManager()
         pm.load_builtin_providers()
+        if health:
+            if not pm.list_providers():
+                console.print("[yellow]No providers registered.[/yellow]")
+                raise typer.Exit(1)
+            table = Table(title="Provider Health", show_header=True)
+            table.add_column("Name", style="cyan")
+            table.add_column("Status", style="green")
+            table.add_column("Error", style="red")
+            for name, provider_cls in pm._providers.items():
+                try:
+                    provider = provider_cls()
+                    status = provider.health_check()
+                    error = ""
+                except Exception as exc:
+                    status = "error"
+                    error = str(exc)
+                table.add_row(name, status, error)
+            console.print(table)
+            return
         if not pm.plugins:
             console.print("[yellow]No plugins registered.[/yellow]")
             return
@@ -100,27 +143,4 @@ def register_commands(app: typer.Typer) -> None:
                 manifest.api_version,
                 "loaded",
             )
-        console.print(table)
-
-    @app.command()  # type: ignore[untyped-decorator]
-    def providers_health() -> None:
-        """Run provider health checks."""
-        pm = PluginManager()
-        pm.load_builtin_providers()
-        if not pm.list_providers():
-            console.print("[yellow]No providers registered.[/yellow]")
-            raise typer.Exit(1)
-        table = Table(title="Provider Health", show_header=True)
-        table.add_column("Name", style="cyan")
-        table.add_column("Status", style="green")
-        table.add_column("Error", style="red")
-        for name, provider_cls in pm._providers.items():
-            try:
-                provider = provider_cls()
-                status = provider.health_check()
-                error = ""
-            except Exception as exc:
-                status = "error"
-                error = str(exc)
-            table.add_row(name, status, error)
         console.print(table)

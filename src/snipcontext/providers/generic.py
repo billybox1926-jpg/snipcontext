@@ -5,15 +5,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from snipcontext.core.sanitization import sanitize_text
-from snipcontext.providers.base import BaseProvider, ExportFormat
+from snipcontext.plugins.base import PluginManifest
+from snipcontext.providers.base import BaseProvider, ExportFormat, ProviderError
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
 
 
 class GenericProvider(BaseProvider):
-    """Standard Markdown provider for universal LLM compatibility."""
+    "Standard Markdown provider for universal LLM compatibility."
 
+    manifest = PluginManifest(name="generic", version="0.1.0")
     name = "generic"
     description = "Universal Markdown format — works with any LLM"
     format = ExportFormat.MARKDOWN
