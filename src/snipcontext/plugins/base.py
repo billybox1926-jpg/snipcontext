@@ -46,23 +46,26 @@ class Plugin(ABC):
         """Called when the plugin is loaded."""
         ...
 
-    def on_shutdown(self) -> None:
+    def on_shutdown(self) -> None:  # noqa: B027
         """Called when the plugin is unloaded. Override for cleanup."""
+        ...
 
     @abstractmethod
     def on_snippet_saved(self, snippet: Snippet) -> None:
         """Hook called after a snippet is saved."""
         ...
 
-    def on_snippet_loaded(self, snippet: Snippet) -> None:
+    def on_snippet_loaded(self, snippet: Snippet) -> None:  # noqa: B027
         """Hook called after a snippet is loaded."""
+        ...
 
     def on_search(self, query: str, results: list) -> list:
         """Hook to modify search results."""
         return results
 
-    def on_config_change(self, new_config: object) -> None:
+    def on_config_change(self, new_config: object) -> None:  # noqa: B027
         """Called when the shared configuration changes."""
+        ...
 
     def get_import_sources(self) -> dict[str, Callable]:
         """Return additional import sources. Map name -> callable."""
@@ -106,7 +109,7 @@ class PluginManager:
                         logger.warning(
                             "Skipping plugin %s: api_version mismatch (plugin=%s, core=%s)",
                             ep.name,
-                            manifest.api_version,
+                            manifest.version,
                             CORE_API_VERSION,
                         )
                         continue
@@ -195,18 +198,3 @@ class PluginManager:
             except Exception as exc:
                 logger.error("Error deactivating plugin %s: %s", plugin.name, exc)
         self._plugins.clear()
-
-    def run_snippet_saved_hooks(self, snippet: Snippet) -> None:
-        for plugin in self._plugins.values():
-            try:
-                plugin.on_snippet_saved(snippet)
-            except Exception as exc:
-                logger.error("Error in %s on_snippet_saved: %s", plugin.name, exc)
-
-    def run_search_hooks(self, query: str, results: list) -> list:
-        for plugin in self._plugins.values():
-            try:
-                results = plugin.on_search(query, results)
-            except Exception as exc:
-                logger.error("Error in %s on_search: %s", plugin.name, exc)
-        return results
