@@ -1,0 +1,13 @@
+provider,method,covered
+ClaudeProvider,export_batch,true
+ClaudeProvider,export_single,true
+ClaudeProvider,health_check,true
+CursorProvider,export_batch,true
+CursorProvider,export_single,true
+CursorProvider,health_check,true
+OpenAIProvider,export_batch,true
+OpenAIProvider,export_single,true
+OpenAIProvider,health_check,true
+GenericProvider,export_batch,true
+GenericProvider,export_single,true
+GenericProvider,health_check,true

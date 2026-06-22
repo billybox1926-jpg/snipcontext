@@ -1,0 +1,96 @@
+{
+  "providers": {
+    "ClaudeProvider": {
+      "instantiable": true,
+      "methods": {
+        "export_single": {
+          "called": true,
+          "has_content": true,
+          "return_type": "str",
+          "expected_return_type": "<class 'str'>",
+          "return_type_match": true
+        },
+        "export_batch": {
+          "called": true,
+          "has_content": true,
+          "return_type": "str",
+          "expected_return_type": "<class 'str'>",
+          "return_type_match": true
+        },
+        "health_check": {
+          "called": true,
+          "health_result": "ok"
+        }
+      }
+    },
+    "CursorProvider": {
+      "instantiable": true,
+      "methods": {
+        "export_single": {
+          "called": true,
+          "has_content": true,
+          "return_type": "str",
+          "expected_return_type": "<class 'str'>",
+          "return_type_match": true
+        },
+        "export_batch": {
+          "called": true,
+          "has_content": true,
+          "return_type": "str",
+          "expected_return_type": "<class 'str'>",
+          "return_type_match": true
+        },
+        "health_check": {
+          "called": true,
+          "health_result": "ok"
+        }
+      }
+    },
+    "OpenAIProvider": {
+      "instantiable": true,
+      "methods": {
+        "export_single": {
+          "called": true,
+          "has_content": true,
+          "return_type": "str",
+          "expected_return_type": "<class 'str'>",
+          "return_type_match": true
+        },
+        "export_batch": {
+          "called": true,
+          "has_content": true,
+          "return_type": "str",
+          "expected_return_type": "<class 'str'>",
+          "return_type_match": true
+        },
+        "health_check": {
+          "called": true,
+          "health_result": "ok"
+        }
+      }
+    },
+    "GenericProvider": {
+      "instantiable": true,
+      "methods": {
+        "export_single": {
+          "called": true,
+          "has_content": true,
+          "return_type": "str",
+          "expected_return_type": "<class 'str'>",
+          "return_type_match": true
+        },
+        "export_batch": {
+          "called": true,
+          "has_content": true,
+          "return_type": "str",
+          "expected_return_type": "<class 'str'>",
+          "return_type_match": true
+        },
+        "health_check": {
+          "called": true,
+          "health_result": "ok"
+        }
+      }
+    }
+  }
+}

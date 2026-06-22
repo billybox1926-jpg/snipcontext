@@ -6,17 +6,17 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-import pytest
-from hypothesis import given, settings, strategies as st, HealthCheck
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 from hypothesis.strategies import sampled_from
-
+from snipcontext.config.settings import Config, EmbeddingConfig, SearchConfig, StorageConfig
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.core.search import HybridSearch
-from snipcontext.config.settings import Config, EmbeddingConfig, SearchConfig, StorageConfig
-
 
 # Strategies for generating snippet data
-snippet_id = st.text(min_size=1, max_size=8, alphabet=st.characters(whitelist_categories=('Lu', 'Ll', 'Nd')))
+snippet_id = st.text(
+    min_size=1, max_size=8, alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"))
+)
 snippet_content = st.text(min_size=1, max_size=30)
 snippet_title = st.text(min_size=1, max_size=20)
 snippet_language = sampled_from(list(Language))
@@ -43,12 +43,17 @@ def _make_config(temp_dir: Path) -> Config:
     return Config(
         storage=StorageConfig(data_dir=temp_dir, snippets_dir="snippets", index_dir="index"),
         embedding=EmbeddingConfig(model_name="dummy", device="cpu", batch_size=2),
-        search=SearchConfig(default_mode="hybrid", semantic_weight=0.5, keyword_weight=0.5, top_k=5, min_score=0.0),
+        search=SearchConfig(
+            default_mode="hybrid", semantic_weight=0.5, keyword_weight=0.5, top_k=5, min_score=0.0
+        ),
     )
 
 
 @given(snippet_lists, query_str)
-@settings(suppress_health_check=[HealthCheck.too_slow, HealthCheck.function_scoped_fixture], max_examples=25)
+@settings(
+    suppress_health_check=[HealthCheck.too_slow, HealthCheck.function_scoped_fixture],
+    max_examples=25,
+)
 def test_hybrid_search_idempotency(snippets: list[Snippet], query: str) -> None:
     """Running the same query twice on the same index yields identical results."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -61,14 +66,17 @@ def test_hybrid_search_idempotency(snippets: list[Snippet], query: str) -> None:
         results_second = engine.search(query, top_k=5)
 
         assert len(results_first) == len(results_second)
-        for r1, r2 in zip(results_first, results_second):
+        for r1, r2 in zip(results_first, results_second, strict=False):
             assert r1.snippet.id == r2.snippet.id
             assert r1.score == r2.score
             assert r1.matched_by == r2.matched_by
 
 
 @given(snippet_lists, query_str)
-@settings(suppress_health_check=[HealthCheck.too_slow, HealthCheck.function_scoped_fixture], max_examples=25)
+@settings(
+    suppress_health_check=[HealthCheck.too_slow, HealthCheck.function_scoped_fixture],
+    max_examples=25,
+)
 def test_hybrid_search_monotonicity_keyword_boost(snippets: list[Snippet], query: str) -> None:
     """Adding a query term to a snippet should not decrease its rank."""
     # We need at least two snippets to test monotonicity.
@@ -144,13 +152,16 @@ def test_hybrid_search_monotonicity_keyword_boost(snippets: list[Snippet], query
         initial_rank_b = id_to_rank_initial.get(b.id, len(test_snippets))
         boosted_rank_b = id_to_rank_boosted.get(b.id, len(test_snippets_boosted))
 
-        assert boosted_rank_b <= initial_rank_b, (
-            f"Boosted snippet b rank worsened: initial {initial_rank_b}, boosted {boosted_rank_b}"
-        )
+        assert (
+            boosted_rank_b <= initial_rank_b
+        ), f"Boosted snippet b rank worsened: initial {initial_rank_b}, boosted {boosted_rank_b}"
 
 
 @given(snippet_lists, query_str)
-@settings(suppress_health_check=[HealthCheck.too_slow, HealthCheck.function_scoped_fixture], max_examples=25)
+@settings(
+    suppress_health_check=[HealthCheck.too_slow, HealthCheck.function_scoped_fixture],
+    max_examples=25,
+)
 def test_hybrid_search_consistency_adding_irrelevant(snippets: list[Snippet], query: str) -> None:
     """Adding an irrelevant snippet (no semantic or keyword overlap) should not change ranking of originals."""
     if len(snippets) < 1:
@@ -182,7 +193,11 @@ def test_hybrid_search_consistency_adding_irrelevant(snippets: list[Snippet], qu
         results_with_irrelevant = engine.search(query, top_k=len(snippets))
 
         # The ordering of the original snippet IDs should be preserved.
-        ids_with_irrelevant = [res.snippet.id for res in results_with_irrelevant if res.snippet.id in original_ids_in_order]
+        ids_with_irrelevant = [
+            res.snippet.id
+            for res in results_with_irrelevant
+            if res.snippet.id in original_ids_in_order
+        ]
         assert ids_with_irrelevant == original_ids_in_order, (
             f"Original snippet order changed after adding irrelevant snippet.\n"
             f"Original: {original_ids_in_order}\n"

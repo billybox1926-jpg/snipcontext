@@ -1,0 +1,39 @@
+════════════════════════════════════════════════════════════════════════════════
+  Canonical Context
+  2 code snippets provided below
+  Use these as reference for your response.
+════════════════════════════════════════════════════════════════════════════════
+
+════════════════════════════════════════
+SNIPPET: Hello World
+════════════════════════════════════════
+
+Language: python
+Framework: fastapi
+Version: 0.100+
+Source: https://example.com
+Tags: demo, python
+Confidence: reviewed
+LLM-Optimized: Yes
+
+```python
+def hello():
+    print('Hello')
+
+```
+
+════════════════════════════════════════
+SNIPPET: Add Function
+════════════════════════════════════════
+
+Language: javascript
+Version: 0.100+
+Source: https://example.com
+Tags: javascript, math
+Confidence: reviewed
+LLM-Optimized: Yes
+
+```javascript
+const add = (a, b) => a + b;
+
+```

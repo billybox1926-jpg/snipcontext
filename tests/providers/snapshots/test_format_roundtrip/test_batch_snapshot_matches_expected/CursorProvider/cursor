@@ -1,0 +1,24 @@
+// Canonical Context
+// 2 snippets from SnipContext
+
+[source: hello_world.python]
+// Language: python
+// Framework: fastapi
+// Version: 0.100+
+// Source: https://example.com
+// Tags: demo, python
+```python
+def hello():
+    print('Hello')
+
+```
+
+[source: add_function.javascript]
+// Language: javascript
+// Version: 0.100+
+// Source: https://example.com
+// Tags: javascript, math
+```javascript
+const add = (a, b) => a + b;
+
+```

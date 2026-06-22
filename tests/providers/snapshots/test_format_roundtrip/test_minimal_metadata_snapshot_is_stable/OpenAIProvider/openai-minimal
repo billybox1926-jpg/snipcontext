@@ -1,0 +1,19 @@
+════════════════════════════════════════════════════════════════════════════════
+  Minimal Context
+  1 code snippets provided below
+  Use these as reference for your response.
+════════════════════════════════════════════════════════════════════════════════
+
+════════════════════════════════════════
+SNIPPET: Minimal Meta
+════════════════════════════════════════
+
+Language: python
+Tags: demo, python
+Confidence: reviewed
+LLM-Optimized: Yes
+
+```python
+x = 1
+
+```

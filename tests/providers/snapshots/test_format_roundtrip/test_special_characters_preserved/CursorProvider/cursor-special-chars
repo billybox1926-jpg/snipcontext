@@ -1,0 +1,16 @@
+// Special Chars
+// 1 snippets from SnipContext
+
+[source: special_<characters>_&_unicode_日本語_🚀.python]
+// Tests & <special> "chars" and unicode
+// Language: python
+// Framework: fastapi
+// Version: 0.100+
+// Source: https://example.com
+// Tags: edge, test, unicode
+```python
+// special chars
+x = '<>&"'
+print('日本語, 🚀')
+
+```

@@ -1,0 +1,18 @@
+# Minimal Context
+
+> *1 code snippets provided as context*
+
+---
+
+## Minimal Meta
+
+**Title:** Minimal Meta
+**Language:** python
+**Tags:** demo, python
+**Quality:** reviewed
+**LLM-Optimized:** Yes
+
+```python
+x = 1
+
+```

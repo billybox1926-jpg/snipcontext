@@ -1,0 +1,10 @@
+// Minimal Context
+// 1 snippets from SnipContext
+
+[source: minimal_meta.python]
+// Language: python
+// Tags: demo, python
+```python
+x = 1
+
+```

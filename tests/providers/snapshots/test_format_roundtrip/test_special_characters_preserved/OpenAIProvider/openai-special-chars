@@ -1,0 +1,25 @@
+════════════════════════════════════════════════════════════════════════════════
+  Special Chars
+  1 code snippets provided below
+  Use these as reference for your response.
+════════════════════════════════════════════════════════════════════════════════
+
+════════════════════════════════════════
+SNIPPET: Special <Characters> & Unicode 日本語 🚀
+════════════════════════════════════════
+
+Description: Tests & <special> "chars" and unicode
+Language: python
+Framework: fastapi
+Version: 0.100+
+Source: https://example.com
+Tags: edge, test, unicode
+Confidence: reviewed
+LLM-Optimized: Yes
+
+```python
+// special chars
+x = '<>&"'
+print('日本語, 🚀')
+
+```

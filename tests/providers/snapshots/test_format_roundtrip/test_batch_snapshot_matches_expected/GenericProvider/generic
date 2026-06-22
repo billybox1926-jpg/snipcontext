@@ -1,0 +1,39 @@
+# Canonical Context
+
+> *2 code snippets provided as context*
+
+---
+
+## Hello World
+
+**Title:** Hello World
+**Language:** python
+**Tags:** demo, python
+**Framework:** fastapi
+**Version:** 0.100+
+**Source:** https://example.com
+**Author:** Test Author
+**Quality:** reviewed
+**LLM-Optimized:** Yes
+
+```python
+def hello():
+    print('Hello')
+
+```
+
+## Add Function
+
+**Title:** Add Function
+**Language:** javascript
+**Tags:** javascript, math
+**Version:** 0.100+
+**Source:** https://example.com
+**Author:** Test Author
+**Quality:** reviewed
+**LLM-Optimized:** Yes
+
+```javascript
+const add = (a, b) => a + b;
+
+```

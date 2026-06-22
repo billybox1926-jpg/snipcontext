@@ -1,0 +1,25 @@
+# Special Chars
+
+> *1 code snippets provided as context*
+
+---
+
+## Special <Characters> & Unicode 日本語 🚀
+
+**Title:** Special <Characters> & Unicode 日本語 🚀
+**Description:** Tests & <special> "chars" and unicode
+**Language:** python
+**Tags:** edge, test, unicode
+**Framework:** fastapi
+**Version:** 0.100+
+**Source:** https://example.com
+**Author:** Test Author
+**Quality:** reviewed
+**LLM-Optimized:** Yes
+
+```python
+// special chars
+x = '<>&"'
+print('日本語, 🚀')
+
+```

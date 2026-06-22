@@ -1,0 +1,26 @@
+<!-- Special Chars — 1 snippets for Claude -->
+<documents>
+<document index="1">
+<source>snapshot-snippet-special-chars</source>
+<title>Special &lt;Characters&gt; &amp; Unicode 日本語 🚀</title>
+<metadata>
+<description>Tests &amp; &lt;special&gt; &quot;chars&quot; and unicode</description>
+<language>python</language>
+<framework>fastapi</framework>
+<version>0.100+</version>
+<source_url>https://example.com</source_url>
+<author>Test Author</author>
+<tags>edge, test, unicode</tags>
+<confidence>reviewed</confidence>
+<llm_optimized>true</llm_optimized>
+</metadata>
+<document_content>
+```python
+// special chars
+x = &#x27;&lt;&gt;&amp;&quot;&#x27;
+print(&#x27;日本語, 🚀&#x27;)
+
+```
+</document_content>
+</document>
+</documents>

@@ -1,0 +1,19 @@
+<!-- Minimal Context — 1 snippets for Claude -->
+<documents>
+<document index="1">
+<source>snapshot-snippet-minimal-meta</source>
+<title>Minimal Meta</title>
+<metadata>
+<language>python</language>
+<tags>demo, python</tags>
+<confidence>reviewed</confidence>
+<llm_optimized>true</llm_optimized>
+</metadata>
+<document_content>
+```python
+x = 1
+
+```
+</document_content>
+</document>
+</documents>

@@ -1,58 +1,68 @@
 # Plugin System
 
-SnipContext plugins let you extend the application with custom providers,
-hooks, and lifecycle logic without modifying core code.
+Snipcontext's plugin system allows extending core functionality via a unified lifecycle, discovery, and health management framework.
 
 ## Architecture
 
-- `PluginBase` — abstract base for all plugins.
-- `PluginManifest` — metadata describing the plugin.
-- `PluginManager` — discovers, loads, and manages plugins.
+- **Plugin** – abstract base class (ABC) with lifecycle hooks: `on_load`, `on_shutdown`, `on_snippet_saved`.
+- **PluginManifest** – dataclass containing plugin metadata (name, version, description, author, dependencies, requires).
+- **PluginRegistry** – singleton registry for all plugins; manages discovery, loading, unloading, health checks, and hook runners.
+- **Provider factory** – `get_provider(name)` and `list_providers()` use the registry to discover and load providers.
+- **Entry points** – plugins are discovered via `snipcontext.plugins` and `snipcontext.providers` groups in `pyproject.toml`.
 
-## Manifest
+## Writing a Plugin
 
-```python
-from dataclasses import dataclass, field
-from snipcontext.plugins.base import PluginManifest
+1. Subclass `Plugin` and implement required abstract methods:
+   - `on_load(self, config: dict) -> None`
+   - `on_shutdown(self) -> None`
+   - (optional) `on_snippet_saved(self, snippet)`
+2. Define a class-level `manifest` attribute with `PluginManifest`.
+3. Optionally specify version constraints via `requires` (e.g., `requires=["snipcontext>=0.3.0"]`).
+4. Register your plugin via entry points in `pyproject.toml`.
 
-manifest = PluginManifest(
-    name="my-plugin",
-    version="0.1.0",
-    api_version="0.3.0",
-    dependencies={"snipcontext": ">=0.3.0"},
-)
-```
-
-## Lifecycle Hooks
-
-| Hook | When Called |
-|------|-------------|
-| `on_load()` | Immediately after plugin import and instantiation. |
-| `on_config_change(new_config)` | When shared configuration is updated. |
-| `on_shutdown()` | During application shutdown. |
-| `on_snippet_saved(snippet)` | After a snippet is persisted. |
-| `on_snippet_loaded(snippet)` | After a snippet is loaded. |
-| `on_search(query, results)` | After search completes; can reorder results. |
-
-## Discovery
-
-Plugins are discovered via Python entry points:
-
-- Group `snipcontext.plugins` — general plugins.
-- Group `snipcontext.providers` — provider plugins.
+### Example
 
 ```python
-pm = PluginManager()
-pm.discover()  # loads entry points
-pm.load_builtin_providers()  # registers built-in providers
+from snipcontext.plugins import Plugin, PluginManifest
+
+class MyPlugin(Plugin):
+    manifest = PluginManifest(
+        name="my_plugin",
+        version="1.0.0",
+        description="Example plugin",
+        author="You",
+        requires=["snipcontext>=0.3.0"],
+    )
+
+    def on_load(self, config):
+        print("Plugin loaded")
+
+    def on_shutdown(self):
+        print("Plugin unloaded")
 ```
 
-Version mismatches (`api_version`) are logged and skipped.
+In `pyproject.toml`:
+```toml
+[project.entry-points."snipcontext.plugins"]
+my_plugin = "my_package:MyPlugin"
+```
 
 ## CLI Commands
 
-```bash
-sc plugins --list
-sc plugins --health
-sc providers --health
-```
+- `sc plugins --list` – list all discovered plugins.
+- `sc plugins --health` – show health status of loaded plugins.
+- `sc plugins --load NAME` – load a plugin by name (calls `on_load`).
+- `sc plugins --unload NAME` – unload a plugin by name (calls `on_shutdown`).
+- `sc providers --health` – alias that filters to provider-type plugins.
+
+## Version Compatibility
+
+Plugins can specify version constraints in their `requires` field using [PEP 440](https://peps.python.org/pep-0440/) specifiers (e.g., `"snipcontext>=0.3.0,<1.0"`). The registry evaluates these constraints at discovery and skips incompatible plugins.
+
+## Provider-Specific Integration
+
+All built-in providers (`openai`, `claude`, `cursor`, `generic`) are also plugins. They are discovered via the `snipcontext.providers` entry point group and can be loaded/unloaded like any other plugin. The `get_provider(name)` factory function uses the registry to instantiate them.
+
+## Testing
+
+The plugin system is covered by unit tests in `tests/test_plugin_system.py` and `tests/test_registry.py`. When adding a new plugin, please include corresponding tests.

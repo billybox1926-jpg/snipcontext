@@ -1,0 +1,43 @@
+<!-- Canonical Context — 2 snippets for Claude -->
+<documents>
+<document index="1">
+<source>snapshot-snippet-python-hello</source>
+<title>Hello World</title>
+<metadata>
+<language>python</language>
+<framework>fastapi</framework>
+<version>0.100+</version>
+<source_url>https://example.com</source_url>
+<author>Test Author</author>
+<tags>demo, python</tags>
+<confidence>reviewed</confidence>
+<llm_optimized>true</llm_optimized>
+</metadata>
+<document_content>
+```python
+def hello():
+    print(&#x27;Hello&#x27;)
+
+```
+</document_content>
+</document>
+<document index="2">
+<source>snapshot-snippet-js-add</source>
+<title>Add Function</title>
+<metadata>
+<language>javascript</language>
+<version>0.100+</version>
+<source_url>https://example.com</source_url>
+<author>Test Author</author>
+<tags>javascript, math</tags>
+<confidence>reviewed</confidence>
+<llm_optimized>true</llm_optimized>
+</metadata>
+<document_content>
+```javascript
+const add = (a, b) =&gt; a + b;
+
+```
+</document_content>
+</document>
+</documents>

@@ -1,0 +1,73 @@
+{
+  "base_methods": [
+    "export_batch",
+    "export_single",
+    "health_check"
+  ],
+  "providers": {
+    "ClaudeProvider": {
+      "missing": [],
+      "signature_diffs": {
+        "export_single": [
+          "was_abstract_now_concrete"
+        ],
+        "health_check": [
+          "was_abstract_now_concrete"
+        ]
+      },
+      "methods": [
+        "export_batch",
+        "export_single",
+        "health_check"
+      ]
+    },
+    "CursorProvider": {
+      "missing": [],
+      "signature_diffs": {
+        "export_single": [
+          "was_abstract_now_concrete"
+        ],
+        "health_check": [
+          "was_abstract_now_concrete"
+        ]
+      },
+      "methods": [
+        "export_batch",
+        "export_single",
+        "health_check"
+      ]
+    },
+    "OpenAIProvider": {
+      "missing": [],
+      "signature_diffs": {
+        "export_single": [
+          "was_abstract_now_concrete"
+        ],
+        "health_check": [
+          "was_abstract_now_concrete"
+        ]
+      },
+      "methods": [
+        "export_batch",
+        "export_single",
+        "health_check"
+      ]
+    },
+    "GenericProvider": {
+      "missing": [],
+      "signature_diffs": {
+        "export_single": [
+          "was_abstract_now_concrete"
+        ],
+        "health_check": [
+          "was_abstract_now_concrete"
+        ]
+      },
+      "methods": [
+        "export_batch",
+        "export_single",
+        "health_check"
+      ]
+    }
+  }
+}
