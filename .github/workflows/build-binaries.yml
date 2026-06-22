@@ -45,6 +45,15 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Install UPX (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get update && sudo apt-get install -y upx
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew install upx
+          fi
+
       - name: Install dependencies
         run: |
           uv venv
@@ -52,11 +61,21 @@ jobs:
 
       - name: Build binary (full)
         if: "!endsWith(matrix.target, '-minimal')"
-        run: uv run pyinstaller snipcontext.spec --clean --noconfirm
+        shell: bash
+        run: |
+          uv run pyinstaller snipcontext.spec --clean --noconfirm
 
       - name: Build binary (minimal — no semantic/encryption/web)
         if: endsWith(matrix.target, '-minimal')
-        run: uv run pyinstaller snipcontext.spec --clean --noconfirm
+        shell: bash
+        run: |
+          uv run pyinstaller snipcontext.spec --clean --noconfirm \
+            --exclude-module sentence_transformers \
+            --exclude-module faiss \
+            --exclude-module cryptography \
+            --exclude-module fastapi \
+            --exclude-module uvicorn \
+            --exclude-module prompt_toolkit
 
       - name: Package binary
         shell: bash
