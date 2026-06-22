@@ -76,6 +76,10 @@ class BaseProvider(ABC):
             lines.append(f"**Language:** {meta.language.value}")
         if snippet.tags:
             lines.append(f"**Tags:** {', '.join(sanitize_text(t) for t in snippet.tags)}")
+        if meta.framework:
+            lines.append(f"**Framework:** {sanitize_text(meta.framework)}")
+        if meta.version:
+            lines.append(f"**Version:** {sanitize_text(meta.version)}")
         if meta.source_url:
             lines.append(f"**Source:** {sanitize_text(meta.source_url)}")
         if meta.author:

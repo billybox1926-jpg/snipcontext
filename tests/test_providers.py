@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.providers.base import ExportFormat
 from snipcontext.providers.claude import ClaudeProvider
@@ -48,6 +47,27 @@ class TestGenericProvider:
         assert "python" in result
         assert "def hello():" in result
         assert "```python" in result
+        # With metadata present, generic should include framework/version/title
+        snippet_with_meta = Snippet(
+            content="x = 1",
+            metadata=SnippetMetadata(
+                title="Meta Test",
+                description="Test",
+                language=Language.PYTHON,
+                framework="fastapi",
+                version="0.100+",
+                author="Dev",
+                confidence="production",
+                llm_optimized=True,
+            ),
+            tags=["test"],
+        )
+        result_with = provider.export_single(snippet_with_meta)
+        assert "**Framework:** fastapi" in result_with
+        assert "**Version:** 0.100+" in result_with
+        assert "**Author:** Dev" in result_with
+        assert "**Quality:** production" in result_with
+        assert "**LLM-Optimized:** Yes" in result_with
 
     def test_export_batch(self):
         provider = GenericProvider()
@@ -95,6 +115,31 @@ class TestClaudeProvider:
         result = provider.export_single(snippet)
         assert "&lt;" in result or "<operators>" not in result
 
+    def test_metadata_fields(self):
+        provider = ClaudeProvider()
+        snippet = Snippet(
+            content="x = 1",
+            metadata=SnippetMetadata(
+                title="Meta Test",
+                description="Test",
+                language=Language.PYTHON,
+                framework="fastapi",
+                version="0.100+",
+                source_url="https://example.com",
+                author="Dev",
+                confidence="production",
+                llm_optimized=True,
+            ),
+            tags=["test"],
+        )
+        result = provider.export_single(snippet)
+        assert "<framework>fastapi</framework>" in result
+        assert "<version>0.100+</version>" in result
+        assert "<source_url>https://example.com</source_url>" in result
+        assert "<author>Dev</author>" in result
+        assert "<confidence>production</confidence>" in result
+        assert "<llm_optimized>true</llm_optimized>" in result
+
     def test_export_batch(self):
         provider = ClaudeProvider()
         snippets = create_test_snippets()
@@ -121,6 +166,27 @@ class TestCursorProvider:
     def test_format_type(self):
         assert CursorProvider.format == ExportFormat.MARKDOWN
 
+    def test_metadata_fields(self):
+        provider = CursorProvider()
+        snippet = Snippet(
+            content="x = 1",
+            metadata=SnippetMetadata(
+                title="Meta Test",
+                description="Test",
+                language=Language.PYTHON,
+                framework="fastapi",
+                version="0.100+",
+                source_url="https://example.com",
+            ),
+            tags=["test"],
+        )
+        result = provider.export_single(snippet)
+        assert "// Language: python" in result
+        assert "// Framework: fastapi" in result
+        assert "// Version: 0.100+" in result
+        assert "// Source: https://example.com" in result
+        assert "// Tags: test" in result
+
 
 class TestOpenAIProvider:
     """Tests for the OpenAI provider."""
@@ -143,6 +209,30 @@ class TestOpenAIProvider:
         assert "Description:" in result
         assert "Language:" in result
         assert "Tags:" in result
+
+    def test_metadata_fields(self):
+        provider = OpenAIProvider()
+        snippet = Snippet(
+            content="x = 1",
+            metadata=SnippetMetadata(
+                title="Meta Test",
+                description="Test",
+                language=Language.PYTHON,
+                framework="fastapi",
+                version="0.100+",
+                source_url="https://example.com",
+                author="Dev",
+                confidence="production",
+                llm_optimized=True,
+            ),
+            tags=["test"],
+        )
+        result = provider.export_single(snippet)
+        assert "Framework: fastapi" in result
+        assert "Version: 0.100+" in result
+        assert "Source: https://example.com" in result
+        assert "Confidence: production" in result
+        assert "LLM-Optimized: Yes" in result
 
     def test_export_batch(self):
         provider = OpenAIProvider()

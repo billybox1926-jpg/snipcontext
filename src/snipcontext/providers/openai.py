@@ -33,10 +33,17 @@ class OpenAIProvider(BaseProvider):
             if snippet.metadata.description:
                 lines.append(f"Description: {sanitize_text(snippet.metadata.description)}")
             lines.append(f"Language: {snippet.metadata.language.value}")
+            if snippet.metadata.framework:
+                lines.append(f"Framework: {sanitize_text(snippet.metadata.framework)}")
+            if snippet.metadata.version:
+                lines.append(f"Version: {sanitize_text(snippet.metadata.version)}")
+            if snippet.metadata.source_url:
+                lines.append(f"Source: {sanitize_text(snippet.metadata.source_url)}")
             if snippet.tags:
                 lines.append(f"Tags: {', '.join(sanitize_text(t) for t in snippet.tags)}")
             if snippet.metadata.confidence:
                 lines.append(f"Confidence: {snippet.metadata.confidence}")
+            lines.append(f"LLM-Optimized: {'Yes' if snippet.metadata.llm_optimized else 'No'}")
             lines.append("")
 
         lang = snippet.metadata.language.value

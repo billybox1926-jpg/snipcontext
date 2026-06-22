@@ -34,8 +34,20 @@ class ClaudeProvider(BaseProvider):
                     f"<description>{html.escape(snippet.metadata.description)}</description>"
                 )
             lines.append(f"<language>{snippet.metadata.language.value}</language>")
+            if snippet.metadata.framework:
+                lines.append(f"<framework>{html.escape(snippet.metadata.framework)}</framework>")
+            if snippet.metadata.version:
+                lines.append(f"<version>{html.escape(snippet.metadata.version)}</version>")
+            if snippet.metadata.source_url:
+                lines.append(f"<source_url>{html.escape(snippet.metadata.source_url)}</source_url>")
+            if snippet.metadata.author:
+                lines.append(f"<author>{html.escape(snippet.metadata.author)}</author>")
             if snippet.tags:
                 lines.append(f"<tags>{', '.join(html.escape(t) for t in snippet.tags)}</tags>")
+            lines.append(f"<confidence>{html.escape(snippet.metadata.confidence)}</confidence>")
+            lines.append(
+                f"<llm_optimized>{'true' if snippet.metadata.llm_optimized else 'false'}</llm_optimized>"
+            )
             lines.append("</metadata>")
 
         lang = snippet.metadata.language.value

@@ -27,8 +27,20 @@ class CursorProvider(BaseProvider):
 
         lines = [f"[source: {pseudo_file}]"]
 
-        if self.include_metadata and snippet.metadata.description:
-            lines.append(f"// {sanitize_text(snippet.metadata.description)}")
+        if self.include_metadata:
+            meta = snippet.metadata
+            if meta.description:
+                lines.append(f"// {sanitize_text(meta.description)}")
+            if meta.language.value != "unknown":
+                lines.append(f"// Language: {meta.language.value}")
+            if meta.framework:
+                lines.append(f"// Framework: {sanitize_text(meta.framework)}")
+            if meta.version:
+                lines.append(f"// Version: {sanitize_text(meta.version)}")
+            if meta.source_url:
+                lines.append(f"// Source: {sanitize_text(meta.source_url)}")
+            if snippet.tags:
+                lines.append(f"// Tags: {', '.join(sanitize_text(t) for t in snippet.tags)}")
 
         safe_content = sanitize_code(snippet.content)
         lines.extend(

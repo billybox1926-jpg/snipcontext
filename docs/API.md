@@ -58,9 +58,12 @@ s2 = Snippet(
         description="Fetch a URL asynchronously using aiohttp",
         language=Language.PYTHON,
         source_url="https://docs.aiohttp.org",
+        framework="aiohttp",
+        version="3.x",
         author="Your Name",
         confidence="production",
         llm_optimized=True,
+        custom_tags={"category": "networking", "async": True},
     ),
     tags=["python", "async", "http", "aiohttp"],
 )
@@ -251,6 +254,11 @@ batch = generic.export_batch(
 | `claude` | XML | Anthropic Claude |
 | `cursor` | Markdown with file headers | Cursor IDE |
 | `openai` | Markdown with dividers | ChatGPT / OpenAI |
+
+All providers include snippet metadata by default (`include_metadata=True`):
+`title`, `description`, `language`, `tags`, `framework`, `version`, `source_url`, `author`, `confidence`, and `llm_optimized`.
+
+Set `include_metadata=False` to export code only.
 
 ### Creating Custom Providers
 
