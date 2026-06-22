@@ -6,6 +6,7 @@ import inspect
 from typing import Any
 
 import pytest
+
 from snipcontext.providers.base import BaseProvider
 from snipcontext.providers.claude import ClaudeProvider
 from snipcontext.providers.cursor import CursorProvider

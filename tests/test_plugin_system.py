@@ -4,15 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 from snipcontext.plugins.base import (
     CORE_API_VERSION,
     Plugin,
     PluginManager,
     PluginManifest,
 )
-from snipcontext.providers.base import BaseProvider
 
 
 class HelloWorldPlugin(Plugin):
@@ -32,7 +29,7 @@ class HelloWorldPlugin(Plugin):
 
 
 class TestPluginSystem:
-    "Verify plugin lifecycle, registry, and version guarding."
+    """Verify plugin lifecycle, registry, and version guarding."""
 
     def test_lifecycle_hooks_fire(self) -> None:
         plugin = HelloWorldPlugin()
@@ -57,8 +54,7 @@ class TestPluginSystem:
             def on_load(self) -> None:
                 self.loaded = True
 
-            def on_snippet_saved(self, snippet: Any) -> None:
-                ...
+            def on_snippet_saved(self, snippet: Any) -> None: ...
 
         plugin = BadApiPlugin()
         loaded = False

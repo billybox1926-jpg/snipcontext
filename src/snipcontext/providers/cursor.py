@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING
 
 from snipcontext.core.sanitization import sanitize_code, sanitize_text
 from snipcontext.plugins.base import PluginManifest
-from snipcontext.providers.base import BaseProvider, ExportFormat, ProviderError
+from snipcontext.providers.base import BaseProvider, ExportFormat
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
 
 
 class CursorProvider(BaseProvider):
-    "Cursor IDE context provider with file-style headers."
+    """Cursor IDE context provider with file-style headers."""
 
     manifest = PluginManifest(name="cursor", version="0.1.0")
     name = "cursor"
