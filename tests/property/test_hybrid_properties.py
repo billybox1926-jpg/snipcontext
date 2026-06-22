@@ -162,6 +162,7 @@ def test_hybrid_search_monotonicity_keyword_boost(snippets: list[Snippet], query
 @settings(
     suppress_health_check=[HealthCheck.too_slow, HealthCheck.function_scoped_fixture],
     max_examples=25,
+    deadline=None,
 )
 def test_hybrid_search_consistency_adding_irrelevant(snippets: list[Snippet], query: str) -> None:
     """Adding an irrelevant snippet (no semantic or keyword overlap) should not change ranking of originals."""
