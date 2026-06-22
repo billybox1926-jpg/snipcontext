@@ -21,7 +21,7 @@ on:
       node-version:
         description: Node.js version for JS/TS projects.
         required: false
-        default: '20'
+        default: '24'
         type: string
       run-format-check:
         description: Run formatting validation command.
