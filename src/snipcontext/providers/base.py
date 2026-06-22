@@ -25,6 +25,10 @@ class ExportFormat(str, Enum):
     PROMPT = "prompt"
 
 
+class ProviderError(Exception):
+    """Base exception for provider-specific failures."""
+
+
 class BaseProvider(ABC):
     """Abstract base for all LLM export providers.
 
@@ -46,7 +50,7 @@ class BaseProvider(ABC):
         Returns:
             Formatted string ready for LLM consumption.
         """
-        ...
+        raise NotImplementedError
 
     def export_batch(self, snippets: list[Snippet], title: str = "Code Context") -> str:
         """Format multiple snippets as a unified context block.
@@ -63,6 +67,15 @@ class BaseProvider(ABC):
             parts.append(self.export_single(snippet))
             parts.append("---\n")
         return "\n".join(parts)
+
+    @abstractmethod
+    def health_check(self) -> str:
+        """Return a simple status string for this provider.
+
+        Implementations should not make network calls by default;
+        return ``ok`` when the provider can be instantiated and called.
+        """
+        raise NotImplementedError
 
     def _metadata_block(self, snippet: Snippet) -> str:
         """Generate a metadata block for a snippet."""

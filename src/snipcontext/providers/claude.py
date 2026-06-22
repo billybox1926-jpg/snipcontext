@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 from typing import TYPE_CHECKING
 
-from snipcontext.providers.base import BaseProvider, ExportFormat
+from snipcontext.providers.base import BaseProvider, ExportFormat, ProviderError
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
@@ -75,3 +75,6 @@ class ClaudeProvider(BaseProvider):
             lines.append("</document>")
         lines.append("</documents>")
         return "\n".join(lines)
+
+    def health_check(self) -> str:
+        return "ok"

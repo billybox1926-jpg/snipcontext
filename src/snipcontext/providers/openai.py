@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from snipcontext.core.sanitization import sanitize_code, sanitize_text
-from snipcontext.providers.base import BaseProvider, ExportFormat
+from snipcontext.providers.base import BaseProvider, ExportFormat, ProviderError
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
@@ -71,3 +71,6 @@ class OpenAIProvider(BaseProvider):
         for snippet in snippets:
             lines.append(self.export_single(snippet))
         return "\n".join(lines)
+
+    def health_check(self) -> str:
+        return "ok"
