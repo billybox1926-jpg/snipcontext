@@ -18,7 +18,7 @@ class ClaudeProvider(BaseProvider):
     Uses Anthropic's recommended XML document structure.
     """
 
-    manifest = PluginManifest(name="claude", version="0.1.0")
+    manifest = PluginManifest(name="claude", version="0.1.0", requires=["snipcontext>=0.3.0"])
     name = "claude"
     description = "Anthropic Claude XML format — optimal context structure"
     format = ExportFormat.XML

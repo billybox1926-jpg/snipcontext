@@ -47,8 +47,8 @@ dependencies = [
     "watchdog>=4.0,<5.0",
     "numpy>=1.24.0,<3.0",
     "rank-bm25>=0.2.2,<1.0",
+    "packaging>=24.0",
 ]
-
 [project.optional-dependencies]
 # Core semantic search (requires Rust toolchain for pydantic-core + sentence-transformers)
 semantic = [
@@ -90,30 +90,24 @@ dev = [
     "mkdocs>=1.6,<2.0",
     "mkdocs-material>=9.5,<10.0",
 ]
-
 [project.scripts]
 snipcontext = "snipcontext.cli.app:app"
 sc = "snipcontext.cli.app:app"
-
 [project.entry-points."snipcontext.plugins"]
 # Built-in plugins register here
-
 [project.entry-points."snipcontext.providers"]
 claude = "snipcontext.providers.claude:ClaudeProvider"
 cursor = "snipcontext.providers.cursor:CursorProvider"
 openai = "snipcontext.providers.openai:OpenAIProvider"
 generic = "snipcontext.providers.generic:GenericProvider"
-
 [project.urls]
 Homepage = "https://github.com/billybox1926-jpg/snipcontext"
 Documentation = "https://github.com/billybox1926-jpg/snipcontext/blob/main/docs"
 Repository = "https://github.com/billybox1926-jpg/snipcontext"
 Issues = "https://github.com/billybox1926-jpg/snipcontext/issues"
 Changelog = "https://github.com/billybox1926-jpg/snipcontext/blob/main/CHANGELOG.md"
-
 [tool.hatch.version]
 path = "src/snipcontext/__init__.py"
-
 [tool.hatch.build.targets.sdist]
 include = [
     "/src/snipcontext",
@@ -122,22 +116,18 @@ include = [
     "/README.md",
     "/pyproject.toml",
 ]
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/snipcontext"]
 artifacts = ["scripts/snipcontext.cmd"]
-
 [tool.hatch.build]
 exclude = [
     "/tests",
     "/.github",
     "/.gitignore",
 ]
-
 [tool.ruff]
 target-version = "py310"
 line-length = 100
-
 [tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
@@ -150,13 +140,10 @@ select = [
     "D",   # pydocstyle
 ]
 ignore = ["E501", "D100", "D104", "D101", "D102", "D103", "D107", "D202", "B008", "B904"]
-
 [tool.ruff.format]
 quote-style = "double"
-
 [tool.ruff.lint.pydocstyle]
 convention = "google"
-
 [tool.mypy]
 python_version = "3.10"
 strict = true
@@ -172,15 +159,12 @@ disable_error_code = [
     "type-arg",
     "no-untyped-call",
 ]
-
 [[tool.mypy.overrides]]
 module = "torch.*"
 ignore_missing_imports = true
-
 [[tool.mypy.overrides]]
 module = "snipcontext.*"
 ignore_missing_imports = true
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
@@ -191,7 +175,6 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
 ]
-
 [tool.coverage.run]
 source = ["snipcontext"]
 omit = ["*/tests/*", "*/test_*"]
@@ -204,4 +187,11 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
+]
+fail_under = 80
+[dependency-groups]
+dev = [
+    "hypothesis>=6.141.1",
+    "pytest-snapshot>=0.9.0",
+    "pytest-xdist>=3.8.0",
 ]

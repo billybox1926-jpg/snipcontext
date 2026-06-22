@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class OpenAIProvider(BaseProvider):
     """OpenAI ChatGPT-optimized context provider with clear visual separation."""
 
-    manifest = PluginManifest(name="openai", version="0.1.0")
+    manifest = PluginManifest(name="openai", version="0.1.0", requires=["snipcontext>=0.3.0"])
     name = "openai"
     description = "OpenAI ChatGPT format — clear visual separation"
     format = ExportFormat.PROMPT

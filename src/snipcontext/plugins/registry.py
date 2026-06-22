@@ -1,12 +1,21 @@
-"""Plugin registry – central discovery, lifecycle, and management."""
+"""Plugin registry – central discovery, lifecycle, and health management."""
 
 from __future__ import annotations
 
 import importlib.metadata
 import logging
-from typing import Any
+import re
+from typing import TYPE_CHECKING, Any
 
-from .base import Plugin, PluginManifest
+from packaging import specifiers
+from packaging.version import Version
+
+import snipcontext
+
+from .base import CORE_API_VERSION, Plugin, PluginManifest
+
+if TYPE_CHECKING:
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +44,17 @@ class PluginRegistry:
         self._discovered = False
         self._initialized = True
 
+    def _is_compatible(self, manifest: PluginManifest) -> bool:
+        current = Version(snipcontext.__version__)
+        if manifest.requires:
+            for raw_req in manifest.requires:
+                req = re.sub(r"^[a-zA-Z0-9_.-]+\s*", "", raw_req.strip())
+                spec = specifiers.SpecifierSet(req)
+                if not spec.contains(current):
+                    return False
+            return True
+        return manifest.api_version == CORE_API_VERSION
+
     def discover(self) -> int:
         """Discover and load all available plugins via entry points."""
         if self._discovered:
@@ -60,11 +80,11 @@ class PluginRegistry:
                     if not isinstance(manifest, PluginManifest):
                         logger.warning("Plugin %s missing manifest, skipping", ep.name)
                         continue
-                    if manifest.api_version != "0.3.0":
-                        logger.warning(
-                            "Skipping plugin %s: api_version mismatch (plugin=%s, core=0.3.0)",
+                    if not self._is_compatible(manifest):
+                        logger.info(
+                            "Skipping plugin %s: version incompatible (requires=%s)",
                             ep.name,
-                            manifest.version,
+                            manifest.requires or manifest.api_version,
                         )
                         continue
                     plugin = plugin_cls()
@@ -81,6 +101,19 @@ class PluginRegistry:
             for ep in provider_eps:
                 try:
                     provider_cls = ep.load()
+                    if not issubclass(provider_cls, Plugin):
+                        continue
+                    manifest = getattr(provider_cls, "manifest", None)
+                    if not isinstance(manifest, PluginManifest):
+                        logger.warning("Provider %s missing manifest, skipping", ep.name)
+                        continue
+                    if not self._is_compatible(manifest):
+                        logger.info(
+                            "Skipping provider %s: version incompatible (requires=%s)",
+                            ep.name,
+                            manifest.requires or manifest.api_version,
+                        )
+                        continue
                     self._plugins[ep.name] = provider_cls
                     self._loaded[ep.name] = False
                 except Exception as exc:
@@ -117,6 +150,41 @@ class PluginRegistry:
                 except Exception as exc:
                     logger.error("Failed to instantiate builtin provider %s: %s", name, exc)
 
+    def load_plugin(self, name: str, config: dict[str, Any] | None = None) -> Any:
+        """Instantiate and initialise a plugin by name."""
+        self.discover()
+        if name not in self._plugins:
+            raise ValueError(f"Plugin '{name}' not found")
+        if self._loaded.get(name, False):
+            return self._instances[name]
+        plugin_cls = self._plugins[name]
+        plugin = plugin_cls()
+        if hasattr(plugin, "on_load"):
+            plugin.on_load()
+        self._instances[name] = plugin
+        self._loaded[name] = True
+        return plugin
+
+    def unload_plugin(self, name: str) -> None:
+        """Call on_shutdown and discard the plugin instance."""
+        self.discover()
+        if not self._loaded.get(name, False):
+            raise ValueError(f"Plugin '{name}' is not loaded")
+        plugin = self._instances[name]
+        if hasattr(plugin, "on_shutdown"):
+            plugin.on_shutdown()
+        del self._instances[name]
+        self._loaded[name] = False
+
+    def get_health(self, name: str) -> dict[str, Any]:
+        """Return health status from a loaded plugin."""
+        if not self._loaded.get(name, False):
+            raise ValueError(f"Plugin '{name}' is not loaded")
+        plugin = self._instances[name]
+        if hasattr(plugin, "health_check"):
+            return {"status": plugin.health_check()}
+        return {"status": "ok"}
+
     def get_provider(self, name: str) -> Any:
         """Get a provider instance by name."""
         if name not in self._plugins:
@@ -141,9 +209,13 @@ class PluginRegistry:
         return result
 
     def list_provider_names(self) -> list[str]:
+        if not self._discovered:
+            self.discover()
         names = []
-        for name in self._plugins:
-            if name in ("claude", "cursor", "openai", "generic"):
+        from snipcontext.providers.base import BaseProvider
+
+        for name, plugin_cls in self._plugins.items():
+            if isinstance(plugin_cls, type) and issubclass(plugin_cls, BaseProvider):
                 names.append(name)
         return names
 

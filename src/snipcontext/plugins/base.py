@@ -34,6 +34,9 @@ class PluginManifest:
     version: str = "0.1.0"
     api_version: str = CORE_API_VERSION
     dependencies: dict[str, str] = field(default_factory=dict)
+    requires: list[str] = field(default_factory=list)
+    description: str = ""
+    author: str = ""
 
 
 class Plugin(ABC):
@@ -111,11 +114,15 @@ class PluginManager:
 
     @staticmethod
     def load_plugin(name: str, config: dict[str, Any] | None = None) -> Any:
-        return PluginManager._registry().load_plugin(name, config)  # type: ignore[attr-defined]
+        return PluginManager._registry().load_plugin(name, config)
 
     @staticmethod
     def unload_plugin(name: str) -> None:
-        return PluginManager._registry().unload_plugin(name)  # type: ignore[attr-defined]
+        return PluginManager._registry().unload_plugin(name)
+
+    @staticmethod
+    def get_health(name: str) -> dict[str, Any]:
+        return PluginManager._registry().get_health(name)
 
     @staticmethod
     def get_plugin(name: str) -> Any:

@@ -11,6 +11,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from snipcontext.core.sanitization import sanitize_code, sanitize_text
+from snipcontext.plugins.base import Plugin
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
@@ -29,11 +30,13 @@ class ProviderError(Exception):
     """Base exception for provider-specific failures."""
 
 
-class BaseProvider(ABC):
+class BaseProvider(Plugin, ABC):
     """Abstract base for all LLM export providers.
 
     Providers transform Snippet collections into strings formatted
     for optimal LLM comprehension and context window usage.
+
+    Inherits from Plugin to enable lifecycle hooks and plugin discovery.
     """
 
     name: str = ""
@@ -76,6 +79,19 @@ class BaseProvider(ABC):
         return ``ok`` when the provider can be instantiated and called.
         """
         raise NotImplementedError
+
+    # Plugin lifecycle hooks – default no-op implementations
+    def on_load(self) -> None:
+        """Called when the provider plugin is loaded. Override for initialization."""
+        pass
+
+    def on_shutdown(self) -> None:
+        """Called when the provider plugin is unloaded. Override for cleanup."""
+        pass
+
+    def on_snippet_saved(self, snippet: Snippet) -> None:
+        """Hook called after a snippet is saved."""
+        pass
 
     def _metadata_block(self, snippet: Snippet) -> str:
         """Generate a metadata block for a snippet."""

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class GenericProvider(BaseProvider):
     """Standard Markdown provider for universal LLM compatibility."""
 
-    manifest = PluginManifest(name="generic", version="0.1.0")
+    manifest = PluginManifest(name="generic", version="0.1.0", requires=["snipcontext>=0.3.0"])
     name = "generic"
     description = "Universal Markdown format — works with any LLM"
     format = ExportFormat.MARKDOWN

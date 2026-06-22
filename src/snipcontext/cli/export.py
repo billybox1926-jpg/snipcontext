@@ -5,12 +5,12 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.table import Table
 
 from snipcontext.cli.context import get_context as _get_context
 from snipcontext.core.models import Snippet
 from snipcontext.plugins.base import PluginManager
+from snipcontext.plugins.registry import PluginRegistry
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -59,11 +59,11 @@ def register_commands(app: typer.Typer) -> None:
             console.print("[yellow]No snippets to export.[/yellow]")
             return
         formatted = prov.export_batch(snippets)
-        if output:
+        if output and output != "-":
             Path(output).write_text(formatted)
             console.print(f"[green]Exported {len(snippets)} snippets to {output}[/green]")
         else:
-            console.print(Markdown(formatted))
+            console.print(formatted, markup=False)
 
     @app.command()  # type: ignore[untyped-decorator]
     def providers(
@@ -103,12 +103,42 @@ def register_commands(app: typer.Typer) -> None:
 
     @app.command()  # type: ignore[untyped-decorator]
     def plugins(
-        list_cmd: bool = typer.Option(True, "--list", help="List loaded plugins"),
+        list_cmd: bool = typer.Option(False, "--list", help="List loaded plugins"),
         health: bool = typer.Option(False, "--health", help="Run plugin/provider health checks"),
+        load_name: str | None = typer.Option(None, "--load", help="Load a plugin by name."),
+        unload_name: str | None = typer.Option(None, "--unload", help="Unload a plugin by name."),
     ) -> None:
         """Plugin management commands."""
+        actions = sum(1 for x in (list_cmd, health, load_name, unload_name) if x)
+        if actions > 1:
+            console.print(
+                "[red]Error: Use only one of --list, --health, --load NAME, or --unload NAME[/red]",
+                err=True,
+            )
+            raise typer.Exit(1)
+
         pm = PluginManager()
         pm.load_builtin_providers()
+        registry = PluginRegistry()
+
+        if load_name:
+            try:
+                registry.load_plugin(load_name)
+                console.print(f"[green]Loaded plugin '{load_name}'[/green]")
+            except ValueError as e:
+                console.print(f"[red]Error: {e}[/red]", err=True)
+                raise typer.Exit(1)
+            return
+
+        if unload_name:
+            try:
+                registry.unload_plugin(unload_name)
+                console.print(f"[green]Unloaded plugin '{unload_name}'[/green]")
+            except ValueError as e:
+                console.print(f"[red]Error: {e}[/red]", err=True)
+                raise typer.Exit(1)
+            return
+
         if health:
             if not pm.list_providers():
                 console.print("[yellow]No providers registered.[/yellow]")
@@ -117,9 +147,9 @@ def register_commands(app: typer.Typer) -> None:
             table.add_column("Name", style="cyan")
             table.add_column("Status", style="green")
             table.add_column("Error", style="red")
-            for name, provider_cls in pm._providers.items():
+            for name in list(pm.list_providers().keys()):
                 try:
-                    provider = provider_cls()
+                    provider = registry.get_provider(name)
                     status = provider.health_check()
                     error = ""
                 except Exception as exc:
@@ -128,19 +158,25 @@ def register_commands(app: typer.Typer) -> None:
                 table.add_row(name, status, error)
             console.print(table)
             return
-        if not pm.plugins:
-            console.print("[yellow]No plugins registered.[/yellow]")
+
+        if list_cmd:
+            if not pm.plugins:
+                console.print("[yellow]No plugins registered.[/yellow]")
+                return
+            table = Table(title="Plugins", show_header=True)
+            table.add_column("Name", style="cyan")
+            table.add_column("Version", style="green")
+            table.add_column("API", style="blue")
+            table.add_column("Status", style="white")
+            for manifest in pm.list_plugins():
+                table.add_row(
+                    manifest.name,
+                    manifest.version,
+                    manifest.api_version,
+                    "loaded",
+                )
+            console.print(table)
             return
-        table = Table(title="Plugins", show_header=True)
-        table.add_column("Name", style="cyan")
-        table.add_column("Version", style="green")
-        table.add_column("API", style="blue")
-        table.add_column("Status", style="white")
-        for manifest in pm.list_plugins():
-            table.add_row(
-                manifest.name,
-                manifest.version,
-                manifest.api_version,
-                "loaded",
-            )
-        console.print(table)
+
+        console.print("Use --list, --health, --load NAME, or --unload NAME")
+        raise typer.Exit(0)

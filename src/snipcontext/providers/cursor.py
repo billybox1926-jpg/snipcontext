@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class CursorProvider(BaseProvider):
     """Cursor IDE context provider with file-style headers."""
 
-    manifest = PluginManifest(name="cursor", version="0.1.0")
+    manifest = PluginManifest(name="cursor", version="0.1.0", requires=["snipcontext>=0.3.0"])
     name = "cursor"
     description = "Cursor IDE format — file-like context headers"
     format = ExportFormat.MARKDOWN
