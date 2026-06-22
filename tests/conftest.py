@@ -10,6 +10,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from snipcontext.config.settings import Config, StorageConfig, reset_config
 from snipcontext.plugins.base import Plugin, PluginManifest
 
