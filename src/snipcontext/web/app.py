@@ -18,7 +18,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(snippets.router)
 
-    @app.get("/", include_in_schema=False)
+    @app.get("/", include_in_schema=False)  # type: ignore[untyped-decorator]
     async def root() -> JSONResponse:
         return JSONResponse({"status": "ok", "docs": "/docs"})
 

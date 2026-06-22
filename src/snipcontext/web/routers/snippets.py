@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-
 from snipcontext.core.snippet_ops import (
     create_snippet,
     delete_snippet,
@@ -19,7 +18,7 @@ from snipcontext.web.schemas import SnippetCreateRequest, SnippetResponse
 router = APIRouter()
 
 
-@router.get("/snippets")
+@router.get("/snippets")  # type: ignore[untyped-decorator]
 async def list_snippet_items(
     storage: Any = None,
 ) -> dict[str, Any]:
@@ -39,7 +38,7 @@ async def list_snippet_items(
     }
 
 
-@router.post("/snippets", response_model=SnippetResponse, status_code=201)
+@router.post("/snippets", response_model=SnippetResponse, status_code=201)  # type: ignore[untyped-decorator]
 async def create_snippet_item(
     body: SnippetCreateRequest,
     storage: Any = None,
@@ -69,7 +68,7 @@ async def create_snippet_item(
     )
 
 
-@router.get("/snippets/{snippet_id}", response_model=SnippetResponse)
+@router.get("/snippets/{snippet_id}", response_model=SnippetResponse)  # type: ignore[untyped-decorator]
 async def get_snippet_item(
     snippet_id: str,
     storage: Any = None,
@@ -94,7 +93,7 @@ async def get_snippet_item(
     )
 
 
-@router.put("/snippets/{snippet_id}", response_model=SnippetResponse)
+@router.put("/snippets/{snippet_id}", response_model=SnippetResponse)  # type: ignore[untyped-decorator]
 async def update_snippet_item(
     snippet_id: str,
     body: SnippetCreateRequest,
@@ -124,7 +123,7 @@ async def update_snippet_item(
     )
 
 
-@router.delete("/snippets/{snippet_id}")
+@router.delete("/snippets/{snippet_id}")  # type: ignore[untyped-decorator]
 async def delete_snippet_item(
     snippet_id: str,
     storage: Any = None,

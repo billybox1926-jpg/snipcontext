@@ -75,8 +75,8 @@ class SnippetVersion(BaseModel):  # type: ignore[misc]
         description="SHA-256 hash of content for integrity",
     )
 
-    @model_validator(mode="after")
-    def _compute_hash(self) -> SnippetVersion:  # type: ignore[misc]
+    @model_validator(mode="after")  # type: ignore[untyped-decorator]
+    def _compute_hash(self) -> SnippetVersion:
         """Auto-compute content hash if not provided."""
         if not self.change_hash and self.content:
             self.change_hash = hashlib.sha256(self.content.encode()).hexdigest()[:16]
@@ -151,14 +151,14 @@ class Snippet(BaseModel):  # type: ignore[misc]
     deleted: bool = Field(default=False, description="Soft deletion flag")
     delete_marker: str = Field(default="", description="Reason or actor for deletion")
 
-    @model_validator(mode="after")
-    def _validate_content_or_encrypted(self) -> Snippet:  # type: ignore[misc]
+    @model_validator(mode="after")  # type: ignore[untyped-decorator]
+    def _validate_content_or_encrypted(self) -> Snippet:
         """Ensure either content or encrypted_content is provided."""
         if not self.content and not self.encrypted_content:
             raise ValueError("Either content or encrypted_content must be provided")
         return self
 
-    @field_validator("tags", mode="before")  # type: ignore[misc]
+    @field_validator("tags", mode="before")  # type: ignore[untyped-decorator]
     @classmethod
     def _normalize_tags(cls, v: list[str]) -> list[str]:
         """Normalize tags to lowercase, deduplicated, sorted."""

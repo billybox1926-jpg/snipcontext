@@ -79,7 +79,7 @@ except ImportError:
     pass  # cryptography not installed, skip encrypt/decrypt commands
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def repl(
     script: str | None = typer.Option(None, "--script", help="Run a TUI script file and exit"),
 ) -> None:
@@ -94,7 +94,7 @@ def repl(
     sys.exit(run())
 
 
-@app.command()
+@app.command()  # type: ignore[untyped-decorator]
 def serve(
     host: str = typer.Option("127.0.0.1", "--host", help="Bind host"),
     port: int = typer.Option(8000, "--port", help="Bind port"),
