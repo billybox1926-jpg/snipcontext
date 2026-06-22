@@ -203,6 +203,25 @@ class TestProvidersCommand:
         assert "generic" in result.output
         assert "openai" in result.output
 
+    def test_providers_health(self):
+        result, tmp = invoke("providers", "--health")
+        assert result.exit_code == 0
+        assert "Provider Health" in result.output
+
+
+class TestPluginsCommand:
+    """Tests for the `plugins` command."""
+
+    def test_plugins_list(self):
+        result, tmp = invoke("plugins", "--list")
+        assert result.exit_code == 0
+        assert "Plugins" in result.output or "No plugins registered" in result.output
+
+    def test_plugins_health(self):
+        result, tmp = invoke("plugins", "--health")
+        assert result.exit_code == 0
+        assert "Provider Health" in result.output
+
 
 class TestConfigCommands:
     """Tests for config subcommands."""

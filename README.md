@@ -404,6 +404,25 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed design documenta
 
 ---
 
+## Roadmap
+
+- [x] Core snippet CRUD with git-friendly storage
+- [x] Semantic + hybrid search with local embeddings
+- [x] LLM-optimized export providers (Claude, Cursor, OpenAI, Generic)
+- [x] Rich CLI with Typer
+- [x] Plugin system with entry points
+- [x] Python library distribution (PyPI)
+- [x] Auto-tagging and deduplication
+- [x] Encryption at rest
+- [x] File watchdog / real-time indexing
+- [ ] Import from GitHub Gists
+- [ ] Import from Git repositories
+- [ ] Snippet templates and scaffolding
+- [ ] Team sharing via git-sync
+- [ ] VS Code extension
+
+---
+
 ## Configuration
 
 SnipContext uses environment variables and a YAML config file:
@@ -474,26 +493,13 @@ mypy .
 pre-commit install
 ```
 
----
+## Documentation
 
-## Roadmap
+- [`docs/API.md`](docs/API.md) — Python library usage
+- [`docs/providers.md`](docs/providers.md) — provider contract and custom provider guide
+- [`docs/plugins.md`](docs/plugins.md) — plugin system, lifecycle hooks, and CLI commands
 
-- [x] Core snippet CRUD with git-friendly storage
-- [x] Semantic + hybrid search with local embeddings
-- [x] LLM-optimized export providers (Claude, Cursor, OpenAI, Generic)
-- [x] Rich CLI with Typer
-- [x] Plugin system with entry points
-- [x] Python library distribution (PyPI)
-- [x] Auto-tagging and deduplication
-- [x] Encryption at rest
-- [x] File watchdog / real-time indexing
-- [ ] Import from GitHub Gists
-- [ ] Import from Git repositories
-- [ ] Snippet templates and scaffolding
-- [ ] Team sharing via git-sync
-- [ ] VS Code extension
-
----
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed design documentation.
 
 ## Project Structure
 
@@ -522,9 +528,10 @@ snipcontext/
 │       └── generic.py        # Universal Markdown
 ├── tests/                    # Test suite
 ├── docs/                     # Documentation
-│   ├── ARCHITECTURE.md
 │   ├── API.md
-│   └── MAINTAINER.md
+│   ├── providers.md
+│   ├── plugins.md
+│   └── ARCHITECTURE.md
 ├── pyproject.toml
 ├── CHANGELOG.md
 └── README.md
