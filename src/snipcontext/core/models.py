@@ -216,6 +216,13 @@ class Snippet(BaseModel):
             self.content,
             " ".join(self.tags),
             self.metadata.language.value,
+            self.metadata.framework,
+            self.metadata.version,
+            self.metadata.source_url,
+            # custom_tags values are also searchable
+            " ".join(
+                f"{k} {v}" for k, v in self.metadata.custom_tags.items() if isinstance(v, str)
+            ),
         ]
         return "\n".join(p for p in parts if p)
 

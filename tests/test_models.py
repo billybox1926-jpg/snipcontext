@@ -37,6 +37,95 @@ class TestSnippetMetadata:
             meta = SnippetMetadata(title="T", confidence=level)
             assert meta.confidence == level
 
+    def test_metadata_field_defaults(self):
+        """New fields (framework, version, source_url, custom_tags) default correctly."""
+        meta = SnippetMetadata(title="Test")
+        assert meta.framework == ""
+        assert meta.version == ""
+        assert meta.source_url == ""
+        assert meta.custom_tags == {}
+        assert meta.author == ""
+        assert meta.llm_optimized is False
+
+    def test_metadata_with_all_fields(self):
+        """Creating metadata with all fields populated works."""
+        meta = SnippetMetadata(
+            title="Full Snippet",
+            description="Complete example",
+            language=Language.PYTHON,
+            source_url="https://github.com/example/repo",
+            framework="fastapi",
+            version="0.100+",
+            author="dev",
+            confidence="production",
+            custom_tags={"priority": "high", "team": "backend"},
+        )
+        assert meta.framework == "fastapi"
+        assert meta.version == "0.100+"
+        assert meta.source_url == "https://github.com/example/repo"
+        assert meta.custom_tags == {"priority": "high", "team": "backend"}
+
+    def test_extra_fields_allowed(self):
+        """ConfigDict(extra='allow') lets arbitrary keys through."""
+        meta = SnippetMetadata(title="T")
+        meta.random_future_field = "works"
+        assert meta.random_future_field == "works"
+
+    def test_backward_compat_missing_fields(self):
+        """Loading a dict that omits new fields fills defaults (simulates old JSON)."""
+        # Simulate what an old v0.2.x JSON file looks like
+        old_data = {
+            "title": "Old Snippet",
+            "description": "From before v0.3",
+            "language": "python",
+        }
+        meta = SnippetMetadata.model_validate(old_data)
+        assert meta.title == "Old Snippet"
+        assert meta.framework == ""
+        assert meta.version == ""
+        assert meta.source_url == ""
+        assert meta.custom_tags == {}
+
+    def test_backward_compat_unknown_fields(self):
+        """Unknown fields in old data are silently accepted, not rejected."""
+        data = {
+            "title": "Future Snippet",
+            "future_field": "some value",
+        }
+        meta = SnippetMetadata.model_validate(data)
+        assert meta.title == "Future Snippet"
+        assert meta.future_field == "some value"
+
+    def test_snippet_backward_compat_roundtrip(self):
+        """Simulate loading old JSON → save → reload cycle (storage round-trip)."""
+        old_json = {
+            "content": "print('hello')",
+            "metadata": {
+                "title": "Legacy",
+                "description": "old",
+                "language": "python",
+            },
+            "tags": ["demo"],
+            "access_count": 5,
+            "deleted": False,
+        }
+        # Load (Pydantic fills defaults for missing fields)
+        s = Snippet.model_validate(old_json)
+        assert s.metadata.framework == ""
+        assert s.metadata.version == ""
+        assert s.metadata.custom_tags == {}
+
+        # Save (model_dump produces complete JSON)
+        data = s.model_dump(mode="json")
+        assert "framework" in data["metadata"]
+        assert data["metadata"]["framework"] == ""
+
+        # Reload from saved data
+        s2 = Snippet.model_validate(data)
+        assert s2.content == s.content
+        assert s2.metadata.title == "Legacy"
+        assert s2.metadata.framework == ""
+
 
 class TestSnippetVersion:
     """Tests for SnippetVersion model."""
@@ -119,6 +208,38 @@ class TestSnippet:
         assert "A greeting" in text
         assert "def hello(): pass" in text
         assert "python" in text
+
+    def test_to_search_text_includes_metadata_fields(self):
+        """Framework, version, source_url, and custom_tags appear in search text."""
+        s = Snippet(
+            content="x",
+            metadata=SnippetMetadata(
+                title="T",
+                framework="react",
+                version="18.x",
+                source_url="https://react.dev/docs",
+                custom_tags={"env": "staging", "team": "frontend"},
+            ),
+        )
+        text = s.to_search_text()
+        assert "react" in text
+        assert "18.x" in text
+        assert "https://react.dev/docs" in text
+        assert "env" in text
+        assert "staging" in text
+        assert "team" in text
+
+    def test_to_search_text_omits_empty_metadata_fields(self):
+        """Empty framework/version/source_url are not included in search text."""
+        s = Snippet(
+            content="x",
+            metadata=SnippetMetadata(title="T", framework="", version=""),
+        )
+        text = s.to_search_text()
+        # Should contain title and content but no empty framework/version lines
+        lines = [l for l in text.split("\n") if l]
+        assert any("T" in l for l in lines)
+        assert len(lines) >= 1
 
     def test_access_tracking(self):
         s = Snippet(content="x", metadata=SnippetMetadata(title="T"))

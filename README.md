@@ -202,6 +202,14 @@ snipcontext add "def authenticate(token):\n    return jwt.decode(token, SECRET)"
   --lang python \
   --tag auth --tag jwt --tag security
 
+# Add with rich metadata (v0.3.0+)
+snipcontext add "from fastapi import FastAPI" \
+  --title "FastAPI App Setup" \
+  --framework fastapi \
+  --version "0.100+" \
+  --source "https://fastapi.tiangolo.com/tutorial/first-steps/" \
+  --custom "team=backend" --custom "priority=high"
+
 # Search semantically
 snipcontext search "how to validate auth tokens"
 
@@ -222,6 +230,9 @@ snipcontext delete <snippet-id>
 
 # Edit a snippet
 snipcontext edit <snippet-id> --title "New Title" --add-tag python
+
+# Edit metadata
+snipcontext edit <snippet-id> --framework react --version "18.x" --source "https://react.dev"
 
 # Rebuild search index
 snipcontext build-index --force
