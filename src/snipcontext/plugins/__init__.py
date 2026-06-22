@@ -1,6 +1,4 @@
-"""Plugin system for SnipContext."""
+from .base import Plugin, PluginManifest
+from .registry import PluginRegistry
 
-from snipcontext.plugins.base import Plugin, PluginManager, PluginManifest
-from snipcontext.plugins.registry import PluginRegistry
-
-__all__ = ["Plugin", "PluginManager", "PluginManifest", "PluginRegistry"]
+__all__ = ["Plugin", "PluginManifest", "PluginRegistry"]
