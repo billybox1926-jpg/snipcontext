@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -22,38 +23,46 @@ logger = logging.getLogger(__name__)
 
 PLUGIN_GROUP = "snipcontext.plugins"
 PROVIDER_GROUP = "snipcontext.providers"
+CORE_API_VERSION = "0.3.0"
+
+
+@dataclass
+class PluginManifest:
+    """Metadata describing a plugin."""
+
+    name: str
+    version: str = "0.1.0"
+    api_version: str = CORE_API_VERSION
+    dependencies: dict[str, str] = field(default_factory=dict)
 
 
 class Plugin(ABC):
     """Base class for all SnipContext plugins."""
 
-    name: str = ""
-    version: str = "0.1.0"
-    description: str = ""
+    manifest: PluginManifest = PluginManifest(name="plugin")
 
     @abstractmethod
-    def activate(self) -> None:
+    def on_load(self) -> None:
         """Called when the plugin is loaded."""
         ...
 
-    @abstractmethod
-    def deactivate(self) -> None:
+    def on_shutdown(self) -> None:
         """Called when the plugin is unloaded. Override for cleanup."""
-        pass
 
     @abstractmethod
     def on_snippet_saved(self, snippet: Snippet) -> None:
         """Hook called after a snippet is saved."""
-        pass
+        ...
 
-    @abstractmethod
     def on_snippet_loaded(self, snippet: Snippet) -> None:
         """Hook called after a snippet is loaded."""
-        pass
 
     def on_search(self, query: str, results: list) -> list:
         """Hook to modify search results."""
         return results
+
+    def on_config_change(self, new_config: object) -> None:
+        """Called when the shared configuration changes."""
 
     def get_import_sources(self) -> dict[str, Callable]:
         """Return additional import sources. Map name -> callable."""
@@ -90,12 +99,22 @@ class PluginManager:
             for ep in plugin_eps:
                 try:
                     plugin_class = ep.load()
-                    if issubclass(plugin_class, Plugin):
-                        plugin = plugin_class()
-                        self._plugins[plugin.name] = plugin
-                        plugin.activate()
-                        count += 1
-                        logger.info("Loaded plugin: %s v%s", plugin.name, plugin.version)
+                    if not issubclass(plugin_class, Plugin):
+                        continue
+                    manifest = getattr(plugin_class, "manifest", PluginManifest(name=ep.name))
+                    if manifest.api_version != CORE_API_VERSION:
+                        logger.warning(
+                            "Skipping plugin %s: api_version mismatch (plugin=%s, core=%s)",
+                            ep.name,
+                            manifest.api_version,
+                            CORE_API_VERSION,
+                        )
+                        continue
+                    plugin = plugin_class()
+                    self._plugins[manifest.name] = plugin
+                    plugin.on_load()
+                    count += 1
+                    logger.info("Loaded plugin: %s v%s", manifest.name, manifest.version)
                 except Exception as exc:
                     logger.error("Failed to load plugin %s: %s", ep.name, exc)
 
@@ -145,6 +164,15 @@ class PluginManager:
                 result[name] = name
         return result
 
+    def list_plugins(self) -> list[PluginManifest]:
+        """Return manifests for loaded plugins."""
+        manifests: list[PluginManifest] = []
+        for plugin in self._plugins.values():
+            manifest = getattr(plugin, "manifest", None)
+            if manifest is not None:
+                manifests.append(manifest)
+        return manifests
+
     @property
     def default_provider(self) -> str:
         """Return the default provider name."""
@@ -163,7 +191,7 @@ class PluginManager:
         """Deactivate all plugins."""
         for plugin in self._plugins.values():
             try:
-                plugin.deactivate()
+                plugin.on_shutdown()
             except Exception as exc:
                 logger.error("Error deactivating plugin %s: %s", plugin.name, exc)
         self._plugins.clear()

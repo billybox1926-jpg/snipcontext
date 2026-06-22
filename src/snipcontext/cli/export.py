@@ -91,9 +91,15 @@ def register_commands(app: typer.Typer) -> None:
         table = Table(title="Plugins", show_header=True)
         table.add_column("Name", style="cyan")
         table.add_column("Version", style="green")
+        table.add_column("API", style="blue")
         table.add_column("Status", style="white")
-        for name, plugin in pm.plugins.items():
-            table.add_row(name, getattr(plugin, "version", ""), "loaded")
+        for manifest in pm.list_plugins():
+            table.add_row(
+                manifest.name,
+                manifest.version,
+                manifest.api_version,
+                "loaded",
+            )
         console.print(table)
 
     @app.command()  # type: ignore[untyped-decorator]

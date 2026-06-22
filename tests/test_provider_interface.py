@@ -6,13 +6,11 @@ import inspect
 from typing import Any
 
 import pytest
-
-from snipcontext.providers.base import BaseProvider, ProviderError
+from snipcontext.providers.base import BaseProvider
 from snipcontext.providers.claude import ClaudeProvider
 from snipcontext.providers.cursor import CursorProvider
-from snipcontext.providers.openai import OpenAIProvider
 from snipcontext.providers.generic import GenericProvider
-
+from snipcontext.providers.openai import OpenAIProvider
 
 CONCRETE_PROVIDERS = [
     ClaudeProvider,
@@ -23,7 +21,7 @@ CONCRETE_PROVIDERS = [
 
 
 class TestProviderInterfaceContract:
-    "Dynamically verify all concrete providers satisfy BaseProvider contract."
+    """Dynamically verify all concrete providers satisfy BaseProvider contract."""
 
     @pytest.mark.parametrize("provider_cls", CONCRETE_PROVIDERS)
     def test_abstract_methods_satisfied(self, provider_cls: type[BaseProvider]) -> None:
@@ -66,7 +64,7 @@ class TestProviderInterfaceContract:
 
 
 class TestProviderRegistry:
-    "Verify registry surfaces work after Phase 1 interface changes."
+    """Verify registry surfaces work after Phase 1 interface changes."""
 
     def test_new_provider_must_register(self) -> None:
         class UnregisteredProvider(BaseProvider):
