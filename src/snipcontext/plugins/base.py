@@ -13,7 +13,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
@@ -59,7 +59,7 @@ class Plugin(ABC):
         """Hook called after a snippet is loaded."""
         ...
 
-    def on_search(self, query: str, results: list) -> list:
+    def on_search(self, query: str, results: list[Any]) -> list[Any]:
         """Hook to modify search results."""
         return results
 
@@ -67,7 +67,7 @@ class Plugin(ABC):
         """Called when the shared configuration changes."""
         ...
 
-    def get_import_sources(self) -> dict[str, Callable]:
+    def get_import_sources(self) -> dict[str, Callable[..., Any]]:
         """Return additional import sources. Map name -> callable."""
         return {}
 
@@ -196,5 +196,20 @@ class PluginManager:
             try:
                 plugin.on_shutdown()
             except Exception as exc:
-                logger.error("Error deactivating plugin %s: %s", plugin.name, exc)
+                logger.error("Error deactivating plugin %s: %s", plugin.manifest.name, exc)
         self._plugins.clear()
+
+    def run_snippet_saved_hooks(self, snippet: Snippet) -> None:
+        for plugin in self._plugins.values():
+            try:
+                plugin.on_snippet_saved(snippet)
+            except Exception as exc:
+                logger.error("Error in %s on_snippet_saved: %s", plugin.manifest.name, exc)
+
+    def run_search_hooks(self, query: str, results: list[Any]) -> list[Any]:
+        for plugin in self._plugins.values():
+            try:
+                results = plugin.on_search(query, results)
+            except Exception as exc:
+                logger.error("Error in %s on_search: %s", plugin.manifest.name, exc)
+        return results

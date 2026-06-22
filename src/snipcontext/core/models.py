@@ -59,7 +59,7 @@ class Language(str, Enum):
     UNKNOWN = "unknown"
 
 
-class SnippetVersion(BaseModel):
+class SnippetVersion(BaseModel):  # type: ignore[misc]
     """Represents a single version snapshot of a snippet.
 
     SnipContext uses immutable version snapshots. When a snippet is updated,
@@ -76,14 +76,14 @@ class SnippetVersion(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _compute_hash(self):
+    def _compute_hash(self) -> SnippetVersion:  # type: ignore[misc]
         """Auto-compute content hash if not provided."""
         if not self.change_hash and self.content:
             self.change_hash = hashlib.sha256(self.content.encode()).hexdigest()[:16]
         return self
 
 
-class SnippetMetadata(BaseModel):
+class SnippetMetadata(BaseModel):  # type: ignore[misc]
     """Rich metadata attached to every snippet.
 
     Supports extensible key-value pairs for custom use cases while
@@ -119,7 +119,7 @@ class SnippetMetadata(BaseModel):
     )
 
 
-class Snippet(BaseModel):
+class Snippet(BaseModel):  # type: ignore[misc]
     """The central entity in SnipContext.
 
     A Snippet represents a reusable piece of code with rich metadata,
@@ -152,13 +152,13 @@ class Snippet(BaseModel):
     delete_marker: str = Field(default="", description="Reason or actor for deletion")
 
     @model_validator(mode="after")
-    def _validate_content_or_encrypted(self):
+    def _validate_content_or_encrypted(self) -> Snippet:  # type: ignore[misc]
         """Ensure either content or encrypted_content is provided."""
         if not self.content and not self.encrypted_content:
             raise ValueError("Either content or encrypted_content must be provided")
         return self
 
-    @field_validator("tags", mode="before")  # type: ignore[untyped-decorator]
+    @field_validator("tags", mode="before")  # type: ignore[misc]
     @classmethod
     def _normalize_tags(cls, v: list[str]) -> list[str]:
         """Normalize tags to lowercase, deduplicated, sorted."""
@@ -241,7 +241,7 @@ class SearchMode(str, Enum):
     TAG = "tag"  # Exact tag matching
 
 
-class SearchResult(BaseModel):
+class SearchResult(BaseModel):  # type: ignore[misc]
     """A single result from a snippet search query."""
 
     model_config = ConfigDict(frozen=True)
