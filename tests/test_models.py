@@ -237,8 +237,8 @@ class TestSnippet:
         )
         text = s.to_search_text()
         # Should contain title and content but no empty framework/version lines
-        lines = [l for l in text.split("\n") if l]
-        assert any("T" in l for l in lines)
+        lines = [line for line in text.split("\n") if line]
+        assert any("T" in line for line in lines)
         assert len(lines) >= 1
 
     def test_access_tracking(self):
