@@ -1,6 +1,7 @@
 """Minimal health router."""
 
 from fastapi import APIRouter
+
 from snipcontext.web.schemas import HealthResponse
 
 router = APIRouter()
