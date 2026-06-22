@@ -73,71 +73,84 @@ class Plugin(ABC):
 
 
 class PluginManager:
-    """Facade for the plugin registry.
+    """Legacy facade for the plugin registry.
 
-    Maintains backward compatibility for existing imports while delegating
-    all real work to ``PluginRegistry``.
+    Delegates all real work to the shared ``PluginRegistry`` singleton
+    while keeping the same import surface as before.
     """
 
-    def __init__(self) -> None:
-        self._registry = _get_registry()
+    @staticmethod
+    def _registry() -> PluginRegistry:
+        from snipcontext.plugins.registry import PluginRegistry
 
-    def discover(self) -> int:
-        return self._registry.discover()
+        return PluginRegistry()
 
-    def load_builtin_providers(self) -> None:
-        return self._registry.load_builtin_providers()
+    @staticmethod
+    def discover() -> int:
+        return PluginManager._registry().discover()
 
-    def get_provider(self, name: str) -> Any:
-        return self._registry.get_provider(name)
+    @staticmethod
+    def load_builtin_providers() -> None:
+        return PluginManager._registry().load_builtin_providers()
 
-    def list_providers(self) -> dict[str, str]:  # type: ignore[name-defined]
-        return self._registry.list_providers()
+    @staticmethod
+    def get_provider(name: str) -> Any:
+        return PluginManager._registry().get_provider(name)
 
-    def list_provider_names(self) -> list[str]:  # type: ignore[name-defined]
-        return self._registry.list_provider_names()
+    @staticmethod
+    def list_providers() -> dict[str, str]:
+        return PluginManager._registry().list_providers()
 
-    def list_plugins(self) -> list[PluginManifest]:  # type: ignore[name-defined]
-        return self._registry.list_plugins()
+    @staticmethod
+    def list_plugins() -> list[PluginManifest]:
+        return PluginManager._registry().list_plugins()
 
+    @staticmethod
+    def list_provider_names() -> list[str]:
+        return PluginManager._registry().list_provider_names()
+
+    @staticmethod
+    def load_plugin(name: str, config: dict[str, Any] | None = None) -> Any:
+        return PluginManager._registry().load_plugin(name, config)  # type: ignore[attr-defined]
+
+    @staticmethod
+    def unload_plugin(name: str) -> None:
+        return PluginManager._registry().unload_plugin(name)  # type: ignore[attr-defined]
+
+    @staticmethod
+    def get_plugin(name: str) -> Any:
+        return PluginManager._registry().get_plugin(name)
+
+    @staticmethod
+    def shutdown() -> None:
+        return PluginManager._registry().shutdown()
+
+    @staticmethod
+    def run_snippet_saved_hooks(snippet: Any) -> None:
+        return PluginManager._registry().run_snippet_saved_hooks(snippet)
+
+    @staticmethod
+    def run_search_hooks(query: str, results: Any) -> Any:
+        return PluginManager._registry().run_search_hooks(query, results)
+
+    # Backward-compatibility property shims for tests/CLI that inspect internals.
     @property
     def default_provider(self) -> str:
-        return self._registry.default_provider
+        return PluginManager._registry().default_provider
 
     @property
     def _providers(self) -> dict[str, Any]:
-        return {
-            k: v
-            for k, v in self._registry._plugins.items()
-            if k in self._registry.list_provider_names()
-        }
-
-    @property
-    def plugins(self) -> dict[str, Plugin]:
-        return self._registry._instances
+        registry = PluginManager._registry()
+        return {k: v for k, v in registry._plugins.items() if k in registry.list_provider_names()}
 
     @property
     def _plugins(self) -> dict[str, Any]:
-        return self._registry._instances
+        return PluginManager._registry()._instances
 
     @property
     def _instances(self) -> dict[str, Any]:
-        return self._registry._instances
+        return PluginManager._registry()._instances
 
-    def get_plugin(self, name: str) -> Plugin | None:
-        return self._registry.get_plugin(name)
-
-    def shutdown(self) -> None:
-        return self._registry.shutdown()
-
-    def run_snippet_saved_hooks(self, snippet: Any) -> None:
-        return self._registry.run_snippet_saved_hooks(snippet)
-
-    def run_search_hooks(self, query: str, results: Any) -> Any:
-        return self._registry.run_search_hooks(query, results)
-
-
-def _get_registry() -> PluginRegistry:
-    from snipcontext.plugins.registry import PluginRegistry
-
-    return PluginRegistry()
+    @property
+    def plugins(self) -> dict[str, Any]:
+        return self._instances
