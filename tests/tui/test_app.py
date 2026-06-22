@@ -5,9 +5,10 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
+from textual.widgets import Input
+
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.tui.textual_app import PreviewPane, SnippetBrowser
-from textual.widgets import Input
 
 
 @pytest.fixture

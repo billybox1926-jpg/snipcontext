@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, Footer, Header, Input, ListView, ListItem, Static
+from textual.widgets import Button, Footer, Header, Input, ListItem, ListView, Static
 
 from snipcontext.core.models import Snippet
 
