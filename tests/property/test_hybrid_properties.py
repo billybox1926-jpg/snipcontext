@@ -9,6 +9,7 @@ import numpy as np
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 from hypothesis.strategies import sampled_from
+
 from snipcontext.config.settings import Config, EmbeddingConfig, SearchConfig, StorageConfig
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.core.search import HybridSearch
@@ -152,9 +153,9 @@ def test_hybrid_search_monotonicity_keyword_boost(snippets: list[Snippet], query
         initial_rank_b = id_to_rank_initial.get(b.id, len(test_snippets))
         boosted_rank_b = id_to_rank_boosted.get(b.id, len(test_snippets_boosted))
 
-        assert (
-            boosted_rank_b <= initial_rank_b
-        ), f"Boosted snippet b rank worsened: initial {initial_rank_b}, boosted {boosted_rank_b}"
+        assert boosted_rank_b <= initial_rank_b, (
+            f"Boosted snippet b rank worsened: initial {initial_rank_b}, boosted {boosted_rank_b}"
+        )
 
 
 @given(snippet_lists, query_str)

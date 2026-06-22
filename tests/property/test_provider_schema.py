@@ -6,6 +6,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 from hypothesis.strategies import builds, sampled_from
+
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.plugins.base import PluginManager
 

@@ -7,12 +7,13 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from typer.testing import CliRunner
+
 from snipcontext.cli.app import app
 from snipcontext.config.settings import Config, EmbeddingConfig, SearchConfig, StorageConfig
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.core.search import EmbeddingEngine, HybridSearch
 from snipcontext.core.storage import StorageEngine
-from typer.testing import CliRunner
 
 MODEL_IDS = ["all-MiniLM-L6-v2", "BAAI/bge-small-en-v1.5"]
 DEVICE_IDS = ["cpu", "cuda", "mps"]

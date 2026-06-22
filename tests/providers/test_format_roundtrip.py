@@ -91,7 +91,7 @@ def special_chars_snippet_batch():
             snippet_id="snapshot-snippet-special-chars",
             title="Special <Characters> & Unicode 日本語 🚀",
             content="// special chars\nx = '<>&\"'\nprint('日本語, 🚀')\n",
-            description="Tests & <special> \"chars\" and unicode",
+            description='Tests & <special> "chars" and unicode',
             tags=["test", "edge", "unicode"],
         )
     ]
@@ -138,9 +138,7 @@ class TestProviderFormatterOutput:
         snapshot: Any,
     ) -> None:
         provider = provider_cls(include_metadata=True)
-        output = provider.export_batch(
-            canonical_snippets, title="Canonical Context"
-        )
+        output = provider.export_batch(canonical_snippets, title="Canonical Context")
 
         assert isinstance(output, str)
         assert output.strip()
@@ -167,16 +165,12 @@ class TestProviderFormatterOutput:
         snapshot: Any,
     ) -> None:
         provider = provider_cls(include_metadata=True)
-        output = provider.export_batch(
-            special_chars_snippet_batch, title="Special Chars"
-        )
+        output = provider.export_batch(special_chars_snippet_batch, title="Special Chars")
 
         assert isinstance(output, str)
         assert output.strip()
         # Snapshot locks exact escaping behavior; test will fire on drift.
-        snapshot.assert_match(
-            output, f"{_provider_name(provider)}-special-chars"
-        )
+        snapshot.assert_match(output, f"{_provider_name(provider)}-special-chars")
 
     def test_minimal_metadata_snapshot_is_stable(
         self,
@@ -185,12 +179,8 @@ class TestProviderFormatterOutput:
         snapshot: Any,
     ) -> None:
         provider = provider_cls(include_metadata=True)
-        output = provider.export_batch(
-            minimal_metadata_snippet_batch, title="Minimal Context"
-        )
+        output = provider.export_batch(minimal_metadata_snippet_batch, title="Minimal Context")
 
         assert isinstance(output, str)
 
-        snapshot.assert_match(
-            output, f"{_provider_name(provider)}-minimal"
-        )
+        snapshot.assert_match(output, f"{_provider_name(provider)}-minimal")
