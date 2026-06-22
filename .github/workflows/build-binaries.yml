@@ -57,7 +57,7 @@ jobs:
       - name: Install dependencies
         run: |
           uv venv
-          uv pip install -e ".[all]" pyinstaller
+          uv pip install -e "." pyinstaller
 
       - name: Build binary (full)
         if: "!endsWith(matrix.target, '-minimal')"
@@ -69,13 +69,7 @@ jobs:
         if: endsWith(matrix.target, '-minimal')
         shell: bash
         run: |
-          uv run pyinstaller snipcontext.spec --clean --noconfirm \
-            --exclude-module sentence_transformers \
-            --exclude-module faiss \
-            --exclude-module cryptography \
-            --exclude-module fastapi \
-            --exclude-module uvicorn \
-            --exclude-module prompt_toolkit
+          uv run pyinstaller snipcontext.spec --clean --noconfirm
 
       - name: Package binary
         shell: bash

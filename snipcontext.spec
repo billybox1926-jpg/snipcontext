@@ -55,8 +55,6 @@ a = Analysis(
         "snipcontext.providers.cursor",
         "snipcontext.providers.openai",
         "snipcontext.providers.generic",
-        "sklearn.feature_extraction.text",
-        "sklearn.metrics.pairwise",
         "yaml",
         "platformdirs",
         "rich",
