@@ -1,9 +1,10 @@
-"""SnipContext TUI (Terminal User Interface) - Interactive REPL.
-
-This module provides an interactive terminal-based interface for SnipContext.
-"""
+"""SnipContext TUI (Textual-based terminal UI)."""
 
 from __future__ import annotations
 
-__all__: list[str] = ["run"]
-__version__ = "0.1.0"
+__all__ = ["run_tui"]
+
+try:  # Optional: only required for the Textual browser
+    from snipcontext.tui.textual_app import run_tui  # noqa: F401
+except Exception:  # pragma: no cover - optional dependency fallback
+    run_tui = None  # type: ignore[assignment,misc]

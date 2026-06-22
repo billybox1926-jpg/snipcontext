@@ -85,13 +85,13 @@ def repl(
 ) -> None:
     """Start the interactive SnipContext shell."""
     try:
-        from snipcontext.tui.app import run
+        from snipcontext.tui import run_tui
     except ImportError as exc:
         console = Console()
         console.print("[red]The interactive shell requires the optional 'tui' extra.[/red]")
         console.print("Install it with: pip install snipcontext[tui]")
         raise typer.Exit(1) from exc
-    sys.exit(run())
+    sys.exit(run_tui())
 
 
 @app.command()  # type: ignore[untyped-decorator]
