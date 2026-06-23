@@ -12,6 +12,8 @@ from snipcontext.config.settings import Config, StorageConfig, reset_config
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.core.storage import (
     EncryptionError,
+    IndexCorruptedError,
+    MissingIndexError,
     SnippetNotFoundError,
     StorageEngine,
     StorageError,
@@ -268,3 +270,229 @@ class TestStorageImportExport:
         storage = StorageEngine(temp_config)
         with pytest.raises(StorageError):
             storage.import_file(Path("/nonexistent/file.json"))
+
+
+class TestStorageExceptions:
+    """Tests for storage exception classes."""
+
+    def test_storage_error(self):
+        with pytest.raises(StorageError):
+            raise StorageError("test error")
+
+    def test_snippet_not_found_error(self):
+        with pytest.raises(SnippetNotFoundError):
+            raise SnippetNotFoundError("not found")
+
+    def test_index_corrupted_error_without_cause(self):
+        err = IndexCorruptedError("vector", "/path/to/index")
+        assert err.index_type == "vector"
+        assert err.path == "/path/to/index"
+        assert err.original_error is None
+        assert "vector" in str(err)
+        assert "/path/to/index" in str(err)
+
+    def test_index_corrupted_error_with_cause(self):
+        cause = RuntimeError("disk full")
+        err = IndexCorruptedError("keyword", "/path/to/index", original_error=cause)
+        assert err.original_error is cause
+        assert "disk full" in str(err)
+
+    def test_missing_index_error(self):
+        err = MissingIndexError("vector", "/path/to/index")
+        assert err.index_type == "vector"
+        assert err.path == "/path/to/index"
+        assert "vector" in str(err)
+        assert "/path/to/index" in str(err)
+
+    def test_encryption_error_operation_only(self):
+        err = EncryptionError("encrypt")
+        assert err.operation == "encrypt"
+        assert err.snippet_id is None
+        assert err.original_error is None
+        assert "encrypt" in str(err)
+
+    def test_encryption_error_with_snippet_id(self):
+        err = EncryptionError("decrypt", snippet_id="abc123")
+        assert err.snippet_id == "abc123"
+        assert "abc123" in str(err)
+
+    def test_encryption_error_with_original_error(self):
+        cause = ValueError("bad key")
+        err = EncryptionError("encrypt", original_error=cause)
+        assert err.original_error is cause
+        assert "bad key" in str(err)
+
+
+class TestStorageProperties:
+    """Tests for storage engine properties."""
+
+    def test_index_dir_property(self, temp_config):
+        storage = StorageEngine(temp_config)
+        assert storage.index_dir.exists()
+
+    def test_deleted_ids_property(self, temp_config):
+        storage = StorageEngine(temp_config)
+        assert storage.deleted_ids == set()
+
+    def test_mark_deleted(self, temp_config, sample_snippet):
+        storage = StorageEngine(temp_config)
+        storage.save(sample_snippet)
+        storage.mark_deleted(sample_snippet.id)
+        assert sample_snippet.id in storage.deleted_ids
+
+    def test_exists(self, temp_config, sample_snippet):
+        storage = StorageEngine(temp_config)
+        assert not storage.exists(sample_snippet.id)
+        storage.save(sample_snippet)
+        assert storage.exists(sample_snippet.id)
+
+    def test_exists_nonexistent(self, temp_config):
+        storage = StorageEngine(temp_config)
+        assert not storage.exists("nonexistent-id")
+
+
+class TestStorageGetTags:
+    """Tests for tag retrieval."""
+
+    def test_get_tags(self, temp_config):
+        storage = StorageEngine(temp_config)
+        s = Snippet(
+            content="code",
+            metadata=SnippetMetadata(title="Test"),
+            tags=["python", "web"],
+        )
+        storage.save(s)
+        tags = storage.get_tags(s.id)
+        assert "python" in tags
+        assert "web" in tags
+
+    def test_get_all_tags_empty(self, temp_config):
+        storage = StorageEngine(temp_config)
+        assert storage.get_all_tags() == []
+
+    def test_get_all_tags_dedup(self, temp_config):
+        storage = StorageEngine(temp_config)
+        s1 = Snippet(content="a", metadata=SnippetMetadata(title="A"), tags=["shared", "a"])
+        s2 = Snippet(content="b", metadata=SnippetMetadata(title="B"), tags=["shared", "b"])
+        storage.save(s1)
+        storage.save(s2)
+        tags = storage.get_all_tags()
+        assert tags == ["a", "b", "shared"]
+
+
+class TestStorageReindex:
+    """Tests for reindex and vacuum operations."""
+
+    def test_reindex_all(self, temp_config):
+        storage = StorageEngine(temp_config)
+        s = Snippet(content="code", metadata=SnippetMetadata(title="Test"))
+        storage.save(s)
+        count = storage.reindex_all()
+        assert count == 1
+
+    def test_reindex_empty(self, temp_config):
+        storage = StorageEngine(temp_config)
+        count = storage.reindex_all()
+        assert count == 0
+
+    def test_vacuum_no_orphans(self, temp_config):
+        storage = StorageEngine(temp_config)
+        s = Snippet(content="code", metadata=SnippetMetadata(title="Test"))
+        storage.save(s)
+        freed = storage.vacuum()
+        assert freed == 0
+
+    def test_vacuum_with_orphan(self, temp_config):
+        storage = StorageEngine(temp_config)
+        # Create a valid snippet
+        s = Snippet(content="code", metadata=SnippetMetadata(title="Test"))
+        storage.save(s)
+        # Create an orphaned file
+        orphan_path = storage.snippets_dir / "orphan.json"
+        orphan_path.write_text('{"not": "valid"}')
+        freed = storage.vacuum()
+        assert freed > 0
+        assert not orphan_path.exists()
+
+
+class TestStorageImportEdgeCases:
+    """Tests for import edge cases."""
+
+    def test_import_list_format(self, temp_config):
+        storage = StorageEngine(temp_config)
+        import_data = [
+            {
+                "content": "def test(): pass",
+                "metadata": {"title": "Test", "language": "python"},
+                "tags": ["test"],
+            }
+        ]
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(import_data, f)
+            f.flush()
+            count = storage.import_file(Path(f.name))
+        assert count == 1
+
+    def test_import_skips_invalid_items(self, temp_config):
+        storage = StorageEngine(temp_config)
+        import_data = {
+            "snippets": [
+                {
+                    "content": "valid code",
+                    "metadata": {"title": "Valid"},
+                    "tags": [],
+                },
+                {"invalid": "no content field"},
+            ],
+            "count": 2,
+        }
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(import_data, f)
+            f.flush()
+            count = storage.import_file(Path(f.name))
+        assert count == 1
+
+    def test_import_empty_list(self, temp_config):
+        storage = StorageEngine(temp_config)
+        import_data = {"snippets": [], "count": 0}
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(import_data, f)
+            f.flush()
+            count = storage.import_file(Path(f.name))
+        assert count == 0
+
+    def test_import_malformed_json(self, temp_config):
+        storage = StorageEngine(temp_config)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write("not valid json{{{")
+            f.flush()
+            with pytest.raises(StorageError):
+                storage.import_file(Path(f.name))
+
+
+class TestStorageEncryptionErrors:
+    """Tests for encryption error paths."""
+
+    pytest.importorskip("cryptography")
+
+    def test_encrypt_without_encryption_enabled(self, temp_config, monkeypatch):
+        """Test that encryption raises when not enabled."""
+        config = temp_config
+        config.encryption.enabled = False
+        storage = StorageEngine(config)
+        with pytest.raises(EncryptionError):
+            storage.encrypt_content("test")
+
+    def test_decrypt_without_encryption_enabled(self, temp_config):
+        """Test that decryption raises when not enabled."""
+        config = temp_config
+        config.encryption.enabled = False
+        storage = StorageEngine(config)
+        with pytest.raises(EncryptionError):
+            storage.decrypt_content("dGVzdA==")
+
+    def test_decrypt_invalid_token(self, encrypted_storage):
+        """Test that decrypting invalid data raises EncryptionError."""
+        with pytest.raises(EncryptionError):
+            encrypted_storage.decrypt_content("not-valid-base64!!!")
+
