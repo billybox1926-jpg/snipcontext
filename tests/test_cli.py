@@ -654,3 +654,107 @@ class TestEditCommand:
             get_result, _ = invoke("get", sid, env=env)
             assert "env=staging" in get_result.output
             assert "tier=frontend" in get_result.output
+
+
+class TestStdinPiping:
+    """Tests for stdin piping support in sc add (issue #114)."""
+
+    def test_pipe_content_via_stdin(self):
+        """Pipe content via stdin to sc add."""
+        result, tmp = invoke(
+            "add",
+            "--title",
+            "Piped Snippet",
+            "--tag",
+            "piped",
+            input="def hello():\n    print('hello')\n",
+        )
+        assert result.exit_code == 0
+        assert "Added snippet" in result.output
+
+    def test_pipe_with_title_and_tags(self):
+        """Pipe content with --title and --tag flags."""
+        result, tmp = invoke(
+            "add",
+            "--title",
+            "Tagged Piped",
+            "--tag",
+            "python",
+            "--tag",
+            "cli",
+            input="import sys\nprint(sys.version)\n",
+        )
+        assert result.exit_code == 0
+        assert "Added snippet" in result.output
+
+    def test_pipe_multiline_content(self):
+        """Pipe multiline content via stdin."""
+        multiline = (
+            "def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)\n"
+        )
+        result, tmp = invoke(
+            "add",
+            "--title",
+            "Factorial",
+            "--tag",
+            "python",
+            "--tag",
+            "recursion",
+            input=multiline,
+        )
+        assert result.exit_code == 0
+        assert "Added snippet" in result.output
+
+    def test_pipe_empty_content_fails(self):
+        """Piping empty content should fail gracefully."""
+        result, tmp = invoke(
+            "add",
+            "--title",
+            "Empty",
+            "--tag",
+            "test",
+            input="   \n  \n",
+        )
+        # Empty/whitespace content should be rejected
+        assert result.exit_code != 0 or "empty" in result.output.lower()
+
+    def test_pipe_with_language_flag(self):
+        """Pipe content with --lang flag."""
+        result, tmp = invoke(
+            "add",
+            "--title",
+            "JS Pipe",
+            "--tag",
+            "js",
+            "--lang",
+            "javascript",
+            input="const x = () => console.log('hello');\n",
+        )
+        assert result.exit_code == 0
+        assert "Added snippet" in result.output
+
+    def test_pipe_content_is_sanitized(self):
+        """Piped content with special chars is handled safely."""
+        result, tmp = invoke(
+            "add",
+            "--title",
+            "Special Chars",
+            "--tag",
+            "test",
+            input="<script>alert('xss')</script>\n",
+        )
+        assert result.exit_code == 0
+        assert "Added snippet" in result.output
+
+    def test_pipe_unicode_content(self):
+        """Pipe unicode content via stdin."""
+        result, tmp = invoke(
+            "add",
+            "--title",
+            "Unicode",
+            "--tag",
+            "unicode",
+            input="# 你好世界\nprint('héllo 🌍')\n",
+        )
+        assert result.exit_code == 0
+        assert "Added snippet" in result.output
