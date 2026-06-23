@@ -201,6 +201,20 @@ class StorageEngine:
         """Check if a snippet exists on disk."""
         return self._snippet_path(snippet_id).exists()
 
+    def find_by_content_hash(self, content_hash: str) -> Snippet | None:
+        """Find a snippet by exact content hash.
+
+        Args:
+            content_hash: SHA-256 prefix to match.
+
+        Returns:
+            The first matching snippet, or None.
+        """
+        for snippet in self.iter_all():
+            if snippet.content_hash == content_hash:
+                return snippet
+        return None
+
     # ------------------------------------------------------------------
     # Bulk operations
     # ------------------------------------------------------------------

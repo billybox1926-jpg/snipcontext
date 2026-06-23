@@ -212,6 +212,10 @@ snipcontext add "def authenticate(token):\n    return jwt.decode(token, SECRET)"
   --lang python \
   --tag auth --tag jwt --tag security
 
+> SnipContext performs a fast hash-based exact duplicate check before the
+> semantic dedup step. If a snippet with identical content already exists,
+> you'll be prompted before adding it again.
+
 # Add with rich metadata (v0.3.0+)
 snipcontext add "from fastapi import FastAPI" \
   --title "FastAPI App Setup" \

@@ -297,16 +297,19 @@ class TestDedupIntegration:
             assert r1.exit_code == 0
             assert "Added snippet" in r1.output
 
-            # Second identical snippet – if the index can't build/train here,
-            # we must still not crash and must not emit an incorrect dedup warning.
+            # Second identical snippet – hash dedup catches exact duplicates even
+            # when the semantic index cannot build/train. The prompt appears,
+            # default is No, so the snippet is not saved.
             r2, _ = invoke(
                 "add",
                 "print('hello world')",
                 env=env,
+                input="n\n",
             )
             assert r2.exit_code == 0
-            assert "Added snippet" in r2.output
+            assert "Added snippet" not in r2.output
             assert "This looks similar to" not in r2.output
+            assert "Exact duplicate" in r2.output
 
 
 class TestEditCommand:

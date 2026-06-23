@@ -218,6 +218,19 @@ def register_commands(app: typer.Typer) -> None:
                 ),
                 tags=tags,
             )
+
+        # ── Fast exact‑hash dedup (before embedding) ──
+        if not encrypt:
+            content_hash = snippet.content_hash
+            existing = storage.find_by_content_hash(content_hash)
+            if existing:
+                console.print(
+                    f"[yellow]Exact duplicate of '{existing.metadata.title}' "
+                    f"(id: {existing.id}). Add anyway?[/yellow]"
+                )
+                if not typer.confirm("Add anyway?", default=False):
+                    raise typer.Exit(0)
+
         # Auto-tag and dedup
         final_tags = list(snippet.tags)
         auto_tag_enabled = getattr(getattr(config, "auto_tag", None), "enabled", False)
