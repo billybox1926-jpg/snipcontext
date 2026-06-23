@@ -78,6 +78,7 @@ class TestGenericProvider:
         assert "My Snippets" in result
         assert "Hello World" in result
         assert "Add Function" in result
+        assert "Export schema version: 1.0.0" in result
 
     def test_no_metadata(self):
         provider = GenericProvider(include_metadata=False)
@@ -150,6 +151,7 @@ class TestClaudeProvider:
         assert '<document index="1">' in result
         assert '<document index="2">' in result
         assert "</documents>" in result
+        assert "Export schema version: 1.0.0" in result
 
 
 class TestCursorProvider:
@@ -166,6 +168,16 @@ class TestCursorProvider:
 
     def test_format_type(self):
         assert CursorProvider.format == ExportFormat.MARKDOWN
+
+    def test_export_batch(self):
+        provider = CursorProvider()
+        snippets = create_test_snippets()
+        result = provider.export_batch(snippets, title="My Snippets")
+
+        assert "My Snippets" in result
+        assert "[source:" in result
+        assert "hello_world.python" in result
+        assert "Export schema version: 1.0.0" in result
 
     def test_metadata_fields(self):
         provider = CursorProvider()
@@ -243,6 +255,7 @@ class TestOpenAIProvider:
         assert "Context" in result
         assert "SNIPPET:" in result
         assert "Use these as reference" in result
+        assert "Export schema version: 1.0.0" in result
 
 
 class TestProviderRegistry:

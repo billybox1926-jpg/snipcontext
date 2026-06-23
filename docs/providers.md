@@ -47,6 +47,12 @@ Do not leak raw provider exceptions through the CLI or plugin loader.
 Providers include full `SnippetMetadata` by default (`include_metadata=True`).
 Set `include_metadata=False` to export code only.
 
+## Export Version
+
+All `export_batch` outputs include a version header (`Export schema version: X.Y.Z`).
+This version is incremented when the export format changes in a non-backward-compatible way.
+Consumers should check this version and handle accordingly.
+
 ## Discovery
 
 Providers can be loaded directly or discovered via entry points:

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from snipcontext.core.sanitization import sanitize_text
 from snipcontext.plugins.base import PluginManifest
-from snipcontext.providers.base import BaseProvider, ExportFormat
+from snipcontext.providers.base import EXPORT_VERSION, BaseProvider, ExportFormat
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
@@ -41,6 +41,8 @@ class GenericProvider(BaseProvider):
             f"# {safe_title}",
             "",
             f"> *{len(snippets)} code snippets provided as context*",
+            "",
+            f"> *Export schema version: {EXPORT_VERSION}*",
             "",
             "---",
             "",

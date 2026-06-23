@@ -1,4 +1,5 @@
 <!-- Minimal Context — 1 snippets for Claude -->
+<!-- Export schema version: 1.0.0 -->
 <documents>
 <document index="1">
 <source>snapshot-snippet-minimal-meta</source>

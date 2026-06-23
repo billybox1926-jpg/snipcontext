@@ -1,5 +1,6 @@
 // Minimal Context
 // 1 snippets from SnipContext
+// Export schema version: 1.0.0
 
 [source: minimal_meta.python]
 // Language: python

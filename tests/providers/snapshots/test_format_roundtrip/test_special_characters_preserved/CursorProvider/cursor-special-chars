@@ -1,5 +1,6 @@
 // Special Chars
 // 1 snippets from SnipContext
+// Export schema version: 1.0.0
 
 [source: special_<characters>_&_unicode_日本語_🚀.python]
 // Tests & <special> "chars" and unicode

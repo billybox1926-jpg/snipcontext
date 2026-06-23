@@ -1,5 +1,6 @@
 // Canonical Context
 // 2 snippets from SnipContext
+// Export schema version: 1.0.0
 
 [source: hello_world.python]
 // Language: python

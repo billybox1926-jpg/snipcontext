@@ -17,6 +17,9 @@ if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
 
 
+EXPORT_VERSION = "1.0.0"
+
+
 class ExportFormat(str, Enum):
     """Supported export formats."""
 
@@ -65,7 +68,10 @@ class BaseProvider(Plugin, ABC):
         Returns:
             Formatted multi-snippet string.
         """
-        parts = [f"# {title}\n"]
+        parts = [
+            f"# {title}\n",
+            f"# Export schema version: {EXPORT_VERSION}\n",
+        ]
         for snippet in snippets:
             parts.append(self.export_single(snippet))
             parts.append("---\n")
