@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from snipcontext.config.settings import Config, SearchConfig, StorageConfig, reset_config
-from snipcontext.core.models import Language, SearchMode, Snippet, SnippetMetadata
+from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.core.search import HybridSearch
 from snipcontext.core.search_ops import ensure_index, export_snippets, search_snippets
 from snipcontext.core.storage import StorageEngine
