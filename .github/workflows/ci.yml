@@ -245,10 +245,10 @@ jobs:
             apt-get update
             apt-get install -y python3 python3-pip python3-venv git
           run: |
+            # Explicitly set PYTHONPATH to avoid unbound variable error.
+            export PYTHONPATH="$(pwd)/src"
             python3 -m venv .venv
             source .venv/bin/activate
             pip install --upgrade pip
             pip install -e ".[dev]"
-            pip install pytest pytest-cov
-            export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
-            python -m pytest tests/test_storage.py tests/test_search_history.py tests/test_config.py -v --tb=short
+            pytest tests/test_storage.py tests/test_search_history.py tests/test_config.py -v --tb=short
