@@ -102,4 +102,18 @@ A healthy PR should include:
 - linked issues when applicable
 - validation steps
 - screenshots or logs when useful
+
+## Snapshot tests
+
+We use `pytest-snapshot` to lock down CLI output and provider formatting.
+Snapshot files live alongside the tests (for example, `tests/cli/snapshots/`).
+
+To update snapshots after an intentional output change:
+
+```bash
+pytest tests/cli/test_cli_snapshots.py --snapshot-update
+```
+
+Review the diff before committing updated snapshots.
+
 - documentation updates for user-facing or contributor-facing changes
