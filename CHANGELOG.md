@@ -59,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sprint + Priority custom fields on project board with full issue tagging
 
 ### Fixed
+- **ARM/Termux compatibility** — Made Rust‑dependent packages (`pydantic-core`, `cryptography`) optional via dependency groups, resolving installation failures on ARM/Termux environments (closes #62).
 - Snippet content sanitization to prevent XSS in downstream rendering (closes #93)
   - New `core/sanitization.py` module: `sanitize_text()`, `sanitize_code()`, `sanitize_html()`, `sanitize_for_display()`
   - Applied to all export providers (generic, openai, cursor, claude) and CLI display
