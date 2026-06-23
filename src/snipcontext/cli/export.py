@@ -70,7 +70,10 @@ def register_commands(app: typer.Typer) -> None:
     def providers(
         health: bool = typer.Option(False, "--health", help="Run provider health checks"),
     ) -> None:
-        """List available export providers."""
+        """List available export providers.
+
+        Use --health to run a health check on each provider.
+        """
         pm = PluginManager()
         pm.load_builtin_providers()
         if health:

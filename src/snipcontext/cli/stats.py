@@ -207,7 +207,11 @@ def register_commands(app: typer.Typer) -> None:
         detailed: bool = typer.Option(False, "--detailed", "-d", help="Show detailed analytics"),
         json_output: bool = typer.Option(False, "--json", help="Output stats as JSON"),
     ) -> None:
-        """Show collection statistics."""
+        """Show collection statistics.
+
+        Use --detailed for full analytics (language distribution, tag charts,
+        access stats, size metrics). Use --json for machine-readable output.
+        """
         config, storage, _ = _get_context()
         snippets = storage.list_all()
 

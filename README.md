@@ -295,6 +295,94 @@ snipcontext watch
 snipcontext demo
 ```
 
+### CLI Commands Reference
+
+| Command | Description | Key Options |
+|---------|-------------|-------------|
+| `sc export` | Export snippets in LLM‑optimized format | `--provider/-p` (claude, cursor, openai, generic), `--output/-o`, `--query/-q`, `--id`, `--limit/-n` |
+| `sc edit` | Edit an existing snippet | `<id>`, `--title`, `--content/-c`, `--tag/--add-tag`, `--remove-tag`, `--lang/-l`, `--source`, `--framework`, `--version`, `--interactive/-i`, `--force/-f` |
+| `sc stats` | Show collection statistics | `--detailed/-d`, `--json` |
+| `sc providers` | List available export providers | `--health` (run provider health checks) |
+| `sc config path` | Show config / data / index directories | *(no options)* |
+| `sc config show` | Show current configuration (YAML) | `--force` |
+| `sc config set <key> <value>` | Update a config value | `--save/--no-save` |
+| `sc history list` | Show recent search history | `--limit` |
+| `sc history favorites` | Show favorite queries | *(no options)* |
+
+#### `sc export`
+
+Formats snippets for consumption by LLMs or IDEs.
+
+```bash
+# Export all snippets as Generic Markdown to stdout
+snipcontext export --provider generic
+
+# Export search results for Claude to a file
+snipcontext export --query "auth" --provider claude --output context.xml
+
+# Export specific snippets by ID
+snipcontext export --id abc123 --id def456 --provider openai -o snippets.md
+
+# Limit query results
+snipcontext export --query "database" --limit 5 --provider cursor
+```
+
+**What gets exported:** snippet content, metadata (title, language, tags, framework, version), and an `Export schema version: 1.0.0` header.
+
+#### `sc edit`
+
+Supportspartial updates — only specified fields are changed.
+
+```bash
+# Update title and add a tag
+snipcontext edit abc123 --title "JWT Auth" --tag security
+
+# Update content from a file
+snipcontext edit abc123 --file fixed_auth.py --lang python
+
+# Update multiple metadata fields
+snipcontext edit abc123 --framework fastapi --version "0.100+" --source "https://example.com"
+
+# Open in $EDITOR for full editing
+snipcontext edit abc123 --interactive
+```
+
+#### `sc stats`
+
+```bash
+# Basic overview
+snipcontext stats
+
+# Detailed analytics with distributions
+snipcontext stats --detailed
+
+# Machine-readable JSON
+snipcontext stats --json
+```
+
+Shows: total snippets, tags, languages, encrypted count, size, dates, language distribution, top tags, access stats, and size metrics (detailed).
+
+#### `sc providers`
+
+```bash
+# List all available export providers
+snipcontext providers
+
+# Check provider health
+snipcontext providers --health
+```
+
+Built-in providers: `generic` (Markdown), `claude` (XML), `cursor` (file headers), `openai` (delineated sections).
+
+#### `sc config path`
+
+```bash
+# Show all storage and config locations
+snipcontext config path
+```
+
+Outputs: config file path, data directory, snippets directory, and index directory.
+
 ### Library Usage
 
 ```python
