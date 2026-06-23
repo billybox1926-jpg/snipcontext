@@ -156,7 +156,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `except: pass` in `search.py` silently swallowing index cleanup errors (partially addressed)
+- `except: pass` in `search.py` silently swallowing index cleanup errors — **fully addressed**. Replaced with proper logging (`logger.warning`) and error propagation (`return False`) in index load/cleanup paths.
 - Duplicate `_OPT_QUERY`, `_OPT_IDS`, `_OPT_OUTPUT` constants causing option conflicts
 - Short option conflicts: `-f` (file/fuzzy/force), `-t` (tag/threshold), `-s` (sensitive/sort), `-m` (mode/message)
 - `DedupConfig` missing `auto_accept` — no way to skip dedup warnings in scripts
