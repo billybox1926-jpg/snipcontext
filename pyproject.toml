@@ -143,7 +143,7 @@ select = [
     "B",   # flake8-bugbear
     "D",   # pydocstyle
 ]
-ignore = ["E501", "D100", "D104", "D101", "D102", "D103", "D107", "D202", "B008", "B904"]
+ignore = ["E501", "D100", "D104", "D101", "D102", "D103", "D107", "D202", "B008", "B904", "N815"]
 [tool.ruff.format]
 quote-style = "double"
 [tool.ruff.lint.pydocstyle]
@@ -192,4 +192,4 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
 ]
-fail_under = 63  # Calibrated to CI "minimal install" floor; raise after expanding test matrix
+fail_under = 68  # Bumped after adding backend/benchmark coverage

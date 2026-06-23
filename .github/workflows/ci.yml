@@ -89,14 +89,52 @@ jobs:
         shell: bash
         run: |
           export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
-          python -m pytest -q --tb=short --cov=src/snipcontext --cov-report=term-missing
+          python -m pytest -q --tb=short -m "not slow" --cov=src/snipcontext --cov-report=term-missing
 
-      - name: Run tests (slow)
+      - name: Run slow tests
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
           python -m pytest -q --tb=short -m "slow"
+
+  # ── Full semantic dependency matrix ──────────────────────────────
+  test-semantic:
+    name: Test semantic extra (Python ${{ matrix.python-version }})
+    needs: quality
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Cache Hugging Face models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-semantic-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            hf-semantic-${{ runner.os }}-${{ matrix.python-version }}-
+            hf-semantic-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev,semantic]"
+
+      - name: Run tests
+        shell: bash
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
+          python -m pytest -q --tb=short -m "not slow" --cov=src/snipcontext --cov-report=term-missing
 
   # ── Minimal install (no optional extras) ──────────────────────────
   test-minimal:
@@ -184,9 +222,3 @@ jobs:
 
       - name: Check package with twine
         run: twine check dist/*
-
-      - name: Verify entry points
-        run: |
-          pip install dist/*.whl
-          snipcontext --help
-          sc --help

@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from snipcontext.config.settings import Config, get_config
+from snipcontext.core.index_backends import IndexBackend
 from snipcontext.core.models import SearchMode, SearchResult, Snippet
 from snipcontext.core.storage import StorageError
 
@@ -138,35 +139,35 @@ class EmbeddingEngine:
 
 
 class VectorIndex:
-    """FAISS-based vector index for fast similarity search.
+    """Vector search index backed by a pluggable ``IndexBackend`` implementation.
 
-    Manages the mapping between FAISS internal IDs and SnipContext snippet IDs.
+    The public API is unchanged from the previous FAISS-specific version so
+    that existing tests and callers continue to work without modification.
     """
 
     def __init__(self, config: Config | None = None) -> None:
         self._config = config or get_config()
-        self._index: faiss.Index | None = None
-        self._id_map: list[str] = []  # faiss_idx -> snippet_id
-        self._id_to_idx: dict[str, int] = {}
+        self._backend: IndexBackend | None = None
         self._content_hashes: dict[str, str] = {}
+        self._id_set: set[str] = set()
 
     @property
     def is_trained(self) -> bool:
-        return self._index is not None and self._index.ntotal > 0
+        return self._backend is not None and self._backend.is_trained
 
     @property
     def count(self) -> int:
-        return self._index.ntotal if self._index else 0
+        return self._backend.count if self._backend else 0
 
     @property
     def snippet_ids(self) -> tuple[str, ...]:
-        return tuple(self._id_map)
+        return tuple(self._backend.snippet_ids if self._backend else [])
 
     def build(self, snippets: list[Snippet], embedding_engine: EmbeddingEngine) -> None:
-        """Build the FAISS index from a list of snippets.
+        """Build the vector index from a list of snippets.
 
-        This encodes all snippets, creates a FAISS index, and populates
-        the ID mapping.
+        The backend is selected from ``SearchConfig.index_type`` and trained
+        before the provided vectors are added.
         """
         if not SEMANTIC_AVAILABLE:
             raise ImportError(
@@ -174,62 +175,53 @@ class VectorIndex:
                 "Install semantic search dependencies with: pip install snipcontext[semantic]"
             )
 
-        import faiss
+        from .index_backends import _create_backend
 
         if not snippets:
-            self._index = None
-            self._id_map = []
-            self._id_to_idx = {}
+            self._backend = None
             self._content_hashes = {}
+            self._id_set = set()
             return
 
-        # Encode all snippets
         texts = [s.to_search_text() for s in snippets]
         embeddings = embedding_engine.encode(texts)
         dimension = embeddings.shape[1]
-
-        # Normalize for cosine similarity via inner product
         faiss.normalize_L2(embeddings)
 
-        # Use IndexFlatIP for exact search (cosine similarity)
-        if len(snippets) > 5000:
-            # IVF for larger collections
-            nlist = min(int(np.sqrt(len(snippets))), 256)
-            quantizer = faiss.IndexFlatIP(dimension)
-            index = faiss.IndexIVFFlat(quantizer, dimension, nlist)
-            index.train(embeddings)
-        else:
-            index = faiss.IndexFlatIP(dimension)
+        backend = _create_backend(
+            self._config,
+            dimension,
+            snippet_count=len(snippets),
+            auto_switch=self._config.search.auto_switch,
+        )
+        backend.train(embeddings)
+        backend.add(embeddings, [s.id for s in snippets])
 
-        index.add(embeddings)
-        self._id_map = [s.id for s in snippets]
-        self._id_to_idx = {sid: i for i, sid in enumerate(self._id_map)}
+        self._backend = backend
         self._content_hashes = {
             s.id: hashlib.sha256(s.content.encode()).hexdigest()[:16] for s in snippets
         }
-        self._index = index
+        self._id_set = {s.id for s in snippets}
 
         # Store embeddings on snippets for hybrid search
         for i, snippet in enumerate(snippets):
             snippet.embedding = embeddings[i].tolist()
 
-        logger.info("Built FAISS index: %d vectors, %d dims", len(snippets), dimension)
+        logger.info("Built vector index: %d vectors, %d dims", len(snippets), dimension)
 
     def add_vector(self, snippet: Snippet, embedding_engine: EmbeddingEngine | None = None) -> None:
-        """Incrementally add a single snippet embedding to the FAISS index."""
+        """Incrementally add a single snippet embedding to the vector index."""
         if not SEMANTIC_AVAILABLE:
             raise ImportError(
                 "Vector index (FAISS) is unavailable. "
                 "Install semantic search dependencies with: pip install snipcontext[semantic]"
             )
 
-        import numpy as np
-
-        if snippet.id in self._id_to_idx:
-            self.remove_vector(snippet.id)  # replace if exists
-
-        if self._index is None:
+        if self._backend is None:
             raise RuntimeError("Vector index is not initialized")
+
+        if snippet.id in self._id_set:
+            self.remove_vector(snippet.id)
 
         if embedding_engine is not None:
             text = f"{self._config.embedding.doc_instruction}{snippet.content}"
@@ -245,28 +237,25 @@ class VectorIndex:
             )
         else:
             embedding = self._embed_fn(snippet.content)
+
         vec = np.array([embedding], dtype=np.float32)
-        self._index.add(vec)
-        self._id_map.append(snippet.id)
-        self._id_to_idx[snippet.id] = len(self._id_map) - 1
+        import faiss
+
+        faiss.normalize_L2(vec)
+        self._backend.add(vec, [snippet.id])
+        self._id_set.add(snippet.id)
         self._content_hashes[snippet.id] = hashlib.sha256(snippet.content.encode()).hexdigest()[:16]
 
     def remove_vector(self, snippet_id: str) -> None:
-        """Remove a single snippet from the FAISS index."""
+        """Remove a single snippet from the vector index."""
         if not SEMANTIC_AVAILABLE:
             return
 
-        import faiss
-
-        if self._index is None or snippet_id not in self._id_to_idx:
+        if self._backend is None or snippet_id not in self._id_set:
             return
 
-        idx = self._id_to_idx[snippet_id]
-        selector = faiss.IDSelectorBatch([idx])
-        self._index.remove_ids(selector)
-        del self._id_map[idx]
-        # Rebuild reverse map (indices shifted after removal)
-        self._id_to_idx = {sid: i for i, sid in enumerate(self._id_map)}
+        self._backend.remove([snippet_id])
+        self._id_set.discard(snippet_id)
         self._content_hashes.pop(snippet_id, None)
 
     def search(
@@ -285,20 +274,15 @@ class VectorIndex:
 
         import faiss
 
-        assert self._index is not None
-        # Normalize query for cosine similarity
-        faiss.normalize_L2(query_embedding)
+        query = np.ascontiguousarray(query_embedding, dtype=np.float32)
+        faiss.normalize_L2(query)
 
-        scores, indices = self._index.search(query_embedding, top_k)
-
+        raw = self._backend.search(query, top_k) if self._backend else []
         results: list[tuple[str, float]] = []
-        for score, idx in zip(scores[0], indices[0], strict=False):
-            if idx < 0 or idx >= len(self._id_map):
-                continue
+        for snippet_id, score in raw:
             if score < min_score:
                 continue
-            results.append((self._id_map[idx], float(score)))
-
+            results.append((snippet_id, float(score)))
         return results
 
     # ------------------------------------------------------------------
@@ -306,21 +290,16 @@ class VectorIndex:
     # ------------------------------------------------------------------
 
     def save(self, path: Path) -> None:
-        """Save the FAISS index and ID mapping to disk."""
-        if self._index is None or not SEMANTIC_AVAILABLE:
+        """Save the vector index and content hashes to disk."""
+        if self._backend is None or not SEMANTIC_AVAILABLE:
             return
-        path.mkdir(parents=True, exist_ok=True)
-        import faiss
-
-        faiss.write_index(self._index, str(path / "vector.faiss"))
-        with open(path / "idmap.json", "w") as f:
-            json.dump(self._id_map, f)
+        self._backend.save(path)
         hash_path = path / "content_hashes.json"
         hash_path.write_text(json.dumps(self._content_hashes), encoding="utf-8")
         logger.debug("Saved vector index to %s", path)
 
     def load(self, path: Path) -> bool:
-        """Load the FAISS index and ID mapping from disk.
+        """Load the vector index and content hashes from disk.
 
         Returns:
             True if loaded successfully, False otherwise.
@@ -328,52 +307,22 @@ class VectorIndex:
         if not SEMANTIC_AVAILABLE:
             return False
 
-        index_file = path / "vector.faiss"
-        idmap_file = path / "idmap.json"
-
-        if not index_file.exists() or not idmap_file.exists():
-            logger.debug("Index files not found at %s", path)
+        if self._backend is None:
             return False
 
-        try:
-            import faiss
-
-            self._index = faiss.read_index(str(index_file))
-            with open(idmap_file) as f:
-                self._id_map = json.load(f)
-
-            hash_path = path / "content_hashes.json"
-            if hash_path.exists():
-                self._content_hashes = json.loads(hash_path.read_text(encoding="utf-8"))
-            else:
-                self._content_hashes = {}
-            self._id_to_idx = {sid: i for i, sid in enumerate(self._id_map)}
-
-            # Validate index integrity
-            if self._index.ntotal != len(self._id_map):
-                logger.warning(
-                    "Index ID map length mismatch: %d vectors vs %d IDs",
-                    self._index.ntotal,
-                    len(self._id_map),
-                )
-                return False
-
-            logger.debug("Loaded vector index from %s", path)
-            return True
-        except Exception as exc:
-            logger.warning("Failed to load vector index from %s: %s", path, exc)
-            # Clean up potentially corrupted files
-            for _file in (index_file, idmap_file, path / "content_hashes.json"):
-                try:
-                    if _file.exists():
-                        _file.unlink()
-                except OSError as cleanup_err:
-                    logger.warning(
-                        "Failed to clean up corrupted index file %s: %s",
-                        _file.name,
-                        cleanup_err,
-                    )
+        loaded = self._backend.load(path)
+        if not loaded:
             return False
+
+        self._id_set = set(self._backend.snippet_ids)
+        hash_path = path / "content_hashes.json"
+        if hash_path.exists():
+            self._content_hashes = json.loads(hash_path.read_text(encoding="utf-8"))
+        else:
+            self._content_hashes = {}
+
+        logger.debug("Loaded vector index from %s", path)
+        return True
 
     def _embed_fn(self, text: str) -> np.ndarray:
         if not SEMANTIC_AVAILABLE:

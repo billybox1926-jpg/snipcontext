@@ -56,6 +56,7 @@ def main(
 # ── Register domain commands ───────────────────────────────────────────
 # Each domain module provides a register_commands(app) function.
 
+from snipcontext.cli.benchmark import register_commands as register_benchmark  # noqa: E402
 from snipcontext.cli.config import register_commands as register_config  # noqa: E402
 from snipcontext.cli.export import register_commands as register_export  # noqa: E402
 from snipcontext.cli.search import register_commands as register_search  # noqa: E402
@@ -68,6 +69,7 @@ register_search(app)
 register_export(app)
 register_watch(app)
 register_stats(app)
+register_benchmark(app)
 register_config(config_app)
 
 # Optional: cryptography commands (requires snipcontext[encryption])

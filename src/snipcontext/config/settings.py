@@ -52,6 +52,33 @@ class SearchConfig(BaseSettings):
     min_score: float = Field(default=0.1, ge=0.0, le=1.0)
     rerank: bool = Field(default=True)
 
+    index_type: Literal["flat", "hnsw", "ivf", "ivfpq"] = Field(default="flat")
+    auto_index_threshold: int = Field(default=5000, ge=1)
+    auto_switch: bool = Field(
+        default=True, description="Allow auto-promotion to IVFPQ when threshold exceeded"
+    )
+    hnsw_M: int = Field(default=16, ge=4)
+    hnsw_efConstruction: int = Field(default=200, ge=8)
+    hnsw_efSearch: int = Field(default=16, ge=1)
+    ivf_nlist: int = Field(default=128, ge=1)
+    ivf_nprobe: int = Field(default=8, ge=1)
+    pq_M: int = Field(default=8, ge=1)
+    pq_nbits: int = Field(default=8, ge=1)
+
+    @field_validator("index_type", mode="after")  # type: ignore[untyped-decorator]
+    @classmethod
+    def _validate_index_type(cls, value: str) -> str:
+        if value == "flat":
+            return value
+        try:
+            import faiss  # noqa: F401
+        except ImportError as exc:
+            raise ImportError(
+                "FAISS is not installed. Install with `pip install snipcontext[semantic]` "
+                "or `pip install snipcontext[all]` to use advanced index types."
+            ) from exc
+        return value
+
 
 class StorageConfig(BaseSettings):
     """Configuration for local storage backend."""

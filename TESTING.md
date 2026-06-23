@@ -111,12 +111,27 @@ Plugins are discovered via entry points. To test plugin loading and discovery:
 
 See `tests/property/test_provider_schema.py` for an example.
 
+## Benchmark Tests
+
+Benchmark tests for vector index latency are marked `slow` and are excluded from the default test run. Run them with:
+
+```bash
+uv run pytest -q -m "slow"
+```
+
+Or run just the benchmark smoke tests:
+
+```bash
+uv run pytest tests/cli/test_benchmark.py -q
+```
+
 ## Continuous Integration
 
 The CI pipeline runs:
 
-1. `uv run pytest -q` (standard suite, coverage enforced).
-2. On a scheduled or manual workflow, the integration matrix may be run on machines with GPU/MPS availability.
+1. `uv run pytest -q -m "not slow"` (standard suite, coverage enforced at 68%).
+2. `uv run pytest -q -m "slow"` (benchmarks, on push to main / manual dispatch).
+3. A separate `test-semantic` job installs `faiss-cpu` and `sentence-transformers` to exercise the backend-specific code paths.
 
 ## Troubleshooting
 

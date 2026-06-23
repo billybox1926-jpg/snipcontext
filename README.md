@@ -247,6 +247,9 @@ snipcontext edit <snippet-id> --framework react --version "18.x" --source "https
 # Rebuild search index
 snipcontext build-index --force
 
+# Benchmark vector latency
+snipcontext benchmark index --vectors 5000 --index-type ivfpq
+
 # Watch for file changes and auto-reindex
 snipcontext watch
 
@@ -495,6 +498,8 @@ pre-commit install
 
 ## Documentation
 
+- [`docs/search.md`](docs/search.md) — index types, auto-switch behavior, keyword fallback
+- [`docs/benchmark.md`](docs/benchmark.md) — `sc benchmark index` usage
 - [`docs/API.md`](docs/API.md) — Python library usage
 - [`docs/providers.md`](docs/providers.md) — provider contract and custom provider guide
 - [`docs/plugins.md`](docs/plugins.md) — plugin system, lifecycle hooks, and CLI commands
