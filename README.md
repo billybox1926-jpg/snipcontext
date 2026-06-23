@@ -202,6 +202,40 @@ snipcontext --help          # or: python -m snipcontext --help
 snipcontext providers       # List available export providers
 ```
 
+### Project-Local Snippets
+
+> **v0.5.0+** — Commit your snippet collection to git and share it with your team.
+
+By default SnipContext stores snippets in a global directory (`~/.local/share/snipcontext`). You can opt into **project-local** mode by scaffolding a `.snipcontext/` directory inside your repository:
+
+```bash
+sc init --local
+```
+
+This creates:
+
+```text
+.snipcontext/
+├── config.yaml          # Project-specific settings
+├── snippets/            # Snippet storage (JSONL)
+├── index.faiss          # Search index (gitignored)
+└── .gitignore           # Ignores index.faiss
+```
+
+Once initialized, every SnipContext command run from that directory (or any subdirectory) automatically uses the local collection. You can override the discovery order with environment variables:
+
+| Priority | Source | Example |
+|----------|--------|---------|
+| 1 | `SNIPCONTEXT_HOME` env var | `SNIPCONTEXT_HOME=/path/to/snippets sc list` |
+| 2 | `.snipcontext/` in CWD or ancestor | `sc init --local` in `/my/project` |
+| 3 | Global platform directory | `~/.local/share/snipcontext` |
+
+Use `sc info` to inspect the active mode and paths:
+
+```bash
+sc info
+```
+
 ### CLI Usage
 
 ```bash

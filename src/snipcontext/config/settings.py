@@ -10,7 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from platformdirs import user_config_dir, user_data_dir
+from snipcontext.config.paths import get_config_path, get_storage_root
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -86,7 +86,7 @@ class StorageConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SNIPCONTEXT_STORAGE_", extra="ignore")
 
     data_dir: Path = Field(
-        default_factory=lambda: Path(user_data_dir(_APP_NAME, _APP_AUTHOR)),
+        default_factory=get_storage_root,
     )
     snippets_dir: str = Field(default="snippets")
     index_dir: str = Field(default="index")
@@ -226,7 +226,7 @@ class Config(BaseSettings):
     def _resolve_storage_paths(cls, v):
         """Ensure storage paths are absolute and resolved."""
         if isinstance(v, dict):
-            data_dir = Path(v.get("data_dir", user_data_dir(_APP_NAME, _APP_AUTHOR)))
+            data_dir = Path(v.get("data_dir", get_storage_root()))
             if not data_dir.is_absolute():
                 data_dir = Path.home() / data_dir
             v["data_dir"] = data_dir.expanduser().resolve()
@@ -245,7 +245,7 @@ class Config(BaseSettings):
     @property
     def config_file_path(self) -> Path:
         """Path to the user configuration file."""
-        return Path(user_config_dir(_APP_NAME, _APP_AUTHOR)) / "snipcontext.yaml"
+        return get_config_path()
 
     def ensure_directories(self) -> None:
         """Create all required directories if they don't exist."""
@@ -267,8 +267,31 @@ def get_config() -> Config:
     """Get the singleton Config instance.
 
     Cached so that configuration is loaded once per process.
+    Reads project-local or global YAML config if present.
     """
-    return Config()
+    config = Config()
+    config_path = get_config_path()
+    if config_path.exists():
+        try:
+            import yaml
+
+            with open(config_path, encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+            for key, value in data.items():
+                if not hasattr(config, key) or value is None:
+                    continue
+                section = getattr(config, key)
+                if isinstance(section, BaseSettings) and isinstance(value, dict):
+                    for sub_key, sub_value in value.items():
+                        if sub_key == "data_dir":
+                            continue
+                        if hasattr(section, sub_key):
+                            setattr(section, sub_key, sub_value)
+                else:
+                    setattr(config, key, value)
+        except Exception:
+            pass
+    return config
 
 
 def reset_config() -> None:
