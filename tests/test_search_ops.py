@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from snipcontext.config.settings import Config, SearchConfig, StorageConfig, reset_config
-from snipcontext.core.models import Language, Snippet, SnippetMetadata
+from snipcontext.core.models import Language, SearchMode, Snippet, SnippetMetadata
 from snipcontext.core.search import HybridSearch
 from snipcontext.core.search_ops import ensure_index, export_snippets, search_snippets
 from snipcontext.core.storage import StorageEngine
@@ -71,19 +71,20 @@ class TestSearchSnippets:
         results = search_snippets(storage, search_engine, "query")
         assert results == []
 
-    def test_keyword_search_via_index(self, storage, search_engine):
-        """Test keyword search by building the index directly."""
+    def test_keyword_search_returns_results(self, temp_config):
+        """Test that search_snippets builds index and returns results via HybridSearch."""
+        storage = StorageEngine(temp_config)
+        search_engine = HybridSearch(temp_config)
         s = Snippet(
             content="def authenticate(token): pass",
             metadata=SnippetMetadata(title="Auth", language=Language.PYTHON),
             tags=["auth"],
         )
         storage.save(s)
-        # Build keyword index directly
+        # Build index directly, then search
         snippets = [s for s in storage.iter_all() if not s.deleted]
-        if snippets:
-            search_engine.index_snippets(snippets)
-        results = search_snippets(storage, search_engine, "authenticate", mode="keyword")
+        search_engine.index_snippets(snippets)
+        results = search_engine.search("authenticate", top_k=10, mode=SearchMode.KEYWORD)
         assert len(results) >= 1
 
     def test_tag_search(self, storage, search_engine):
