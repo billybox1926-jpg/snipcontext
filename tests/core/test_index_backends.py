@@ -9,11 +9,14 @@ import numpy as np
 import pytest
 
 from snipcontext.config.settings import Config, SearchConfig
-from snipcontext.core.index_backends import (
+from snipcontext.core.index_backends import KeywordOnlyBackend
+
+pytest.importorskip("faiss", reason="faiss not installed")
+
+from snipcontext.core.index_backends import (  # noqa: E402
     FlatIndexBackend,
     HNSWIndexBackend,
     IVFPQIndexBackend,
-    KeywordOnlyBackend,
     _create_backend,
 )
 
