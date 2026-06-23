@@ -1,22 +1,21 @@
-"""Tests for search history and favorites."""
+"""Tests for search history core storage."""
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
 
 from snipcontext.cli.app import app
-from snipcontext.cli.search import _get_history
 from snipcontext.core.search_history import SearchHistoryStore
 
 runner = CliRunner()
 
 
 @pytest.fixture()
-def history_store(tmp_path: Path, monkeypatch):
+def history_store(tmp_path: Path):
     """Isolated history store backed by a temp SQLite file."""
     db = tmp_path / "history.db"
     store = SearchHistoryStore(db_path=db)
@@ -46,7 +45,6 @@ def test_get_favorites(history_store: SearchHistoryStore):
     assert favs[0].is_favorite is True
 
     all_recent = history_store.get_recent()
-    # Most recent first: sqlite pool (id=2, not fav), fastapi setup (id=1, fav)
     assert all_recent[0].query == "sqlite pool"
     assert all_recent[0].is_favorite is False
     assert all_recent[1].query == "fastapi setup"
@@ -76,8 +74,6 @@ def test_clear_history(history_store: SearchHistoryStore):
 
 
 def test_prune_older_than(history_store: SearchHistoryStore):
-    from datetime import datetime, timedelta
-
     old_ts = (datetime.now() - timedelta(days=10)).isoformat()
     very_old_ts = (datetime.now() - timedelta(days=100)).isoformat()
 
@@ -97,39 +93,3 @@ def test_prune_older_than(history_store: SearchHistoryStore):
     remaining = [e.query for e in history_store.get_recent(limit=100)]
     assert "old query" in remaining
     assert "ancient query" not in remaining
-
-
-def test_cli_search_history_option(tmp_path: Path, monkeypatch):
-    """Sc search --history displays history table."""
-    from snipcontext.config.settings import reset_config
-
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / ".snipcontext").mkdir()
-    reset_config()
-
-    result = runner.invoke(app, ["search", "--history"])
-    assert result.exit_code == 0
-    assert "No search history yet" in result.output
-
-
-def test_cli_search_favorites_option(tmp_path: Path, monkeypatch):
-    result = runner.invoke(app, ["search", "--favorites"])
-    assert result.exit_code == 0
-    assert "No favorites yet" in result.output
-
-
-def test_cli_search_favorite_toggle(tmp_path: Path, history_store: SearchHistoryStore):
-    history_store.add("docker compose", result_count=4)
-    eid = history_store.get_recent()[0].id
-    with patch("snipcontext.cli.search._get_history", return_value=history_store):
-        result = runner.invoke(app, ["search", "--favorite", str(eid)])
-    assert result.exit_code == 0, result.output
-    assert "favorited" in result.output
-
-
-def test_cli_search_clear_history(tmp_path: Path, monkeypatch, history_store: SearchHistoryStore):
-    history_store.add("cleanup test", result_count=1)
-    with patch.object(_get_history, "__call__", return_value=history_store):
-        result = runner.invoke(app, ["search", "--clear-history"])
-    assert result.exit_code == 0, result.output
-    assert "Search history cleared" in result.output

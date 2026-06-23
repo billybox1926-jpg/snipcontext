@@ -63,13 +63,6 @@ def search(
     group_by: str = typer.Option(
         None, "--group-by", help="Group results: language, tag, or source"
     ),
-    history: bool = typer.Option(False, "--history", help="Show recent search history"),
-    favorites: bool = typer.Option(False, "--favorites", help="Show favorite searches"),
-    rerun: int | None = typer.Option(None, "--rerun", help="Re-run a search from history by ID"),
-    favorite: int | None = typer.Option(
-        None, "--favorite", help="Toggle favorite on a history entry by ID"
-    ),
-    clear_history: bool = typer.Option(False, "--clear-history", help="Clear all search history"),
 ) -> None:
     """Search snippets with semantic + keyword hybrid search.
 
@@ -79,33 +72,10 @@ def search(
 
     Use --group-by to organise results by language, tag, or source.
     """
-    store = _get_history()
-
-    if history:
-        _show_history(store)
-        return
-    if favorites:
-        _show_favorites(store)
-        return
-    if rerun is not None:
-        entry = store.get_by_id(rerun)
-        if not entry:
-            console.print(f"[red]No history entry with ID {rerun}[/red]")
-            raise typer.Exit(1)
-        queries = [entry.query]
-        console.print(f"[dim]Re-running: {entry.query}[/dim]")
-    if favorite is not None:
-        _toggle_favorite(store, favorite)
-        return
-    if clear_history:
-        store.clear()
-        console.print("[green]Search history cleared.[/green]")
-        return
     if not queries:
-        console.print("[red]Error: QUERIES are required for search.[/red]")
+        console.print("[red]Error: QUERIES are required for search.[red]")
         raise typer.Exit(1)
 
-    # Normal search path
     config, storage, searcher = _get_context()
     if index or not searcher.indices_ready:
         console.print("[yellow]Building search index...[/yellow]")
@@ -150,6 +120,8 @@ def search(
         )
         query_label = ", ".join(queries)
 
+    # Record query in search history
+    store = _get_history()
     store.add(query_label, len(results))
 
     if not results:

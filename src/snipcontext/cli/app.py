@@ -60,6 +60,7 @@ from snipcontext.cli.agent import register_commands as register_agent  # noqa: E
 from snipcontext.cli.benchmark import register_commands as register_benchmark  # noqa: E402
 from snipcontext.cli.config import register_commands as register_config  # noqa: E402
 from snipcontext.cli.export import register_commands as register_export  # noqa: E402
+from snipcontext.cli.history import register_commands as register_history  # noqa: E402
 from snipcontext.cli.info import register_commands as register_info  # noqa: E402
 from snipcontext.cli.init import register_commands as register_init  # noqa: E402
 from snipcontext.cli.search import register_commands as register_search  # noqa: E402
@@ -70,6 +71,7 @@ from snipcontext.cli.watch import register_commands as register_watch  # noqa: E
 register_agent(app)
 register_snippets(app)
 register_search(app)
+register_history(app)
 register_export(app)
 register_watch(app)
 register_stats(app)
