@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from snipcontext.cli.app import app
 from snipcontext.core.search_history import SearchHistoryStore
 
 runner = CliRunner()
