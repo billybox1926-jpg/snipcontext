@@ -719,15 +719,9 @@ class TestStdinPiping:
         assert result.exit_code != 0 or "empty" in result.output.lower()
 
     def test_pipe_with_language_flag(self):
-        """Pipe content with --language flag."""
+        """Pipe content with --lang flag."""
         result, tmp = invoke(
-            "add",
-            "--title",
-            "JS Pipe",
-            "--tag",
-            "js",
-            "--language",
-            "javascript",
+            "add", "--title", "JS Pipe", "--tag", "js", "--lang", "javascript",
             input="const x = () => console.log('hello');\n",
         )
         assert result.exit_code == 0
