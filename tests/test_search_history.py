@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
-from unittest.mock import patch
 
 from snipcontext.cli.app import app
 from snipcontext.cli.search import _get_history
@@ -101,9 +100,8 @@ def test_prune_older_than(history_store: SearchHistoryStore):
 
 
 def test_cli_search_history_option(tmp_path: Path, monkeypatch):
-    """sc search --history displays history table."""
-    from snipcontext.config.paths import get_storage_root
-    from snipcontext.config.settings import get_config, reset_config
+    """Sc search --history displays history table."""
+    from snipcontext.config.settings import reset_config
 
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".snipcontext").mkdir()
