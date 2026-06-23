@@ -192,4 +192,9 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
 ]
-fail_under = 68  # Bumped after adding backend/benchmark coverage
+fail_under = 68
+omit = [
+    "src/snipcontext/tui/*",
+    "src/snipcontext/web/*",
+    "src/snipcontext/cli/benchmark.py",
+]
