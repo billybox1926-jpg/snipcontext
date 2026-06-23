@@ -7,9 +7,10 @@ import os
 # Force Rich/table output to ASCII so snapshots are stable across environments.
 # These env vars MUST be set before any Rich console is initialized.
 os.environ.setdefault("TERM", "dumb")
-os.environ.setdefault("COLUMNS", "120")
 os.environ.setdefault("NO_COLOR", "1")
-os.environ.setdefault("RICH_TERMINAL", "dumb")
+os.environ.setdefault("FORCE_COLOR", "0")
+os.environ.setdefault("RICH_TERMINAL", "ascii")
+os.environ.setdefault("COLUMNS", "120")
 
 from pathlib import Path
 from unittest.mock import MagicMock
