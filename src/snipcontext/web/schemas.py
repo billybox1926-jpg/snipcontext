@@ -50,3 +50,20 @@ class ExportRequest(BaseModel):
 class MessageResponse(BaseModel):
     type: str
     message: str
+
+
+class AgentSkill(BaseModel):
+    id: str
+    name: str
+    description: str
+    input_modes: list[str] | None = None
+    output_modes: list[str] | None = None
+
+
+class AgentCard(BaseModel):
+    name: str
+    description: str
+    version: str
+    skills: list[AgentSkill]
+    authentication: dict[str, Any] | None = None
+    endpoint: str | None = None

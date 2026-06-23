@@ -339,3 +339,15 @@ except ValidationError as e:
     # Handle validation errors
     print(e.errors())
 ```
+
+## A2A Agent Discovery
+
+SnipContext exposes an A2A (Agent-to-Agent) Agent Card at `/.well-known/agent.json`. This allows other agents to discover SnipContext's capabilities.
+
+### CLI
+
+```bash
+sc agent-card
+```
+
+Prints the Agent Card to stdout.
