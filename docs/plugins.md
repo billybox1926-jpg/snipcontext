@@ -10,20 +10,20 @@ Snipcontext's plugin system allows extending core functionality via a unified li
 - **Provider factory** – `get_provider(name)` and `list_providers()` use the registry to discover and load providers.
 - **Entry points** – plugins are discovered via `snipcontext.plugins` and `snipcontext.providers` groups in `pyproject.toml`.
 
-## Writing a Plugin
+## Writing Your Own Plugin
 
-1. Subclass `Plugin` and implement required abstract methods:
-   - `on_load(self, config: dict) -> None`
-   - `on_shutdown(self) -> None`
-   - (optional) `on_snippet_saved(self, snippet)`
-2. Define a class-level `manifest` attribute with `PluginManifest`.
-3. Optionally specify version constraints via `requires` (e.g., `requires=["snipcontext>=0.3.0"]`).
-4. Register your plugin via entry points in `pyproject.toml`.
+1. Pick the right base class:
+   - Use `BaseProvider` for new export formats (see [Provider Implementation Guide](providers.md)).
+   - Use `Plugin` for lifecycle hooks only (see [Plugin Examples](plugin-examples.md)).
+2. Define a `PluginManifest` with `name`, `version`, and `requires`.
+3. Implement required methods (`export_single`, `health_check`, ...).
+4. Register via entry points in `pyproject.toml`.
+5. Test using the patterns in [Plugin Testing Guide](plugin-testing.md).
 
-### Example
+### Quick example
 
 ```python
-from snipcontext.plugins import Plugin, PluginManifest
+from snipcontext.plugins.base import Plugin, PluginManifest
 
 class MyPlugin(Plugin):
     manifest = PluginManifest(
@@ -31,21 +31,26 @@ class MyPlugin(Plugin):
         version="1.0.0",
         description="Example plugin",
         author="You",
-        requires=["snipcontext>=0.3.0"],
+        requires=["snipcontext>=0.4.0"],
     )
 
-    def on_load(self, config):
+    def on_load(self) -> None:
         print("Plugin loaded")
 
-    def on_shutdown(self):
+    def on_shutdown(self) -> None:
         print("Plugin unloaded")
 ```
 
-In `pyproject.toml`:
 ```toml
 [project.entry-points."snipcontext.plugins"]
 my_plugin = "my_package:MyPlugin"
 ```
+
+For complete examples, including a Markdown export provider and a JSON audit
+logger plugin, see [Plugin Examples](plugin-examples.md).
+
+For testing strategies, mocking patterns, and the compliance test suite, see
+[Plugin Testing Guide](plugin-testing.md).
 
 ## CLI Commands
 
