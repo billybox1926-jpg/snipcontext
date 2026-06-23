@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import typer
+from rich.box import ASCII as ASCII_BOX
 from rich.console import Console
 from rich.table import Table
-from rich.box import ASCII as ASCII_BOX
 
 from snipcontext.config.paths import get_config_path, get_storage_root, is_project_local
 from snipcontext.config.settings import get_config

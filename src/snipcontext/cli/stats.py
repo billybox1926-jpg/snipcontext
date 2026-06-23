@@ -4,11 +4,11 @@ import json
 import logging
 
 import typer
+from rich.box import ASCII as ASCII_BOX
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
-from rich.box import ASCII as ASCII_BOX
 
 from snipcontext.cli.context import get_context as _get_context
 
@@ -152,7 +152,9 @@ def _render_detailed_stats(d: dict) -> None:
         console.print(f"  Average accesses per snippet: [cyan]{access.get('average', 0)}[/cyan]")
         most = access.get("most_accessed", [])
         if most:
-            table = Table(show_header=True, header_style="bold magenta", padding=(0, 1), box=ASCII_BOX)
+            table = Table(
+                show_header=True, header_style="bold magenta", padding=(0, 1), box=ASCII_BOX
+            )
             table.add_column("ID", style="dim", width=8)
             table.add_column("Title", style="cyan", no_wrap=False)
             table.add_column("Accesses", style="green", justify="right", width=8)

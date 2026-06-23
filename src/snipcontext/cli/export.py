@@ -4,9 +4,9 @@ import logging
 from pathlib import Path
 
 import typer
+from rich.box import ASCII as ASCII_BOX
 from rich.console import Console
 from rich.table import Table
-from rich.box import ASCII as ASCII_BOX
 
 from snipcontext.cli.context import get_context as _get_context
 from snipcontext.core.models import Snippet

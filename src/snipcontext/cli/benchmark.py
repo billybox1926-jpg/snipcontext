@@ -7,9 +7,9 @@ import math
 import time
 
 import typer
+from rich.box import ASCII as ASCII_BOX
 from rich.console import Console
 from rich.table import Table
-from rich.box import ASCII as ASCII_BOX
 
 from snipcontext.config.settings import Config, SearchConfig
 from snipcontext.core.index_backends import _create_backend

@@ -5,10 +5,10 @@ from __future__ import annotations
 import logging
 
 import typer
+from rich.box import ASCII as ASCII_BOX
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.box import ASCII as ASCII_BOX
 
 from snipcontext.cli.context import get_context as _get_context
 from snipcontext.core.config_ops import get_config_paths, get_config_values
