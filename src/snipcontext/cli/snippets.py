@@ -13,6 +13,7 @@ import typer
 from rich.console import Console
 from rich.syntax import Syntax
 from rich.table import Table
+from rich.box import ASCII as ASCII_BOX
 
 from snipcontext.cli.context import get_context as _get_context
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
@@ -354,6 +355,7 @@ def register_commands(app: typer.Typer) -> None:
             show_header=True,
             header_style="bold magenta",
             row_styles=["", "dim"],
+            box=ASCII_BOX,
         )
         table.add_column("ID", style="dim", no_wrap=True, width=8)
         table.add_column("Title", style="cyan", no_wrap=False)

@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from rich.box import ASCII as ASCII_BOX
 
 from snipcontext.cli.context import get_context as _get_context
 from snipcontext.core.config_ops import get_config_paths, get_config_values
@@ -119,7 +120,7 @@ def register_commands(app: typer.Typer) -> None:
                     if key.startswith("_"):
                         continue
                     rows.append((f"  {name}.{key}", type(value).__name__, ""))
-        table = Table(title="Configuration keys")
+        table = Table(title="Configuration keys", box=ASCII_BOX)
         table.add_column("Key", style="cyan")
         table.add_column("Type", style="magenta")
         table.add_column("Default", style="green")

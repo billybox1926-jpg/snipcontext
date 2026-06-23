@@ -9,6 +9,7 @@ import time
 import typer
 from rich.console import Console
 from rich.table import Table
+from rich.box import ASCII as ASCII_BOX
 
 from snipcontext.config.settings import Config, SearchConfig
 from snipcontext.core.index_backends import _create_backend
@@ -71,7 +72,7 @@ def benchmark_index(
 
     search_elapsed = _bootstrap_search(backend, query, top_k)
 
-    table = Table(title="Vector index benchmark")
+    table = Table(title="Vector index benchmark", box=ASCII_BOX)
     table.add_column("Backend", style="magenta")
     table.add_column("count", justify="right")
     table.add_column("trained", justify="center")

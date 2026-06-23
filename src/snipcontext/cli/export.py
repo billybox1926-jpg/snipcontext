@@ -6,6 +6,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.table import Table
+from rich.box import ASCII as ASCII_BOX
 
 from snipcontext.cli.context import get_context as _get_context
 from snipcontext.core.models import Snippet
@@ -76,7 +77,7 @@ def register_commands(app: typer.Typer) -> None:
             if not pm.list_providers():
                 console.print("[yellow]No providers registered.[/yellow]")
                 raise typer.Exit(1)
-            table = Table(title="Provider Health", show_header=True)
+            table = Table(title="Provider Health", show_header=True, box=ASCII_BOX)
             table.add_column("Name", style="cyan")
             table.add_column("Status", style="green")
             table.add_column("Error", style="red")
@@ -91,7 +92,7 @@ def register_commands(app: typer.Typer) -> None:
                 table.add_row(name, status, error)
             console.print(table)
             return
-        table = Table(title="Export Providers", show_header=True)
+        table = Table(title="Export Providers", show_header=True, box=ASCII_BOX)
         table.add_column("Name", style="cyan")
         table.add_column("Description", style="white")
         table.add_column("Format", style="green")
@@ -143,7 +144,7 @@ def register_commands(app: typer.Typer) -> None:
             if not pm.list_providers():
                 console.print("[yellow]No providers registered.[/yellow]")
                 raise typer.Exit(1)
-            table = Table(title="Provider Health", show_header=True)
+            table = Table(title="Provider Health", show_header=True, box=ASCII_BOX)
             table.add_column("Name", style="cyan")
             table.add_column("Status", style="green")
             table.add_column("Error", style="red")
@@ -163,7 +164,7 @@ def register_commands(app: typer.Typer) -> None:
             if not pm.plugins:
                 console.print("[yellow]No plugins registered.[/yellow]")
                 return
-            table = Table(title="Plugins", show_header=True)
+            table = Table(title="Plugins", show_header=True, box=ASCII_BOX)
             table.add_column("Name", style="cyan")
             table.add_column("Version", style="green")
             table.add_column("API", style="blue")

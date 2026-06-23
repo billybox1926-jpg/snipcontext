@@ -5,6 +5,7 @@ from __future__ import annotations
 import typer
 from rich.console import Console
 from rich.table import Table
+from rich.box import ASCII as ASCII_BOX
 
 from snipcontext.config.paths import get_config_path, get_storage_root, is_project_local
 from snipcontext.config.settings import get_config
@@ -25,7 +26,7 @@ def register_commands(app: typer.Typer) -> None:
 
         mode = "project-local" if project_local else "global"
 
-        table = Table(title="SnipContext Configuration")
+        table = Table(title="SnipContext Configuration", box=ASCII_BOX)
         table.add_column("Setting", style="cyan")
         table.add_column("Value", style="green")
 

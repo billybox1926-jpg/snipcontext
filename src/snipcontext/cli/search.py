@@ -7,6 +7,7 @@ import logging
 import typer
 from rich.console import Console
 from rich.table import Table
+from rich.box import ASCII as ASCII_BOX
 
 from snipcontext.cli.context import get_context as _get_context
 from snipcontext.cli.snippets import _print_snippet
@@ -205,7 +206,7 @@ def _show_history(store: SearchHistoryStore) -> None:
     if not entries:
         console.print("[dim]No search history yet.[/dim]")
         return
-    table = Table(title="Search History")
+    table = Table(title="Search History", box=ASCII_BOX)
     table.add_column("ID", style="cyan", justify="right")
     table.add_column("Query")
     table.add_column("Time", style="dim")
@@ -223,7 +224,7 @@ def _show_favorites(store: SearchHistoryStore) -> None:
     if not entries:
         console.print("[dim]No favorites yet. Use --favorite <id> to mark one.[/dim]")
         return
-    table = Table(title="Favorite Searches")
+    table = Table(title="Favorite Searches", box=ASCII_BOX)
     table.add_column("ID", style="cyan", justify="right")
     table.add_column("Query")
     table.add_column("Time", style="dim")
