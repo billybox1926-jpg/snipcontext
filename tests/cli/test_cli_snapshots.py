@@ -27,7 +27,6 @@ def _invoke(temp_dir: Path, args: list[str], **kwargs):
 
 
 def _normalize(output: str, temp_dir: Path) -> str:
-    import re
 
     output = output.replace(str(temp_dir), "<tmp>")
     return output
@@ -44,7 +43,6 @@ def _reset_registry():
 
 @pytest.fixture(autouse=True)
 def _fixed_ids(mocker):
-    import uuid
 
     fake_uuid = MagicMock(side_effect=["f" + str(i).zfill(21) for i in range(100)])
     mocker.patch("snipcontext.core.models.uuid.uuid4", fake_uuid)
@@ -201,7 +199,7 @@ def test_sc_list_special_chars(snapshot, tmp_path: Path, mock_embeddings):
         tmp_path,
         [
             "add",
-            'x = "hello\\nworld"\ny = \'foo\\tbar\'',
+            "x = \"hello\\nworld\"\ny = 'foo\\tbar'",
             "--title",
             'Special <Chars> & "Quotes"',
             "--lang",
