@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import pytest
-from snipcontext.cli.app import app
 from typer.testing import CliRunner
+
+from snipcontext.cli.app import app
 
 
 @pytest.fixture()
@@ -20,6 +21,7 @@ def test_benchmark_index_help(runner):
 
 @pytest.mark.slow
 def test_benchmark_index_smoke(runner, caplog):
+    pytest.importorskip("faiss")
     caplog.set_level("INFO")
     result = runner.invoke(
         app,
@@ -39,6 +41,7 @@ def test_benchmark_index_smoke(runner, caplog):
 
 
 def test_benchmark_index_no_auto_switch(runner, caplog):
+    pytest.importorskip("faiss")
     caplog.set_level("INFO")
     result = runner.invoke(
         app,

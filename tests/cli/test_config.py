@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import pytest
-from snipcontext.cli.app import app
 from typer.testing import CliRunner
+
+from snipcontext.cli.app import app
 
 
 @pytest.fixture()
