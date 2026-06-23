@@ -8,6 +8,8 @@ import pytest
 
 pytest.importorskip("textual")
 
+from textual.widgets import Input, ListView  # noqa: E402
+
 from snipcontext.core.models import Language, Snippet, SnippetMetadata  # noqa: E402
 from snipcontext.tui.textual_app import (  # noqa: E402
     HelpModal,
@@ -16,7 +18,6 @@ from snipcontext.tui.textual_app import (  # noqa: E402
     SnippetBrowser,
     StatusBar,
 )
-from textual.widgets import Input, ListView  # noqa: E402
 
 
 @pytest.fixture
