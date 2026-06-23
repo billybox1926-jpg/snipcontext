@@ -9,8 +9,6 @@ import pytest
 from typer.testing import CliRunner
 
 from snipcontext.cli.app import app
-from snipcontext.cli.history import add_history, clear_history, list_favorites, list_history
-from snipcontext.cli.search import _get_history
 from snipcontext.core.search_history import SearchHistoryStore
 
 runner = CliRunner()
@@ -25,21 +23,24 @@ def history_store(tmp_path: Path):
 
 
 def test_history_list_empty(tmp_path: Path, monkeypatch):
-    """sc history list shows empty state when no history exists."""
+    """Sc history list shows empty state when no history exists."""
     from snipcontext.config.settings import reset_config
 
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".snipcontext").mkdir()
     reset_config()
 
-    with patch("snipcontext.cli.history.SearchHistoryStore", return_value=SearchHistoryStore(db_path=tmp_path / "history.db")):
+    with patch(
+        "snipcontext.cli.history.SearchHistoryStore",
+        return_value=SearchHistoryStore(db_path=tmp_path / "history.db"),
+    ):
         result = runner.invoke(app, ["history", "list"])
     assert result.exit_code == 0
     assert "No search history yet" in result.output
 
 
 def test_history_list_with_entries(tmp_path: Path, monkeypatch, history_store: SearchHistoryStore):
-    """sc history list shows recent entries."""
+    """Sc history list shows recent entries."""
     from snipcontext.config.settings import reset_config
 
     monkeypatch.chdir(tmp_path)
@@ -57,21 +58,24 @@ def test_history_list_with_entries(tmp_path: Path, monkeypatch, history_store: S
 
 
 def test_history_favorites_empty(tmp_path: Path, monkeypatch):
-    """sc history favorites shows empty state when no favorites exist."""
+    """Sc history favorites shows empty state when no favorites exist."""
     from snipcontext.config.settings import reset_config
 
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".snipcontext").mkdir()
     reset_config()
 
-    with patch("snipcontext.cli.history.SearchHistoryStore", return_value=SearchHistoryStore(db_path=tmp_path / "history.db")):
+    with patch(
+        "snipcontext.cli.history.SearchHistoryStore",
+        return_value=SearchHistoryStore(db_path=tmp_path / "history.db"),
+    ):
         result = runner.invoke(app, ["history", "favorites"])
     assert result.exit_code == 0
     assert "No favorites yet" in result.output
 
 
 def test_history_favorites_with_entries(tmp_path: Path, history_store: SearchHistoryStore):
-    """sc history favorites shows favorited queries."""
+    """Sc history favorites shows favorited queries."""
     history_store.add("fastapi setup", result_count=5)
     eid = history_store.get_recent()[0].id
     history_store.toggle_favorite(eid)
@@ -83,7 +87,7 @@ def test_history_favorites_with_entries(tmp_path: Path, history_store: SearchHis
 
 
 def test_history_add(tmp_path: Path, history_store: SearchHistoryStore):
-    """sc history add adds a query to history."""
+    """Sc history add adds a query to history."""
     with patch("snipcontext.cli.history.SearchHistoryStore", return_value=history_store):
         result = runner.invoke(app, ["history", "add", "docker compose"])
     assert result.exit_code == 0
@@ -92,7 +96,7 @@ def test_history_add(tmp_path: Path, history_store: SearchHistoryStore):
 
 
 def test_history_add_with_favorite(tmp_path: Path, history_store: SearchHistoryStore):
-    """sc history add --favorite marks the new entry as favorite."""
+    """Sc history add --favorite marks the new entry as favorite."""
     with patch("snipcontext.cli.history.SearchHistoryStore", return_value=history_store):
         result = runner.invoke(app, ["history", "add", "redis cache", "--favorite"])
     assert result.exit_code == 0
@@ -102,7 +106,7 @@ def test_history_add_with_favorite(tmp_path: Path, history_store: SearchHistoryS
 
 
 def test_history_favorite_toggle(tmp_path: Path, history_store: SearchHistoryStore):
-    """sc history favorite <id> toggles favorite status."""
+    """Sc history favorite <id> toggles favorite status."""
     history_store.add("sqlite pool", result_count=2)
     eid = history_store.get_recent()[0].id
 
@@ -119,7 +123,7 @@ def test_history_favorite_toggle(tmp_path: Path, history_store: SearchHistorySto
 
 
 def test_history_favorite_missing_id(tmp_path: Path, history_store: SearchHistoryStore):
-    """sc history favorite <missing-id> reports error."""
+    """Sc history favorite <missing-id> reports error."""
     with patch("snipcontext.cli.history.SearchHistoryStore", return_value=history_store):
         result = runner.invoke(app, ["history", "favorite", "9999"])
     assert result.exit_code == 1
@@ -127,7 +131,7 @@ def test_history_favorite_missing_id(tmp_path: Path, history_store: SearchHistor
 
 
 def test_history_clear_with_force(tmp_path: Path, history_store: SearchHistoryStore):
-    """sc history clear --force clears all history without prompt."""
+    """Sc history clear --force clears all history without prompt."""
     history_store.add("cleanup test", result_count=1)
 
     with patch("snipcontext.cli.history.SearchHistoryStore", return_value=history_store):
