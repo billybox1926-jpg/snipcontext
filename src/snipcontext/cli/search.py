@@ -1,15 +1,28 @@
 """Search domain CLI commands."""
 
+from __future__ import annotations
+
 import logging
 
 import typer
 from rich.console import Console
+from rich.table import Table
 
 from snipcontext.cli.context import get_context as _get_context
 from snipcontext.cli.snippets import _print_snippet
+from snipcontext.core.search_history import SearchHistoryStore
 
 logger = logging.getLogger(__name__)
 console = Console()
+
+_history_store: SearchHistoryStore | None = None
+
+
+def _get_history() -> SearchHistoryStore:
+    global _history_store
+    if _history_store is None:
+        _history_store = SearchHistoryStore()
+    return _history_store
 
 
 def register_commands(app: typer.Typer) -> None:
@@ -21,7 +34,7 @@ def register_commands(app: typer.Typer) -> None:
 
 def search(
     queries: list[str] = typer.Argument(
-        ...,
+        None,
         help="Search query(ies). Multiple queries trigger multi-search merge. Use query^N for weight (e.g. http^2).",
     ),
     mode: str = typer.Option(
@@ -36,19 +49,16 @@ def search(
     no_semantic: bool = typer.Option(
         False, "--no-semantic", help="Skip semantic search; use keyword-only mode"
     ),
-    lang: str = typer.Option(
-        None, "--lang", "-l", help="Filter by language (comma-separated, e.g. python,typescript)"
-    ),
-    tag: str = typer.Option(
-        None, "--tag", help="Filter by tags (comma-separated, AND logic, e.g. cli,api)"
-    ),
-    boost_recent: bool = typer.Option(
-        False, "--boost-recent", help="Weight newer snippets higher in rankings"
-    ),
+    lang: str = typer.Option(None, "--lang", "-l", help="Filter by language (comma-separated, e.g. python,typescript)"),
+    tag: str = typer.Option(None, "--tag", help="Filter by tags (comma-separated, AND logic, e.g. cli,api)"),
+    boost_recent: bool = typer.Option(False, "--boost-recent", help="Weight newer snippets higher in rankings"),
     explain: bool = typer.Option(False, "--explain", help="Show scoring breakdown for each result"),
-    group_by: str = typer.Option(
-        None, "--group-by", help="Group results: language, tag, or source"
-    ),
+    group_by: str = typer.Option(None, "--group-by", help="Group results: language, tag, or source"),
+    history: bool = typer.Option(False, "--history", help="Show recent search history"),
+    favorites: bool = typer.Option(False, "--favorites", help="Show favorite searches"),
+    rerun: int | None = typer.Option(None, "--rerun", help="Re-run a search from history by ID"),
+    favorite: int | None = typer.Option(None, "--favorite", help="Toggle favorite on a history entry by ID"),
+    clear_history: bool = typer.Option(False, "--clear-history", help="Clear all search history"),
 ) -> None:
     """Search snippets with semantic + keyword hybrid search.
 
@@ -58,6 +68,33 @@ def search(
 
     Use --group-by to organise results by language, tag, or source.
     """
+    store = _get_history()
+
+    if history:
+        _show_history(store)
+        return
+    if favorites:
+        _show_favorites(store)
+        return
+    if rerun is not None:
+        entry = store.get_by_id(rerun)
+        if not entry:
+            console.print(f"[red]No history entry with ID {rerun}[/red]")
+            raise typer.Exit(1)
+        queries = [entry.query]
+        console.print(f"[dim]Re-running: {entry.query}[/dim]")
+    if favorite is not None:
+        _toggle_favorite(store, favorite)
+        return
+    if clear_history:
+        store.clear()
+        console.print("[green]Search history cleared.[/green]")
+        return
+    if not queries:
+        console.print("[red]Error: QUERIES are required for search.[/red]")
+        raise typer.Exit(1)
+
+    # Normal search path
     config, storage, searcher = _get_context()
     if index or not searcher.indices_ready:
         console.print("[yellow]Building search index...[/yellow]")
@@ -74,7 +111,6 @@ def search(
 
     # Decide single-query vs multi-query
     if len(queries) == 1:
-        # Single query — use the fast path
         results = searcher.search(
             queries[0],
             top_k=top_k,
@@ -89,7 +125,6 @@ def search(
         )
         query_label = queries[0]
     else:
-        # Multi-query — use RRF merge
         results = searcher.multi_search(
             queries,
             top_k=top_k,
@@ -103,6 +138,8 @@ def search(
             explain=explain,
         )
         query_label = ", ".join(queries)
+
+    store.add(query_label, len(results))
 
     if not results:
         console.print(f"[yellow]No results for '{query_label}'[/yellow]")
@@ -151,6 +188,50 @@ def search(
                 for key, val in result.explanation.items():
                     console.print(f"  [dim]{key}: {val}[/dim]")
             console.print()
+
+
+def _show_history(store: SearchHistoryStore) -> None:
+    entries = store.get_recent(limit=50)
+    if not entries:
+        console.print("[dim]No search history yet.[/dim]")
+        return
+    table = Table(title="Search History")
+    table.add_column("ID", style="cyan", justify="right")
+    table.add_column("Query")
+    table.add_column("Time", style="dim")
+    table.add_column("Results", justify="right")
+    table.add_column("Fav", justify="center")
+    for entry in entries:
+        ts = entry.timestamp.strftime("%Y-%m-%d %H:%M")
+        fav = "★" if entry.is_favorite else ""
+        table.add_row(str(entry.id), entry.query, ts, str(entry.result_count), fav)
+    console.print(table)
+
+
+def _show_favorites(store: SearchHistoryStore) -> None:
+    entries = store.get_favorites()
+    if not entries:
+        console.print("[dim]No favorites yet. Use --favorite <id> to mark one.[/dim]")
+        return
+    table = Table(title="Favorite Searches")
+    table.add_column("ID", style="cyan", justify="right")
+    table.add_column("Query")
+    table.add_column("Time", style="dim")
+    table.add_column("Results", justify="right")
+    for entry in entries:
+        ts = entry.timestamp.strftime("%Y-%m-%d %H:%M")
+        table.add_row(str(entry.id), entry.query, ts, str(entry.result_count))
+    console.print(table)
+
+
+def _toggle_favorite(store: SearchHistoryStore, entry_id: int) -> None:
+    entry = store.get_by_id(entry_id)
+    if not entry:
+        console.print(f"[red]No history entry with ID {entry_id}[/red]")
+        raise typer.Exit(1)
+    is_fav = store.toggle_favorite(entry_id)
+    label = "favorited" if is_fav else "unfavorited"
+    console.print(f"[green]{label}: '{entry.query}' (ID {entry_id})[/green]")
 
 
 def index(

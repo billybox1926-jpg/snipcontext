@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
+from unittest.mock import patch
 
 from snipcontext.cli.app import app
 from snipcontext.config.paths import (
