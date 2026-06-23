@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] – 2026-06-23
+
+### Added
+- **Export schema versioning** – Every `export_batch` output now includes a `Export schema version: 1.0.0` header (or provider‑specific comment). This makes it easier to detect breaking format changes. (#98)
+- **Hash‑based exact dedup** – A fast SHA‑256 hash check runs **before** the expensive semantic dedup step, saving time and compute on duplicate content. (#101)
+- **Configurable storage location** – You can now use a **project‑local `.snipcontext/`** directory (via `sc init --local`) or override the storage root via the `SNIPCONTEXT_HOME` environment variable. (#36)
+- **Search history & favorites** – All search queries are now stored locally. Use `sc search --history` to see recent queries, `--favorites` to see starred ones, `--rerun <id>` to re‑execute, and `--favorite <id>` to toggle a query as a favorite. (#35)
+
+### Changed
+- **Plugin system** – The `PluginRegistry` is now the single source of truth for discovery, loading, unloading, and health checks. Providers are now full plugins with lifecycle hooks and version compatibility checks (`requires`). CLI now includes `sc plugins --load` / `--unload`.
+- **`BaseProvider` now inherits from `Plugin`** – All providers gain `on_load` and `on_shutdown` hooks (default no‑ops).
+- **CLI snapshot tests** – Stabilised across all environments. Output is now deterministic with ASCII box‑drawing and fixed‑width tables.
+
+### Fixed
+- **Snapshot instability** – Tables now consistently use `+`, `-`, `|` borders. Environment variables and explicit ASCII box style are used to guarantee deterministic output.
+- **Mypy errors** – Fixed return type annotation in `SearchHistoryStore.toggle_favorite()` and silenced untyped decorator warning in A2A agent card router.
+- **Encryption skip in minimal install** – Tests that require `cryptography` now skip cleanly when the package is absent.
+
+### Deprecated
+- (None)
+
+### Removed
+- (None)
+
 ## [0.2.4] - 2026-06-21
 
 ### Added
