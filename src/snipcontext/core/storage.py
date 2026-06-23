@@ -432,15 +432,13 @@ class StorageEngine:
         """Remove orphaned files and compress storage.
 
         Only removes files whose stem is not a valid snippet ID that can
-        be loaded. Corrupted/unreadable files are left alone to prevent
-        data loss.
+        be loaded.
 
         Returns:
             Number of bytes freed.
         """
         freed = 0
         valid_ids: set[str] = set()
-        corrupted_ids: set[str] = set()
 
         for path in self.snippets_dir.glob("*.json"):
             snippet_id = path.stem
@@ -450,13 +448,11 @@ class StorageEngine:
                 Snippet.model_validate(data)
                 valid_ids.add(snippet_id)
             except Exception:
-                corrupted_ids.add(snippet_id)
+                pass
 
-        # Remove only files that are neither valid nor corrupted-valid
-        # (i.e. files that don't correspond to any loadable snippet)
         for path in self.snippets_dir.glob("*.json"):
             snippet_id = path.stem
-            if snippet_id not in valid_ids and snippet_id not in corrupted_ids:
+            if snippet_id not in valid_ids:
                 freed += path.stat().st_size
                 path.unlink()
                 logger.debug("Vacuumed orphaned file: %s", path.name)
