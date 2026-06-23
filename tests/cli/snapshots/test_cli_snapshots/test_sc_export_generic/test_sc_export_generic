@@ -1,0 +1,19 @@
+# Code Context
+
+> *1 code snippets provided as context*
+
+> *Export schema version: 1.0.0*
+
+---
+
+## Answer
+
+**Title:** Answer
+**Language:** python
+**Quality:** draft
+**LLM-Optimized:** No
+
+```python
+x = 42
+```
+
