@@ -156,8 +156,8 @@ def fake_plugin_factory():
         built.append(ep)
         return ep
 
-    factory.reset = lambda: built.clear()  # noqa
-    factory.built = built
+    factory.reset = lambda: built.clear()  # type: ignore[attr-defined] # noqa
+    factory.built = built  # type: ignore[attr-defined]
     return factory
 
 
@@ -254,11 +254,11 @@ def mock_provider_apis(mocker):
         registry.clear()
         sent.clear()
 
-    factory.register = register
-    factory.reset = reset
-    factory.sent = sent
-    factory.FakeResponse = FakeResponse
-    factory.responses = responses
+    factory.register = register  # type: ignore[attr-defined]
+    factory.reset = reset  # type: ignore[attr-defined]
+    factory.sent = sent  # type: ignore[attr-defined]
+    factory.FakeResponse = FakeResponse  # type: ignore[attr-defined]
+    factory.responses = responses  # type: ignore[attr-defined]
     return factory
 
 
