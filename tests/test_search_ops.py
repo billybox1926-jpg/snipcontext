@@ -83,7 +83,7 @@ class TestSearchSnippets:
         storage.save(s)
         # Use search_snippets which properly handles index building
         results = search_snippets(storage, search_engine, "authenticate", mode="keyword", top_k=10)
-        assert len(results) >= 1
+        assert len(results) >= 1, f"Expected at least 1 result, got {len(results)}"
 
     def test_tag_search(self, storage, search_engine):
         s = Snippet(
