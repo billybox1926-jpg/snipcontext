@@ -49,15 +49,25 @@ def search(
     no_semantic: bool = typer.Option(
         False, "--no-semantic", help="Skip semantic search; use keyword-only mode"
     ),
-    lang: str = typer.Option(None, "--lang", "-l", help="Filter by language (comma-separated, e.g. python,typescript)"),
-    tag: str = typer.Option(None, "--tag", help="Filter by tags (comma-separated, AND logic, e.g. cli,api)"),
-    boost_recent: bool = typer.Option(False, "--boost-recent", help="Weight newer snippets higher in rankings"),
+    lang: str = typer.Option(
+        None, "--lang", "-l", help="Filter by language (comma-separated, e.g. python,typescript)"
+    ),
+    tag: str = typer.Option(
+        None, "--tag", help="Filter by tags (comma-separated, AND logic, e.g. cli,api)"
+    ),
+    boost_recent: bool = typer.Option(
+        False, "--boost-recent", help="Weight newer snippets higher in rankings"
+    ),
     explain: bool = typer.Option(False, "--explain", help="Show scoring breakdown for each result"),
-    group_by: str = typer.Option(None, "--group-by", help="Group results: language, tag, or source"),
+    group_by: str = typer.Option(
+        None, "--group-by", help="Group results: language, tag, or source"
+    ),
     history: bool = typer.Option(False, "--history", help="Show recent search history"),
     favorites: bool = typer.Option(False, "--favorites", help="Show favorite searches"),
     rerun: int | None = typer.Option(None, "--rerun", help="Re-run a search from history by ID"),
-    favorite: int | None = typer.Option(None, "--favorite", help="Toggle favorite on a history entry by ID"),
+    favorite: int | None = typer.Option(
+        None, "--favorite", help="Toggle favorite on a history entry by ID"
+    ),
     clear_history: bool = typer.Option(False, "--clear-history", help="Clear all search history"),
 ) -> None:
     """Search snippets with semantic + keyword hybrid search.
