@@ -5,10 +5,13 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from textual.widgets import Input
 
-from snipcontext.core.models import Language, Snippet, SnippetMetadata
-from snipcontext.tui.textual_app import PreviewPane, SnippetBrowser
+pytest.importorskip("textual")
+
+from textual.widgets import Input  # noqa: E402
+
+from snipcontext.core.models import Language, Snippet, SnippetMetadata  # noqa: E402
+from snipcontext.tui.textual_app import PreviewPane, SnippetBrowser  # noqa: E402
 
 
 @pytest.fixture
