@@ -83,8 +83,10 @@ def _normalize(output: str, temp_dir: Path) -> str:
     # Blast the entire Storage section with a fixed template so terminal
     # width differences between environments cannot affect snapshots.
     pattern = r"(Storage:)(.*?)(\n\n|\n[+\-].*$|\Z)"
+
     def _repl(match: re.Match[str]) -> str:
         return "Storage:\n  Data directory: <tmp>\n"
+
     output = re.sub(pattern, _repl, output, flags=re.DOTALL)
 
     # Normalize padding/whitespace for snapshot stability.
