@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import tempfile
 from pathlib import Path
 
@@ -11,7 +10,12 @@ import pytest
 
 from snipcontext.config.settings import Config, StorageConfig, reset_config
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
-from snipcontext.core.storage import EncryptionError, SnippetNotFoundError, StorageEngine, StorageError
+from snipcontext.core.storage import (
+    EncryptionError,
+    SnippetNotFoundError,
+    StorageEngine,
+    StorageError,
+)
 
 
 @pytest.fixture
