@@ -461,6 +461,8 @@ snipcontext encrypt <snippet-id>
 ```
 
 > **Note:** When encrypted, the plaintext `content` is cleared from storage. The `encrypted_content` field stores the encrypted data. Use `snipcontext decrypt <id>` to restore plaintext for editing.
+>
+> For the full security guide, see [`docs/security.md`](docs/security.md).
 
 ---
 

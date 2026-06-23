@@ -78,6 +78,17 @@ SnipContext Configuration
 | `SNIPCONTEXT_STORAGE__SNIPPETS_DIR` | Override the snippets subdirectory |
 | `SNIPCONTEXT_STORAGE__INDEX_DIR` | Override the index subdirectory |
 
+### Encryption
+
+| Variable | Description |
+|----------|-------------|
+| `SNIPCONTEXT_ENCRYPT_ENABLED` | Enable global encryption at rest |
+| `SNIPCONTEXT_ENCRYPTION_PASSPHRASE` | **Required** — passphrase for PBKDF2 key derivation |
+| `SNIPCONTEXT_ENCRYPT_KEY_ITERATIONS` | PBKDF2 iteration count (default: `100000`, minimum `10000`) |
+| `SNIPCONTEXT_ENCRYPT_KEY_SALT` | Base64‑encoded 16‑byte salt (auto‑generated if omitted) |
+
+For usage and threat model details, see [`docs/security.md`](security.md).
+
 For a full list of configurable keys, run:
 
 ```bash
