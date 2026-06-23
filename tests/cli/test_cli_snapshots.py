@@ -1,16 +1,8 @@
+"""Golden/snapshot tests for CLI output."""
+
 from __future__ import annotations
 
 import os
-
-# Force Rich/table output to ASCII so snapshots are stable across environments.
-# These env vars are the first line of defense.
-os.environ.setdefault("TERM", "dumb")
-os.environ.setdefault("COLUMNS", "120")
-os.environ.setdefault("NO_COLOR", "1")
-os.environ.setdefault("RICH_TERMINAL", "dumb")
-
-"""Golden/snapshot tests for CLI output."""
-
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -18,6 +10,13 @@ import pytest
 from typer.testing import CliRunner
 
 from snipcontext.cli.app import app
+
+# Force Rich/table output to ASCII so snapshots are stable across environments.
+# These env vars are the first line of defense.
+os.environ.setdefault("TERM", "dumb")
+os.environ.setdefault("COLUMNS", "120")
+os.environ.setdefault("NO_COLOR", "1")
+os.environ.setdefault("RICH_TERMINAL", "dumb")
 
 runner = CliRunner()
 
