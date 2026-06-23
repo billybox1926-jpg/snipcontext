@@ -7,8 +7,6 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-from snipcontext.config.paths import _PROJECT_DIR_NAME
-
 console = Console()
 
 
