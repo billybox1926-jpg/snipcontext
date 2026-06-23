@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from snipcontext.config.settings import Config, SearchConfig
 from snipcontext.core.index_backends import (
     FlatIndexBackend,
