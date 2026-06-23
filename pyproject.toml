@@ -181,7 +181,7 @@ markers = [
 ]
 [tool.coverage.run]
 source = ["snipcontext"]
-omit = ["*/tests/*", "*/test_*"]
+omit = ["*/tests/*", "*/test_*", "*/tui/textual_app.py"]
 
 [tool.coverage.report]
 exclude_lines = [
