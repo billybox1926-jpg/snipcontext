@@ -76,6 +76,12 @@ BOX_TRANSLATION = str.maketrans(
 
 def _normalize(output: str, temp_dir: Path) -> str:
     output = output.replace(str(temp_dir), "<tmp>")
+    lines = output.splitlines()
+    for i, line in enumerate(lines):
+        if "Data directory:" in line:
+            lines[i] = "  Data directory: <tmp>"
+            break
+    output = "\n".join(lines)
     # Normalize padding/whitespace for snapshot stability.
     output = "\n".join(line.rstrip() for line in output.splitlines())
     # Force ASCII table borders in case RICH_TERMINAL injection is late.
