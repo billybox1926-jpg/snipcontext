@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typer
+from rich.box import ASCII as ASCII_BOX
 from rich.console import Console
 from rich.table import Table
 
@@ -25,7 +26,7 @@ def register_commands(app: typer.Typer) -> None:
 
         mode = "project-local" if project_local else "global"
 
-        table = Table(title="SnipContext Configuration")
+        table = Table(title="SnipContext Configuration", box=ASCII_BOX)
         table.add_column("Setting", style="cyan")
         table.add_column("Value", style="green")
 
