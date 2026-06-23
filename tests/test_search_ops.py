@@ -103,9 +103,7 @@ class TestSearchSnippets:
                 metadata=SnippetMetadata(title=f"Func {i}"),
             )
             storage.save(s)
-        results = search_snippets(
-            storage, search_engine, "def", mode="keyword", top_k=3
-        )
+        results = search_snippets(storage, search_engine, "def", mode="keyword", top_k=3)
         # Results may be empty if keyword index isn't built, but top_k should be respected
         assert len(results) <= 3
 
@@ -126,9 +124,7 @@ class TestExportSnippets:
         s2 = Snippet(content="b", metadata=SnippetMetadata(title="B"))
         storage.save(s1)
         storage.save(s2)
-        snippets, formatted = export_snippets(
-            storage, search_engine, "generic", ids=[s1.id]
-        )
+        snippets, formatted = export_snippets(storage, search_engine, "generic", ids=[s1.id])
         assert len(snippets) == 1
         assert snippets[0].metadata.title == "A"
 
@@ -146,9 +142,7 @@ class TestExportSnippets:
             metadata=SnippetMetadata(title="Hello", language=Language.PYTHON),
         )
         storage.save(s)
-        snippets, formatted = export_snippets(
-            storage, search_engine, "generic", query="hello"
-        )
+        snippets, formatted = export_snippets(storage, search_engine, "generic", query="hello")
         # Query export uses search_snippets which may return empty if index not built
         # but the function should still work
         assert isinstance(formatted, str)
