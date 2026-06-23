@@ -54,6 +54,8 @@ def encrypted_storage(temp_config, monkeypatch):
 class TestEncryption:
     """Tests for content encryption/decryption."""
 
+    pytest.importorskip("cryptography")
+
     def test_roundtrip(self, encrypted_storage):
         plaintext = "hello, world"
         ciphertext = encrypted_storage.encrypt_content(plaintext)
