@@ -31,7 +31,9 @@ def _env(temp_dir: Path) -> dict[str, str]:
         "COLUMNS": "120",
         "TERM": "dumb",
         "NO_COLOR": "1",
-        "RICH_TERMINAL": "dumb",
+        "FORCE_COLOR": "0",
+        "RICH_TERMINAL": "ascii",
+        "RICH_TERMINAL_WIDTH": "120",
     }
 
 
@@ -74,7 +76,9 @@ BOX_TRANSLATION = str.maketrans(
 
 def _normalize(output: str, temp_dir: Path) -> str:
     output = output.replace(str(temp_dir), "<tmp>")
-    # Force ASCII table borders so snapshots are stable across Windows/WSL/CI.
+    # Normalize padding/whitespace for snapshot stability.
+    output = "\n".join(line.rstrip() for line in output.splitlines())
+    # Force ASCII table borders in case RICH_TERMINAL injection is late.
     return output.translate(BOX_TRANSLATION)
 
 
