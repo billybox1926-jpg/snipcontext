@@ -58,7 +58,9 @@ class SearchHistoryStore:
                 (query, result_count),
             )
             conn.commit()
-            return cursor.lastrowid
+            last_id = cursor.lastrowid
+            assert last_id is not None
+            return last_id
 
     def get_recent(self, limit: int = 50) -> list[SearchHistoryEntry]:
         with self._connect() as conn:

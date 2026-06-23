@@ -9,7 +9,7 @@ from snipcontext.web.agent_card import build_agent_card
 router = APIRouter(tags=["a2a"])
 
 
-@router.get("/.well-known/agent.json")
+@router.get("/.well-known/agent.json")  # type: ignore[untyped-decorator]
 async def get_agent_card(request: Request) -> dict[str, object]:
     """A2A Agent Card endpoint."""
     base_url = str(request.base_url).rstrip("/")
