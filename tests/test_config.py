@@ -11,12 +11,11 @@ from unittest.mock import patch
 
 from snipcontext.cli.app import app
 from snipcontext.config.paths import (
-    find_project_root,
     get_config_path,
     get_storage_root,
     is_project_local,
 )
-from snipcontext.config.settings import Config, StorageConfig, get_config, reset_config
+from snipcontext.config.settings import get_config, reset_config
 
 runner = CliRunner()
 

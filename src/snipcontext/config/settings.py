@@ -10,9 +10,10 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from snipcontext.config.paths import get_config_path, get_storage_root
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from snipcontext.config.paths import get_config_path, get_storage_root
 
 _APP_NAME = "SnipContext"
 _APP_AUTHOR = "snipcontext"
