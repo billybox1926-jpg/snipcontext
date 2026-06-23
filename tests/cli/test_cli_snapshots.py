@@ -1,6 +1,15 @@
-"""Golden/snapshot tests for CLI output."""
-
 from __future__ import annotations
+
+import os
+
+# Force Rich/table output to ASCII so snapshots are stable across environments.
+# These env vars are the first line of defense.
+os.environ.setdefault("TERM", "dumb")
+os.environ.setdefault("COLUMNS", "120")
+os.environ.setdefault("NO_COLOR", "1")
+os.environ.setdefault("RICH_TERMINAL", "dumb")
+
+"""Golden/snapshot tests for CLI output."""
 
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -19,6 +28,9 @@ def _env(temp_dir: Path) -> dict[str, str]:
         "SNIPCONTEXT_STORAGE__SNIPPETS_DIR": "snippets",
         "SNIPCONTEXT_STORAGE__INDEX_DIR": "index",
         "COLUMNS": "120",
+        "TERM": "dumb",
+        "NO_COLOR": "1",
+        "RICH_TERMINAL": "dumb",
     }
 
 
@@ -26,10 +38,27 @@ def _invoke(temp_dir: Path, args: list[str], **kwargs):
     return runner.invoke(app, args, env=_env(temp_dir), **kwargs)
 
 
-def _normalize(output: str, temp_dir: Path) -> str:
+BOX_TRANSLATION = str.maketrans(
+    {
+        "┌": "+",
+        "┬": "+",
+        "┐": "+",
+        "├": "+",
+        "┼": "+",
+        "┤": "+",
+        "└": "+",
+        "┴": "+",
+        "┘": "+",
+        "─": "-",
+        "│": "|",
+    }
+)
 
+
+def _normalize(output: str, temp_dir: Path) -> str:
     output = output.replace(str(temp_dir), "<tmp>")
-    return output
+    # Force ASCII table borders so snapshots are stable across Windows/WSL/CI.
+    return output.translate(BOX_TRANSLATION)
 
 
 @pytest.fixture(autouse=True)

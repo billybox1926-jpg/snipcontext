@@ -5,6 +5,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from snipcontext.cli.app import app
@@ -68,6 +69,7 @@ def test_hash_dedup_allows_explicit_yes():
 
 def test_hash_dedup_skips_encrypted():
     """Encrypted snippets skip the hash dedup check."""
+    pytest.importorskip("cryptography")
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         env = {
