@@ -78,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Web API dependency isolation for CI (PR #104)
 - Short option conflicts (`-f`, `-t`, `-s`, `-m`) across commands
 
-## [Unreleased]
+## [0.4.0] - 2026-06-22
 
 ### Added
 - `sc index` CLI command — rebuild search index from all stored snippets
@@ -128,6 +128,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SyntaxError: parameter without a default follows parameter with a default` — `delete` command parameter order
 - `idmap.json` serialization — was manual string joining, now proper `json.dump`
 - `content_hashes.json` not persisted in `VectorIndex.save`
+
+## [Unreleased]
+
+### Added
 - `except: pass` in `search.py` silently swallowing index cleanup errors (partially addressed)
 - Duplicate `_OPT_QUERY`, `_OPT_IDS`, `_OPT_OUTPUT` constants causing option conflicts
 - Short option conflicts: `-f` (file/fuzzy/force), `-t` (tag/threshold), `-s` (sensitive/sort), `-m` (mode/message)
