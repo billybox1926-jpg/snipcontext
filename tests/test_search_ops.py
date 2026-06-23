@@ -81,10 +81,8 @@ class TestSearchSnippets:
             tags=["auth"],
         )
         storage.save(s)
-        # Build index directly, then search
-        snippets = [s for s in storage.iter_all() if not s.deleted]
-        search_engine.index_snippets(snippets)
-        results = search_engine.search("authenticate", top_k=10, mode=SearchMode.KEYWORD)
+        # Use search_snippets which properly handles index building
+        results = search_snippets(storage, search_engine, "authenticate", mode="keyword", top_k=10)
         assert len(results) >= 1
 
     def test_tag_search(self, storage, search_engine):
