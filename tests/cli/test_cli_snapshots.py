@@ -75,13 +75,18 @@ BOX_TRANSLATION = str.maketrans(
 
 
 def _normalize(output: str, temp_dir: Path) -> str:
+    import re
+
+    # Replace temp path
     output = output.replace(str(temp_dir), "<tmp>")
-    lines = output.splitlines()
-    for i, line in enumerate(lines):
-        if "Data directory:" in line:
-            lines[i] = "  Data directory: <tmp>"
-            break
-    output = "\n".join(lines)
+
+    # Blast the entire Storage section with a fixed template so terminal
+    # width differences between environments cannot affect snapshots.
+    pattern = r"(Storage:)(.*?)(\n\n|\n[+\-].*$|\Z)"
+    def _repl(match: re.Match[str]) -> str:
+        return "Storage:\n  Data directory: <tmp>\n"
+    output = re.sub(pattern, _repl, output, flags=re.DOTALL)
+
     # Normalize padding/whitespace for snapshot stability.
     output = "\n".join(line.rstrip() for line in output.splitlines())
     # Force ASCII table borders in case RICH_TERMINAL injection is late.
