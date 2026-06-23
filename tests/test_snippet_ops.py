@@ -106,8 +106,13 @@ class TestCreateSnippet:
 
     def test_encrypted_snippet(self):
         s = create_snippet(
-            "", "title", "desc", "python", ["tag"],
-            encrypt=True, encrypted_content="encrypted-blob",
+            "",
+            "title",
+            "desc",
+            "python",
+            ["tag"],
+            encrypt=True,
+            encrypted_content="encrypted-blob",
         )
         assert s.content == ""
         assert s.encrypted_content == "encrypted-blob"

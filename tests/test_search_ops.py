@@ -97,9 +97,7 @@ class TestSearchSnippets:
             metadata=SnippetMetadata(title="Hello", language=Language.PYTHON),
         )
         storage.save(s)
-        results = search_snippets(
-            storage, search_engine, "hello", mode="keyword", threshold=0.0
-        )
+        results = search_snippets(storage, search_engine, "hello", mode="keyword", threshold=0.0)
         assert len(results) >= 1
 
     def test_fuzzy_search(self, storage, search_engine):
@@ -108,9 +106,7 @@ class TestSearchSnippets:
             metadata=SnippetMetadata(title="Auth"),
         )
         storage.save(s)
-        results = search_snippets(
-            storage, search_engine, "auth", mode="keyword", fuzzy=True
-        )
+        results = search_snippets(storage, search_engine, "auth", mode="keyword", fuzzy=True)
         assert len(results) >= 1
 
     def test_top_k_limit(self, storage, search_engine):
@@ -120,9 +116,7 @@ class TestSearchSnippets:
                 metadata=SnippetMetadata(title=f"Func {i}"),
             )
             storage.save(s)
-        results = search_snippets(
-            storage, search_engine, "def", mode="keyword", top_k=3
-        )
+        results = search_snippets(storage, search_engine, "def", mode="keyword", top_k=3)
         assert len(results) <= 3
 
 
@@ -142,9 +136,7 @@ class TestExportSnippets:
         s2 = Snippet(content="b", metadata=SnippetMetadata(title="B"))
         storage.save(s1)
         storage.save(s2)
-        snippets, formatted = export_snippets(
-            storage, search_engine, "generic", ids=[s1.id]
-        )
+        snippets, formatted = export_snippets(storage, search_engine, "generic", ids=[s1.id])
         assert len(snippets) == 1
         assert snippets[0].metadata.title == "A"
 
@@ -162,9 +154,7 @@ class TestExportSnippets:
             metadata=SnippetMetadata(title="Hello", language=Language.PYTHON),
         )
         storage.save(s)
-        snippets, formatted = export_snippets(
-            storage, search_engine, "generic", query="hello"
-        )
+        snippets, formatted = export_snippets(storage, search_engine, "generic", query="hello")
         assert len(snippets) >= 1
 
     def test_export_invalid_provider(self, storage, search_engine):

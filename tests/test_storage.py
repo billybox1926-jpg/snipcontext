@@ -495,4 +495,3 @@ class TestStorageEncryptionErrors:
         """Test that decrypting invalid data raises EncryptionError."""
         with pytest.raises(EncryptionError):
             encrypted_storage.decrypt_content("not-valid-base64!!!")
-
