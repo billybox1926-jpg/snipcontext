@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 from pathlib import Path
 
@@ -10,7 +11,7 @@ import pytest
 
 from snipcontext.config.settings import Config, StorageConfig, reset_config
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
-from snipcontext.core.storage import SnippetNotFoundError, StorageEngine, StorageError
+from snipcontext.core.storage import EncryptionError, SnippetNotFoundError, StorageEngine, StorageError
 
 
 @pytest.fixture
@@ -39,6 +40,56 @@ def sample_snippet():
         ),
         tags=["python", "demo", "beginner"],
     )
+
+
+@pytest.fixture
+def encrypted_storage(temp_config, monkeypatch):
+    """Provide a StorageEngine with Fernet encryption enabled."""
+    config = temp_config
+    config.encryption.enabled = True
+    monkeypatch.setenv("SNIPCONTEXT_ENCRYPTION_PASSPHRASE", "test-passphrase-for-unit-tests")
+    return StorageEngine(config)
+
+
+class TestEncryption:
+    """Tests for content encryption/decryption."""
+
+    def test_roundtrip(self, encrypted_storage):
+        plaintext = "hello, world"
+        ciphertext = encrypted_storage.encrypt_content(plaintext)
+        assert encrypted_storage.decrypt_content(ciphertext) == plaintext
+
+    def test_different_plaintexts_produce_different_ciphertexts(self, encrypted_storage):
+        ct1 = encrypted_storage.encrypt_content("hello")
+        ct2 = encrypted_storage.encrypt_content("world")
+        assert ct1 != ct2
+
+    def test_same_plaintext_produces_different_ciphertexts(self, encrypted_storage):
+        ct1 = encrypted_storage.encrypt_content("hello")
+        ct2 = encrypted_storage.encrypt_content("hello")
+        assert ct1 != ct2
+
+    def test_wrong_key_fails(self, temp_config, monkeypatch):
+        config = temp_config
+        config.encryption.enabled = True
+
+        monkeypatch.setenv("SNIPCONTEXT_ENCRYPTION_PASSPHRASE", "passphrase-a")
+        storage_a = StorageEngine(config)
+        encrypted = storage_a.encrypt_content("secret")
+
+        monkeypatch.setenv("SNIPCONTEXT_ENCRYPTION_PASSPHRASE", "passphrase-b")
+        storage_b = StorageEngine(config)
+        with pytest.raises(EncryptionError):
+            storage_b.decrypt_content(encrypted)
+
+    def test_empty_string_roundtrip(self, encrypted_storage):
+        ciphertext = encrypted_storage.encrypt_content("")
+        assert encrypted_storage.decrypt_content(ciphertext) == ""
+
+    def test_unicode_roundtrip(self, encrypted_storage):
+        plaintext = "你好 🚀 émoji"
+        ciphertext = encrypted_storage.encrypt_content(plaintext)
+        assert encrypted_storage.decrypt_content(ciphertext) == plaintext
 
 
 class TestStorageCRUD:
