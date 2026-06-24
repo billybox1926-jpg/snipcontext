@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import os
-import re
+from datetime import datetime
+from unittest.mock import patch
 
 # Force Rich/table output to ASCII so snapshots are stable across environments.
 # These env vars MUST be set before any Rich console is initialized.
@@ -22,6 +23,32 @@ from typer.testing import CliRunner
 from snipcontext.cli.app import app
 
 runner = CliRunner()
+
+# Snapshot tests embed created_at dates in output — freeze datetime so snapshots
+# don't drift when the calendar date changes between CI runs and snapshot creation.
+_snapshot_epoch = datetime(2026, 6, 24, 12, 0, 0)
+
+
+@pytest.fixture(autouse=True)
+def _freeze_datetime():
+    """Pin datetime.now() to a fixed UTC timestamp for snapshot stability."""
+    import datetime as _real_dt
+
+    epoch = _snapshot_epoch
+
+    class FrozenDateTime(_real_dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is not None:
+                return epoch.replace(tzinfo=tz)
+            return epoch.replace(tzinfo=_real_dt.timezone.utc).astimezone(tz)
+
+        @classmethod
+        def utcnow(cls):  # noqa: N802 — mirrors stdlib naming
+            return epoch
+
+    with patch("datetime.datetime", FrozenDateTime):
+        yield
 
 
 def _env(temp_dir: Path) -> dict[str, str]:
