@@ -113,6 +113,27 @@ auto_tag:
 
 > **Requirement:** Install the `[semantic]` extra: `pip install snipcontext[semantic]`.
 
+## File Watcher
+
+SnipContext's `sc watch` command uses the file watcher integration to keep the
+search index in sync with disk changes. You can tune its behavior with these
+storage settings:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SNIPCONTEXT_STORAGE__WATCHDOG_ENABLED` | `true` | Enable the file watcher auto-index |
+| `SNIPCONTEXT_STORAGE__WATCHDOG_DEBOUNCE_SECONDS` | `2.0` | Debounce window (seconds) — batches rapid changes into a single reindex |
+| `SNIPCONTEXT_STORAGE__WATCHDOG_POLL_INTERVAL` | `5.0` | Poll interval (seconds); present in config schema but the current watcher uses `watchdog.Observer` rather than polling |
+
+Or via YAML config:
+
+```yaml
+storage:
+  watchdog_enabled: true
+  watchdog_debounce_seconds: 2.0
+  watchdog_poll_interval: 5.0
+```
+
 For a full list of configurable keys, run:
 
 ```bash

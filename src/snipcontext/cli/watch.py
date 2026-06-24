@@ -17,7 +17,18 @@ def register_commands(app: typer.Typer) -> None:
 
     @app.command()  # type: ignore[untyped-decorator]
     def watch() -> None:
-        """Watch snippet directory for changes and auto-update the search index."""
+        """
+        Watch snippet directory for changes and auto-update the search index.
+
+        \b
+        Uses watchdog to monitor the snippets directory. When files are
+        added, modified, or deleted, the index is updated incrementally.
+
+        \b
+        Debounce is enabled by default (2-second window) to avoid
+        excessive reindexes during batch changes. Runs in the foreground;
+        press Ctrl+C to stop.
+        """
         config, storage, search = _get_context()
         watcher = SnippetWatcher(config, search, storage)
         watcher.start()

@@ -197,20 +197,19 @@ python -m snipcontext add "print('hello')" --title "Hello" --tag python
 
 ### Try SnipContext Without Any Setup
 
-New to SnipContext? Run the interactive demo to see how it works:
+New to SnipContext? Run the built-in demo to see it in action with realistic sample snippets:
 
 ```bash
 sc demo
 ```
 
-This will:
-- Check your existing collection. If it's empty, it seeds **sample snippets** (Python, TypeScript, Go, Rust, Bash) with realistic code.
-- Run a quick preview of **semantic search** and **export** using those snippets.
-- Print next steps so you can keep exploring (`sc list`, `sc search`, `sc add`, `sc export`, `sc build-index`).
+What it does:
+- If your collection is empty, it seeds sample snippets (Python, TypeScript, Go, Rust, Bash) and runs quick previews of **semantic search** and **export**.
+- If you already have snippets, it warns and exits without touching your data so you can pick up where you left off.
 
-If your collection already has snippets, `sc demo` won’t overwrite anything — it will warn you and exit.
+After the demo, try `sc list`, `sc search`, `sc add`, `sc export`, and `sc build-index` to keep exploring.
 
-> **Works best with the `[semantic]` extra installed.** Without it, search and export previews fall back gracefully.
+> **Tip:** The demo works best with the `[semantic]` extra installed. Without it, search and export previews still run but may use simpler fallbacks.
 
 ### Verify Installation
 
@@ -514,10 +513,16 @@ Run `snipcontext watch` to monitor the snippets directory and automatically rein
 snipcontext watch
 ```
 
+The watcher uses `watchdog` to monitor your snippets directory. When a file is added, modified, or deleted, it rebuilds the search index incrementally so new content is searchable immediately.
+
+**Debounce:** By default, multiple rapid changes are debounced into a single reindex (2-second window). This prevents excessive work during saves, git checkouts, or batch edits.
+
+**Foreground mode:** The watcher runs in the foreground — press `Ctrl+C` to stop. For continuous background monitoring, run it in a separate terminal or as a background process.
+
 Disable via config if you prefer manual rebuilds only:
 
 ```bash
-export SNIPCONTEXT_WATCHDOG_ENABLED=false
+export SNIPCONTEXT_STORAGE__WATCHDOG_ENABLED=false
 ```
 
 ---
