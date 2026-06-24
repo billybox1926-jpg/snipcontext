@@ -434,6 +434,71 @@ for r in results:
 
 ---
 
+## Platform Support
+
+SnipContext is tested on the following platforms. Features marked with `⚠️` are
+conditionally available; see the notes below.
+
+| Platform | Core CLI | Semantic Search | Encryption | TUI |
+|----------|----------|-----------------|------------|-----|
+| **Linux x86_64** | ✅ | ✅ | ✅ | ✅ |
+| **macOS x86_64** | ✅ | ✅ | ✅ | ✅ |
+| **macOS ARM (Apple Silicon)** | ✅ | ✅ | ✅ | ✅ |
+| **Windows** | ✅ | ✅ | ✅ | ✅ |
+| **Linux ARM (Raspberry Pi, etc.)** | ✅ | ⚠️* | ⚠️* | ✅ |
+| **Android / Termux** | ⚠️** | ❌ | ❌ | ✅ |
+
+*\* `semantic` and `encryption` extras require a Rust toolchain to compile native
+wheels on ARM. Install Rust (`rustup` or distro packages) before running
+`pip install snipcontext[semantic]` or `pip install snipcontext[encryption]`.*
+*\*\* The core CLI may work on Termux, but `pydantic-core` currently requires a
+Rust toolchain with stdlib support, which is not available there by default.
+See [#105](https://github.com/billybox1926-jpg/snipcontext/issues/105).*
+
+### Installation per platform
+
+SnipContext is a Python package. The core CLI works on all supported platforms
+with Python **3.10+**.
+
+```bash
+# Core only (keyword search, export, watchdog)
+pip install snipcontext
+```
+
+Optional extras unlock additional features:
+
+| Extra | Description | Required for |
+|-------|-------------|--------------|
+| `[semantic]` | sentence-transformers + FAISS | Semantic search, auto-tagging, deduplication |
+| `[encryption]` | `cryptography` (PBKDF2 + Fernet) | `sc add --encrypt`, `sc encrypt`, `sc decrypt` |
+| `[tui]` | `textual` + `prompt-toolkit` | `sc tui` |
+| `[all]` | Every extra | Full feature set |
+
+```bash
+# With semantic search
+pip install "snipcontext[semantic]"
+
+# All features
+pip install "snipcontext[all]"
+```
+
+### Platform-specific notes
+
+- **Windows:** The `sc` alias is shadowed by `sc.exe`. Use the full `snipcontext` command or the `snipcontext.cmd` wrapper installed by `pip`. See [Windows Users](#windows-users) for details.
+- **macOS:** Both Intel and Apple Silicon are supported. If `sentence-transformers` has trouble with `numpy`, install `numpy` explicitly first.
+- **Linux / macOS (x86_64):** Pre-built wheels are available for all extras; no compiler toolchain is required.
+- **Linux ARM:** Pre-built wheels are not always available. Install `rustup` first, then install extras. The core CLI and TUI work without Rust.
+- **Android / Termux:** Core install is currently blocked by `pydantic-core`'s Rust/stdlib requirement ([#105](https://github.com/billybox1926-jpg/snipcontext/issues/105)). Use keyword search and export on platforms where this is resolved.
+- **Headless / CI:** Set `SNIPCONTEXT_EMBED_MODEL_NAME=all-MiniLM-L6-v2` (default) or a smaller model to reduce download size. Semantic search requires a writable cache directory for model files.
+
+### Related issues
+
+- [#105](https://github.com/billybox1926-jpg/snipcontext/issues/105) — ARM/Termux install blocker (`pydantic-core` / Rust toolchain)
+- [#91](https://github.com/billybox1926-jpg/snipcontext/issues/91) — Optional dependency groups (extras)
+- [#106](https://github.com/billybox1926-jpg/snipcontext/issues/106) — ARM CI test matrix
+
+---
+
 ## 🔐 Encryption at Rest
 
 SnipContext supports **Fernet (AES-128)** encryption for sensitive snippets. When enabled, snippet content is encrypted at rest using a key derived from a passphrase via PBKDF2 (100k iterations).

@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 |- **Auto-tagging documentation** – Documented the auto-tagging feature, configuration variables (`SC_AUTO_TAG_*`), YAML config format, interaction with deduplication, and the `[semantic]` extra requirement. (#110)
 |- **`sc demo` documentation** – Documented the built-in demo command, its behavior (seeds sample snippets, previews search/export, respects existing data), and added a README onboarding section. (#109)
 |- **`sc watch` documentation** – Documented the file watcher command, its foreground behavior, debounce mechanism, and configuration reference (`SNIPCONTEXT_STORAGE__WATCHDOG_*`). (#108)
+|- **Platform support matrix** – Added README section with compatibility table, per-platform install instructions, ARM-specific notes, and links to #105, #91, and #106. (#107)
 
 ### Changed
 - **Plugin system** – The `PluginRegistry` is now the single source of truth for discovery, loading, unloading, and health checks. Providers are now full plugins with lifecycle hooks and version compatibility checks (`requires`). CLI now includes `sc plugins --load` / `--unload`.
