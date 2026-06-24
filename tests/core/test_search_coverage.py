@@ -120,10 +120,10 @@ class TestVectorIndexMocks:
 
     def test_add_and_remove_vector(self, tmp_path, mocker):
         search_module = pytest.importorskip("snipcontext.core.search")
+        pytest.importorskip("faiss")
         original = search_module.SEMANTIC_AVAILABLE
         try:
             search_module.SEMANTIC_AVAILABLE = True
-            mocker.patch.dict("sys.modules", {"faiss": MagicMock()})
             backend = MagicMock()
             backend.is_trained = True
             backend.snippet_ids = ["x"]
@@ -151,10 +151,10 @@ class TestVectorIndexMocks:
 
     def test_save_and_load_roundtrip(self, tmp_path, mocker):
         search_module = pytest.importorskip("snipcontext.core.search")
+        pytest.importorskip("faiss")
         original = search_module.SEMANTIC_AVAILABLE
         try:
             search_module.SEMANTIC_AVAILABLE = True
-            mocker.patch.dict("sys.modules", {"faiss": MagicMock()})
             backend = MagicMock()
             backend.is_trained = True
             backend.count = 1

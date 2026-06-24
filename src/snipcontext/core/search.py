@@ -186,6 +186,13 @@ class VectorIndex:
         texts = [s.to_search_text() for s in snippets]
         embeddings = embedding_engine.encode(texts)
         dimension = embeddings.shape[1]
+        try:
+            import faiss
+        except ImportError as exc:
+            raise ImportError(
+                "Semantic search requires the 'faiss-cpu' package. "
+                "Install it with: pip install snipcontext[semantic]"
+            ) from exc
         faiss.normalize_L2(embeddings)
 
         backend = _create_backend(
