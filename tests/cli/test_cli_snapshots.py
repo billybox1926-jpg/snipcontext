@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 
 # Force Rich/table output to ASCII so snapshots are stable across environments.
 # These env vars MUST be set before any Rich console is initialized.
@@ -75,8 +76,6 @@ BOX_TRANSLATION = str.maketrans(
 
 
 def _normalize(output: str, temp_dir: Path) -> str:
-    import re
-
     # Replace temp path
     output = output.replace(str(temp_dir), "<tmp>")
 
