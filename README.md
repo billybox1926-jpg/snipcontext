@@ -83,7 +83,35 @@ uv run sc --help           # run without activating venv
 pip install -e ".[dev]"
 ```
 
-> **💡 Why uv?** This project uses \`uv\` for dependency management (\`uv.lock\` pinned). \`uv sync\` guarantees reproducible installs. \`pip install\` works but may resolve dependencies differently.
+### Try Semantic Search
+
+Semantic search is SnipContext's core differentiator — it finds code by **meaning**, not just exact keywords.
+
+```bash
+# 1. Install SnipContext with semantic search
+pip install "snipcontext[semantic]"
+
+# 2. Add some example snippets
+sc add "import pandas as pd; df = pd.read_csv('data.csv')" --title "Read CSV" --tag python --tag pandas
+sc add "import json; data = json.load(open('config.json'))" --title "Load JSON" --tag python --tag json
+sc add "from fastapi import FastAPI; app = FastAPI()" --title "FastAPI App" --tag python --tag fastapi
+
+# 3. Search by intent (not exact keywords)
+sc search "how to read a CSV file"
+# → Finds the "Read CSV" snippet
+
+sc search "parse JSON"
+# → Finds "Load JSON"
+
+sc search "create a web API"
+# → Finds "FastAPI App"
+```
+
+> **Note:** Semantic search requires the `[semantic]` extra (sentence-transformers + FAISS). If you installed the core package without it, upgrade with `pip install "snipcontext[semantic]"`.
+
+![Demo of semantic search](docs/demo.gif)
+
+> **💡 Why uv?** This project uses `uv` for dependency management (`uv.lock` pinned). `uv sync` guarantees reproducible installs. `pip install` works but may resolve dependencies differently.
 # Or install directly from GitHub
 pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 ```
