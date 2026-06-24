@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import re
-from unittest.mock import patch
 
 # Force Rich/table output to ASCII so snapshots are stable across environments.
 # These env vars MUST be set before any Rich console is initialized.
@@ -18,9 +17,8 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from typer.testing import CliRunner
-
 from snipcontext.cli.app import app
+from typer.testing import CliRunner
 
 runner = CliRunner()
 
@@ -109,7 +107,6 @@ def _reset_registry():
 
 @pytest.fixture(autouse=True)
 def _fixed_ids(mocker):
-
     fake_uuid = MagicMock(side_effect=["f" + str(i).zfill(21) for i in range(100)])
     mocker.patch("snipcontext.core.models.uuid.uuid4", fake_uuid)
 
@@ -265,7 +262,7 @@ def test_sc_list_special_chars(snapshot, tmp_path: Path, mock_embeddings):
         tmp_path,
         [
             "add",
-            'x = "hello\nworld"\ny = \'foo\tbar\'',
+            "x = \"hello\nworld\"\ny = 'foo\tbar'",
             "--title",
             'Special <Chars> & "Quotes"',
             "--lang",
