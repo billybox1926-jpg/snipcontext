@@ -127,6 +127,7 @@ class TestVectorIndexMocks:
         original = search_module.SEMANTIC_AVAILABLE
         try:
             search_module.SEMANTIC_AVAILABLE = True
+            mocker.patch.dict("sys.modules", {"faiss": MagicMock()})
             backend = MagicMock()
             backend.is_trained = True
             backend.snippet_ids = ["x"]
@@ -159,6 +160,7 @@ class TestVectorIndexMocks:
         original = search_module.SEMANTIC_AVAILABLE
         try:
             search_module.SEMANTIC_AVAILABLE = True
+            mocker.patch.dict("sys.modules", {"faiss": MagicMock()})
             backend = MagicMock()
             backend.is_trained = True
             backend.count = 1
