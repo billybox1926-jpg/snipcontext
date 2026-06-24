@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 |- **`sc watch` documentation** – Documented the file watcher command, its foreground behavior, debounce mechanism, and configuration reference (`SNIPCONTEXT_STORAGE__WATCHDOG_*`). (#108)
 |- **Platform support matrix** – Added README section with compatibility table, per-platform install instructions, ARM-specific notes, and links to #105, #91, and #106. (#107)
 |- **Quick Start semantic search guide** – Added README section with copy-pasteable commands demonstrating semantic search, embedded demo GIF, and `[semantic]` extra note. (#102)
+|- **Onboarding / documentation improvements** – Added `docs/migrate.md` and `docs/performance.md`, updated README badges (PyPI version, downloads), and expanded the Documentation index. (#19)
 
 ### Changed
 - **Plugin system** – The `PluginRegistry` is now the single source of truth for discovery, loading, unloading, and health checks. Providers are now full plugins with lifecycle hooks and version compatibility checks (`requires`). CLI now includes `sc plugins --load` / `--unload`.

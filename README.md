@@ -1,5 +1,7 @@
 # SnipContext
 
+[![PyPI version](https://img.shields.io/pypi/v/snipcontext.svg)](https://pypi.org/project/snipcontext/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/snipcontext.svg)](https://pypi.org/project/snipcontext/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Ruff](https://img.shields.io/badge/lint-ruff-261230?logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
@@ -780,13 +782,19 @@ pre-commit install
 
 ## Documentation
 
+- [Quick Start](#quick-start) — get started with semantic search
 - [`docs/search.md`](docs/search.md) — index types, auto-switch behavior, keyword fallback
-- [`docs/benchmark.md`](docs/benchmark.md) — `sc benchmark index` usage
-- [`docs/API.md`](docs/API.md) — Python library usage
+- [`docs/configuration.md`](docs/configuration.md) — environment variables and YAML config
+- [`docs/security.md`](docs/security.md) — encryption at rest
+- [`docs/plugins.md`](docs/plugins.md) — plugin system and lifecycle hooks
+- [`docs/plugin-examples.md`](docs/plugin-examples.md) — example plugin implementations
+- [`docs/plugin-testing.md`](docs/plugin-testing.md) — testing plugin integrations
 - [`docs/providers.md`](docs/providers.md) — provider contract and custom provider guide
-- [`docs/plugins.md`](docs/plugins.md) — plugin system, lifecycle hooks, and CLI commands
-
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed design documentation.
+- [`docs/migrate.md`](docs/migrate.md) — migration guides from VS Code, SnippetsLab, Pieces
+- [`docs/performance.md`](docs/performance.md) — benchmarks and performance expectations
+- [`docs/API.md`](docs/API.md) — Python library usage
+- [`docs/benchmark.md`](docs/benchmark.md) — `sc benchmark index` usage
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — detailed design documentation
 
 ## Project Structure
 
