@@ -569,7 +569,7 @@ export SNIPCONTEXT_EMBED_MODEL_NAME="all-mpnet-base-v2"
 export SNIPCONTEXT_SEARCH_SEMANTIC_WEIGHT="0.8"
 
 # Enable auto-tagging
-export SNIPCONTEXT_AUTO_TAG_ENABLED=true
+export SC_AUTO_TAG_ENABLED=true
 
 # Enable deduplication
 export SNIPCONTEXT_DEDUP_ENABLED=true
@@ -591,7 +591,9 @@ search:
 
 auto_tag:
   enabled: true
-  threshold: 0.75
+  top_k: 5
+  min_frequency: 2
+  auto_accept: false
 
 dedup:
   enabled: true
@@ -599,6 +601,43 @@ dedup:
 ```
 
 ---
+
+## 🏷️ Auto-Tagging
+
+When you add a snippet with `sc add`, SnipContext can suggest tags based on semantically similar existing snippets. This saves time and improves tag consistency across your collection.
+
+- **Enabled by default** if you install the `[semantic]` extra and have a populated FAISS index.
+- **How it works:** SnipContext uses the same FAISS index as semantic search to find the nearest neighbors, extracts their tags, and surfaces the most frequent ones.
+- **Interaction with deduplication:** Auto-tagging and deduplication share the same embedding step. If both are enabled, the embedding is computed once and reused.
+
+### Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SC_AUTO_TAG_ENABLED` | `true` | Enable auto-tag suggestions on `sc add` |
+| `SC_AUTO_TAG_TOP_K` | `5` | Number of similar snippets to consider |
+| `SC_AUTO_TAG_MIN_FREQUENCY` | `2` | Minimum tag frequency among neighbors to suggest it |
+| `SC_AUTO_TAG_AUTO_ACCEPT` | `false` | Automatically apply suggested tags without prompting |
+
+Or via YAML config:
+
+```yaml
+auto_tag:
+  enabled: true
+  top_k: 5
+  min_frequency: 2
+  auto_accept: false
+```
+
+### Requirements
+
+Install with the `[semantic]` extra to enable auto-tagging:
+
+```bash
+pip install snipcontext[semantic]
+```
+
+This pulls in `sentence-transformers` and `faiss-cpu`.
 
 ## Development
 

@@ -10,8 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Export schema versioning** – Every `export_batch` output now includes a `Export schema version: 1.0.0` header (or provider‑specific comment). This makes it easier to detect breaking format changes. (#98)
 - **Hash‑based exact dedup** – A fast SHA‑256 hash check runs **before** the expensive semantic dedup step, saving time and compute on duplicate content. (#101)
-- **Configurable storage location** – You can now use a **project‑local `.snipcontext/`** directory (via `sc init --local`) or override the storage root via the `SNIPCONTEXT_HOME` environment variable. (#36)
+- **Configurable storage location** – You can now use a **project-local `.snipcontext/`** directory (via `sc init --local`) or override the storage root via the `SNIPCONTEXT_HOME` environment variable. (#36)
 - **Search history & favorites** – All search queries are now stored locally. Use `sc search --history` to see recent queries, `--favorites` to see starred ones, `--rerun <id>` to re‑execute, and `--favorite <id>` to toggle a query as a favorite. (#35)
+- **Auto-tagging documentation** – Documented the auto-tagging feature, configuration variables (`SC_AUTO_TAG_*`), YAML config format, interaction with deduplication, and the `[semantic]` extra requirement. (#110)
 
 ### Changed
 - **Plugin system** – The `PluginRegistry` is now the single source of truth for discovery, loading, unloading, and health checks. Providers are now full plugins with lifecycle hooks and version compatibility checks (`requires`). CLI now includes `sc plugins --load` / `--unload`.

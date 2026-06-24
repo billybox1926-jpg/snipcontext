@@ -55,3 +55,13 @@ sc index rebuild
 When `faiss-cpu` or `sentence-transformers` are not installed,
 SnipContext falls back to keyword-only (BM25) search. All config keys are
 still available; the auto-switch will simply return the flat backend.
+
+## Auto-Tagging
+
+The same FAISS index used for semantic search is also used for **auto-tagging**.
+When `SC_AUTO_TAG_ENABLED` is true, `sc add` queries the index for the nearest
+neighbors, extracts their tags, and surfaces the most frequent ones (above
+`SC_AUTO_TAG_MIN_FREQUENCY`).
+
+Auto-tagging and deduplication share the same embedding step, so enabling both
+does not incur a second model inference.

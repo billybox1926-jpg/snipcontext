@@ -89,6 +89,30 @@ SnipContext Configuration
 
 For usage and threat model details, see [`docs/security.md`](security.md).
 
+## Auto-Tagging
+
+SnipContext can suggest tags for new snippets by finding semantically similar
+existing snippets via the FAISS index.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SC_AUTO_TAG_ENABLED` | `true` | Enable auto-tag suggestions on `sc add` |
+| `SC_AUTO_TAG_TOP_K` | `5` | Number of similar snippets to consider |
+| `SC_AUTO_TAG_MIN_FREQUENCY` | `2` | Minimum tag frequency among neighbors to suggest it |
+| `SC_AUTO_TAG_AUTO_ACCEPT` | `false` | Automatically apply suggested tags without prompting |
+
+Or via YAML config:
+
+```yaml
+auto_tag:
+  enabled: true
+  top_k: 5
+  min_frequency: 2
+  auto_accept: false
+```
+
+> **Requirement:** Install the `[semantic]` extra: `pip install snipcontext[semantic]`.
+
 For a full list of configurable keys, run:
 
 ```bash
