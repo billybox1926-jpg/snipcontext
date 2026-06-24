@@ -26,7 +26,7 @@ def register_commands(app: typer.Typer) -> None:
     app.add_typer(history_app)
 
 
-@history_app.command("list")
+@history_app.command("list")  # type: ignore[untyped-decorator]
 def list_history(
     limit: int = typer.Option(10, "--limit", "-n", help="Number of recent entries to show"),
 ) -> None:
@@ -50,7 +50,7 @@ def list_history(
     console.print(table)
 
 
-@history_app.command("favorites")
+@history_app.command("favorites")  # type: ignore[untyped-decorator]
 def list_favorites() -> None:
     """Show favorite queries."""
     store = SearchHistoryStore()
@@ -70,7 +70,7 @@ def list_favorites() -> None:
     console.print(table)
 
 
-@history_app.command("favorite")
+@history_app.command("favorite")  # type: ignore[untyped-decorator]
 def toggle_favorite(
     entry_id: int = typer.Argument(..., help="History entry ID to toggle favorite status"),
 ) -> None:
@@ -85,7 +85,7 @@ def toggle_favorite(
     console.print(f"[green]{label}: '{entry.query}' (ID {entry_id})[/green]")
 
 
-@history_app.command("add")
+@history_app.command("add")  # type: ignore[untyped-decorator]
 def add_history(
     query: str = typer.Argument(..., help="Search query to add to history"),
     favorite: bool = typer.Option(False, "--favorite", help="Mark as favorite immediately"),
@@ -100,7 +100,7 @@ def add_history(
     console.print(f"[green]Added '{query}' to history.[/green]")
 
 
-@history_app.command("clear")
+@history_app.command("clear")  # type: ignore[untyped-decorator]
 def clear_history(
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt"),
 ) -> None:
