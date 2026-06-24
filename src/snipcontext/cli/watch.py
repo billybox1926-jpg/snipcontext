@@ -17,8 +17,7 @@ def register_commands(app: typer.Typer) -> None:
 
     @app.command()  # type: ignore[untyped-decorator]
     def watch() -> None:
-        r"""
-        Watch snippet directory for changes and auto-update the search index.
+        r"""Watch snippet directory for changes and auto-update the search index.
 
         \b
         Uses watchdog to monitor the snippets directory. When files are
