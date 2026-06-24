@@ -195,6 +195,23 @@ snipcontext stats
 python -m snipcontext add "print('hello')" --title "Hello" --tag python
 ```
 
+### Try SnipContext Without Any Setup
+
+New to SnipContext? Run the interactive demo to see how it works:
+
+```bash
+sc demo
+```
+
+This will:
+- Check your existing collection. If it's empty, it seeds **sample snippets** (Python, TypeScript, Go, Rust, Bash) with realistic code.
+- Run a quick preview of **semantic search** and **export** using those snippets.
+- Print next steps so you can keep exploring (`sc list`, `sc search`, `sc add`, `sc export`, `sc build-index`).
+
+If your collection already has snippets, `sc demo` won’t overwrite anything — it will warn you and exit.
+
+> **Works best with the `[semantic]` extra installed.** Without it, search and export previews fall back gracefully.
+
 ### Verify Installation
 
 ```bash

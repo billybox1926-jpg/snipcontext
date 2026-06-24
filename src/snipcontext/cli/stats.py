@@ -246,7 +246,22 @@ def register_commands(app: typer.Typer) -> None:
 
     @app.command()  # type: ignore[untyped-decorator]
     def demo() -> None:
-        """Run an interactive demo with sample snippets."""
+        """
+        Run an interactive demo with sample snippets.
+
+        \b
+        If your collection is empty, this seeds realistic sample snippets
+        (Python, TypeScript, Go, Rust, Bash) and runs a quick preview of
+        semantic search and export so you can see SnipContext in action.
+
+        \b
+        If snippets already exist in your collection, the command warns and
+        exits without modifying anything.
+
+        \b
+        Available commands to try after the demo:
+          sc list, sc search, sc add, sc export, sc build-index, sc stats
+        """
         from snipcontext.core.models import Language, Snippet, SnippetMetadata
         from snipcontext.core.search import HybridSearch
         from snipcontext.core.storage import StorageEngine
