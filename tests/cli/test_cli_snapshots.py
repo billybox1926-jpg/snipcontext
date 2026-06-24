@@ -103,10 +103,11 @@ BOX_TRANSLATION = str.maketrans(
 
 
 def _normalize(output: str, temp_dir: Path) -> str:
-    import re
-
     # Replace temp path
     output = output.replace(str(temp_dir), "<tmp>")
+
+    # Normalize dynamic dates so snapshots do not drift with calendar time.
+    output = re.sub(r"\d{4}-\d{2}-\d{2}", "<date>", output)
 
     # Blast the entire Storage section with a fixed template so terminal
     # width differences between environments cannot affect snapshots.
@@ -290,7 +291,7 @@ def test_sc_list_special_chars(snapshot, tmp_path: Path, mock_embeddings):
         tmp_path,
         [
             "add",
-            "x = \"hello\\nworld\"\ny = 'foo\\tbar'",
+            'x = "hello\nworld"\ny = \'foo\tbar\'',
             "--title",
             'Special <Chars> & "Quotes"',
             "--lang",
