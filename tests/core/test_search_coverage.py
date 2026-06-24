@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -16,11 +16,9 @@ from snipcontext.core.models import (
     SnippetMetadata,
 )
 from snipcontext.core.search import (
-    SEMANTIC_AVAILABLE,
     EmbeddingEngine,
     HybridSearch,
     KeywordIndex,
-    SemanticSearch,
     VectorIndex,
 )
 
@@ -110,9 +108,7 @@ class TestVectorIndexMocks:
         try:
             search_module.SEMANTIC_AVAILABLE = True
             backend = MagicMock()
-            mocker.patch(
-                "snipcontext.core.index_backends._create_backend", return_value=backend
-            )
+            mocker.patch("snipcontext.core.index_backends._create_backend", return_value=backend)
             idx = self._index(tmp_path)
             engine = MagicMock()
             idx.build([], engine)
@@ -133,9 +129,7 @@ class TestVectorIndexMocks:
             backend.snippet_ids = ["x"]
             backend.add.return_value = None
             backend.remove.return_value = None
-            mocker.patch(
-                "snipcontext.core.index_backends._create_backend", return_value=backend
-            )
+            mocker.patch("snipcontext.core.index_backends._create_backend", return_value=backend)
 
             idx = self._index(tmp_path)
             engine = MagicMock()
@@ -171,9 +165,7 @@ class TestVectorIndexMocks:
 
             backend.save.side_effect = fake_save
             backend.load.return_value = True
-            mocker.patch(
-                "snipcontext.core.index_backends._create_backend", return_value=backend
-            )
+            mocker.patch("snipcontext.core.index_backends._create_backend", return_value=backend)
 
             idx = self._index(tmp_path)
             engine = MagicMock()
@@ -204,7 +196,6 @@ class TestVectorIndexMocks:
 class TestKeywordIndexEdgeCases:
     def test_fuzzy_search_import_error_returns_empty(self, tmp_path):
         """Without rapidfuzz, fuzzy search should gracefully return []."""
-        import sys
 
         idx = KeywordIndex(_config(tmp_path))
         idx._texts = ["hello world"]
@@ -254,9 +245,7 @@ class TestHybridSearchBranches:
             mocker.patch("snipcontext.core.storage.StorageEngine", return_value=fake_storage)
 
             hs.keyword_index.build([_snippet("a")])
-            results = hs._semantic_search(
-                "query", top_k=3, min_score=0.0, storage=fake_storage
-            )
+            results = hs._semantic_search("query", top_k=3, min_score=0.0, storage=fake_storage)
             assert all(r.matched_by == "keyword" for r in results)
         finally:
             search_module.SEMANTIC_AVAILABLE = original
@@ -266,9 +255,7 @@ class TestHybridSearchBranches:
         hs.keyword_index.build([_snippet("a")])
         fake_storage = MagicMock()
         fake_storage.get.side_effect = lambda sid: _snippet(sid)
-        hs.embedder.encode_query = MagicMock(
-            return_value=np.zeros((1, 16), dtype=np.float32)
-        )
+        hs.embedder.encode_query = MagicMock(return_value=np.zeros((1, 16), dtype=np.float32))
         hs.vector_index.search = MagicMock(return_value=[])
         mocker.patch("snipcontext.core.storage.StorageEngine", return_value=fake_storage)
 
@@ -326,9 +313,7 @@ class TestHybridSearchBranches:
     def test_hydrate_skips_missing_snippet(self, tmp_path, mocker):
         hs = HybridSearch(_config(tmp_path))
         fake_storage = MagicMock()
-        fake_storage.get.side_effect = lambda sid: (_ for _ in ()).throw(
-            RuntimeError("missing")
-        )
+        fake_storage.get.side_effect = lambda sid: (_ for _ in ()).throw(RuntimeError("missing"))
         mocker.patch("snipcontext.core.storage.StorageEngine", return_value=fake_storage)
 
         out = hs._hydrate([("missing", 0.9)], "keyword", top_k=3, storage=fake_storage)
