@@ -246,8 +246,7 @@ def register_commands(app: typer.Typer) -> None:
 
     @app.command()  # type: ignore[untyped-decorator]
     def demo() -> None:
-        r"""
-        Run an interactive demo with sample snippets.
+        r"""Run an interactive demo with sample snippets.
 
         \b
         If your collection is empty, this seeds realistic sample snippets
