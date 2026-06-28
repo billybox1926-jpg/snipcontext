@@ -30,7 +30,6 @@ def compute_basic_stats(snippets: list[Any]) -> dict[str, Any]:
             "tags": {},
             "oldest": None,
             "newest": None,
-            "encrypted_count": 0,
             "deleted_count": 0,
             "total_size_bytes": 0,
         }
@@ -38,7 +37,6 @@ def compute_basic_stats(snippets: list[Any]) -> dict[str, Any]:
     languages: Counter[str] = Counter()
     tags: Counter[str] = Counter()
     total_size = 0
-    encrypted_count = 0
     deleted_count = 0
     oldest = None
     newest = None
@@ -48,8 +46,6 @@ def compute_basic_stats(snippets: list[Any]) -> dict[str, Any]:
         for tag in s.tags:
             tags[tag] += 1
         total_size += len(s.content.encode("utf-8"))
-        if s.encrypted_content:
-            encrypted_count += 1
         if s.deleted:
             deleted_count += 1
 
@@ -67,7 +63,6 @@ def compute_basic_stats(snippets: list[Any]) -> dict[str, Any]:
         "tags": dict(tags.most_common()),
         "oldest": oldest.isoformat() if oldest else None,
         "newest": newest.isoformat() if newest else None,
-        "encrypted_count": encrypted_count,
         "deleted_count": deleted_count,
         "total_size_bytes": total_size,
     }

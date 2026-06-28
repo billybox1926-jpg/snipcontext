@@ -70,7 +70,7 @@ class SnipContextCompleter(Completer):
                 if flag.startswith(prefix):
                     yield Completion(flag, start_position=-len(prefix))
             return
-        if command in ("delete", "get", "edit", "encrypt", "decrypt"):
+        if command in ("delete", "get", "edit"):
             try:
                 from snipcontext.cli.context import get_context as _get_ctx
 

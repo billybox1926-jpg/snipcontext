@@ -67,7 +67,6 @@ def _render_basic_stats(s: dict) -> None:
   Snippets: [cyan]{total}[/cyan]
   Unique Tags: [cyan]{s.get("total_tags", 0)}[/cyan]
   Languages: [cyan]{len(s.get("languages", {}))}[/cyan]
-  Encrypted: [cyan]{s.get("encrypted_count", 0)}[/cyan]
   Size: [cyan]{_format_size(s.get("total_size_bytes", 0))}[/cyan]
 {date_block}
 
@@ -95,7 +94,6 @@ def _render_detailed_stats(d: dict) -> None:
   Snippets: [cyan]{total}[/cyan]
   Unique Tags: [cyan]{d.get("total_tags", 0)}[/cyan]
   Languages: [cyan]{len(d.get("languages", {}))}[/cyan]
-  Encrypted: [cyan]{d.get("encrypted_count", 0)}[/cyan]
   Deleted: [cyan]{d.get("deleted_count", 0)}[/cyan]
   Size: [cyan]{_format_size(d.get("total_size_bytes", 0))}[/cyan]
   Avg tags/snippet: [cyan]{d.get("avg_tags_per_snippet", 0)}[/cyan]""",

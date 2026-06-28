@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-
 from snipcontext.core.snippet_ops import (
     create_snippet,
     delete_snippet,
@@ -51,7 +50,6 @@ async def create_snippet_item(
         description=body.description or "",
         language=body.language or "",
         tags=body.tags or [],
-        encrypt=body.encrypt,
     )
     storage.save(snippet)
     return SnippetResponse(

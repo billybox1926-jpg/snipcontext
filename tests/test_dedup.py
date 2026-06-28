@@ -5,10 +5,8 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-import pytest
-from typer.testing import CliRunner
-
 from snipcontext.cli.app import app
+from typer.testing import CliRunner
 
 runner = CliRunner()
 
@@ -65,37 +63,6 @@ def test_hash_dedup_allows_explicit_yes():
         r2 = invoke_add("x = 42", tmp_path, input_text="y\n")
         assert r2.exit_code == 0, r2.output
         assert "Added snippet" in r2.output
-
-
-def test_hash_dedup_skips_encrypted():
-    """Encrypted snippets skip the hash dedup check."""
-    pytest.importorskip("cryptography")
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp_path = Path(tmp)
-        env = {
-            "SNIPCONTEXT_ENCRYPT_ENABLED": "true",
-            "SNIPCONTEXT_ENCRYPTION_PASSPHRASE": "unit-test-passphrase-123",
-        }
-
-        # First encrypted snippet
-        r1 = runner.invoke(
-            app,
-            ["add", "--encrypt", "secret = 123"],
-            env=_env(tmp_path, **env),
-        )
-        assert r1.exit_code == 0, r1.output
-        assert "Added encrypted" in r1.output
-
-        # Second encrypted snippet with identical plaintext should NOT trigger hash dedup
-        r2 = runner.invoke(
-            app,
-            ["add", "--encrypt", "secret = 123"],
-            env=_env(tmp_path, **env),
-            input="n\n",
-        )
-        assert r2.exit_code == 0, r2.output
-        assert "Exact duplicate" not in r2.output
-        assert "Added encrypted" in r2.output
 
 
 def test_hash_dedup_case_sensitive():

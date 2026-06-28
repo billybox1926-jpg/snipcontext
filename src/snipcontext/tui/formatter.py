@@ -52,7 +52,7 @@ def _snippet_panel(snippet) -> Panel:
     content.append(f"Language: {snippet.metadata.language.value}\n", "green")
     if snippet.tags:
         content.append(f"Tags: {', '.join(snippet.tags)}\n", "yellow")
-    text = snippet.content or snippet.encrypted_content or ""
+    text = snippet.content or ""
     try:
         syntax = Syntax(
             text,

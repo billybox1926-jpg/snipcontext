@@ -145,13 +145,9 @@ def register_commands(app: typer.Typer) -> None:
             [], "--custom", help="Custom key=value metadata (repeatable)"
         ),
         from_file: bool = typer.Option(False, "--file", "-F", help="Read content from file path"),
-        encrypt: bool = typer.Option(False, "--encrypt", "-e", help="Encrypt content"),
-        sensitive: bool = typer.Option(False, "--sensitive", help="Mark as sensitive"),
     ) -> None:
         """Add a new code snippet to your collection."""
         config, storage, search = _get_context()
-        if sensitive:
-            encrypt = True
         if content is None:
             if not sys.stdin.isatty():
                 content = sys.stdin.read()
@@ -177,66 +173,37 @@ def register_commands(app: typer.Typer) -> None:
             lang_enum = Language(language) if language else Language.UNKNOWN
         except ValueError:
             lang_enum = Language.UNKNOWN
-        if encrypt:
-            if not config.encryption.enabled:
-                console.print("[red]Encryption is not enabled.[/red]")
-                raise typer.Exit(1)
-            try:
-                encrypted = storage.encrypt_content(content)
-            except Exception as exc:
-                console.print(f"[red]Encryption failed: {exc}[/red]")
-                raise typer.Exit(1) from exc
-            custom_meta = _parse_custom(custom)
-            snippet = Snippet(
-                content="",
-                encrypted_content=encrypted,
-                metadata=SnippetMetadata(
-                    title=title,
-                    description=description,
-                    language=lang_enum,
-                    source_url=source,
-                    framework=framework,
-                    version=version,
-                    custom_tags=custom_meta,
-                ),
-                tags=tags,
-            )
-            console.print(
-                f"[green]Added encrypted snippet:[/green] [bold]{snippet.metadata.title}[/bold]"
-            )
-        else:
-            custom_meta = _parse_custom(custom)
-            snippet = Snippet(
-                content=content,
-                metadata=SnippetMetadata(
-                    title=title,
-                    description=description,
-                    language=lang_enum,
-                    source_url=source,
-                    framework=framework,
-                    version=version,
-                    custom_tags=custom_meta,
-                ),
-                tags=tags,
-            )
+        custom_meta = _parse_custom(custom)
+        snippet = Snippet(
+            content=content,
+            metadata=SnippetMetadata(
+                title=title,
+                description=description,
+                language=lang_enum,
+                source_url=source,
+                framework=framework,
+                version=version,
+                custom_tags=custom_meta,
+            ),
+            tags=tags,
+        )
 
         # ── Fast exact‑hash dedup (before embedding) ──
-        if not encrypt:
-            content_hash = snippet.content_hash
-            existing = storage.find_by_content_hash(content_hash)
-            if existing:
-                console.print(
-                    f"[yellow]Exact duplicate of '{existing.metadata.title}' "
-                    f"(id: {existing.id}). Add anyway?[/yellow]"
-                )
-                if not typer.confirm("Add anyway?", default=False):
-                    raise typer.Exit(0)
+        content_hash = snippet.content_hash
+        existing = storage.find_by_content_hash(content_hash)
+        if existing:
+            console.print(
+                f"[yellow]Exact duplicate of '{existing.metadata.title}' "
+                f"(id: {existing.id}). Add anyway?[/yellow]"
+            )
+            if not typer.confirm("Add anyway?", default=False):
+                raise typer.Exit(0)
 
         # Auto-tag and dedup
         final_tags = list(snippet.tags)
         auto_tag_enabled = getattr(getattr(config, "auto_tag", None), "enabled", False)
         dedup_enabled = getattr(getattr(config, "dedup", None), "enabled", False)
-        if (auto_tag_enabled or dedup_enabled) and not encrypt:
+        if auto_tag_enabled or dedup_enabled:
             try:
                 from snipcontext.core.auto_tag import AutoTagService
             except Exception:

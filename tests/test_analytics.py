@@ -83,12 +83,6 @@ class TestBasicStats:
         result = compute_basic_stats(snippets)
         assert result["total_size_bytes"] == 300
 
-    def test_encrypted_count(self):
-        s1 = _make_snippet()
-        s1.encrypted_content = "encrypted_data"
-        result = compute_basic_stats([s1])
-        assert result["encrypted_count"] == 1
-
 
 class TestDetailedStats:
     """Tests for compute_detailed_stats."""

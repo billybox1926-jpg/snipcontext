@@ -89,27 +89,20 @@ def create_snippet(
     description: str,
     language: str,
     tags: list[str],
-    encrypt: bool = False,
-    encrypted_content: str | None = None,
 ) -> Snippet:
     """Create a new Snippet model instance.
 
     Args:
-        content: Snippet content (empty string if encrypted).
+        content: Snippet content.
         title: Snippet title.
         description: Snippet description.
         language: Programming language string.
         tags: List of tags.
-        encrypt: Whether the content is encrypted.
-        encrypted_content: Encrypted content (if encrypt=True).
 
     Returns:
         New Snippet instance (not yet persisted).
-
-    Raises:
-        ValueError: If content is empty and not encrypted.
     """
-    if not content.strip() and not encrypted_content:
+    if not content.strip():
         raise ValueError("Content cannot be empty")
 
     try:
@@ -117,17 +110,6 @@ def create_snippet(
     except ValueError:
         lang_enum = Language.UNKNOWN
 
-    if encrypt and encrypted_content:
-        return Snippet(
-            content="",
-            encrypted_content=encrypted_content,
-            metadata=SnippetMetadata(
-                title=title,
-                description=description,
-                language=lang_enum,
-            ),
-            tags=tags,
-        )
     return Snippet(
         content=content,
         metadata=SnippetMetadata(
@@ -146,8 +128,6 @@ def add_snippet(
     description: str,
     language: str,
     tags: list[str],
-    encrypt: bool = False,
-    encrypted_content: str | None = None,
 ) -> Snippet:
     """Create and persist a new snippet.
 
@@ -158,15 +138,11 @@ def add_snippet(
         description: Snippet description.
         language: Programming language string.
         tags: List of tags.
-        encrypt: Whether the content is encrypted.
-        encrypted_content: Encrypted content (if encrypt=True).
 
     Returns:
         The saved Snippet instance.
     """
-    snippet = create_snippet(
-        content, title, description, language, tags, encrypt, encrypted_content
-    )
+    snippet = create_snippet(content, title, description, language, tags)
     storage.save(snippet)
     return snippet
 

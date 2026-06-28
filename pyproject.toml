@@ -55,10 +55,6 @@ semantic = [
     "sentence-transformers>=3.0,<4.0",
     "faiss-cpu>=1.8.0",
 ]
-# Encryption support (requires Rust toolchain for cryptography)
-encryption = [
-    "cryptography>=42.0,<44.0",
-]
 # TUI interactive shell (Textual ≥0.32 + prompt_toolkit fallback)
 tui = [
     "textual>=0.32,<1.0",
@@ -74,7 +70,6 @@ web = [
 all = [
     "sentence-transformers>=3.0,<4.0",
     "faiss-cpu>=1.8.0",
-    "cryptography>=42.0,<44.0",
     "prompt-toolkit>=3.0.43,<4.0",
     "fastapi>=0.115.0,<1.0",
     "uvicorn[standard]>=0.32.0,<1.0",

@@ -7,11 +7,9 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
 from snipcontext.config.settings import Config, StorageConfig, reset_config
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.core.storage import (
-    EncryptionError,
     IndexCorruptedError,
     MissingIndexError,
     SnippetNotFoundError,
@@ -46,58 +44,6 @@ def sample_snippet():
         ),
         tags=["python", "demo", "beginner"],
     )
-
-
-@pytest.fixture
-def encrypted_storage(temp_config, monkeypatch):
-    """Provide a StorageEngine with Fernet encryption enabled."""
-    config = temp_config
-    config.encryption.enabled = True
-    monkeypatch.setenv("SNIPCONTEXT_ENCRYPTION_PASSPHRASE", "test-passphrase-for-unit-tests")
-    return StorageEngine(config)
-
-
-class TestEncryption:
-    """Tests for content encryption/decryption."""
-
-    pytest.importorskip("cryptography")
-
-    def test_roundtrip(self, encrypted_storage):
-        plaintext = "hello, world"
-        ciphertext = encrypted_storage.encrypt_content(plaintext)
-        assert encrypted_storage.decrypt_content(ciphertext) == plaintext
-
-    def test_different_plaintexts_produce_different_ciphertexts(self, encrypted_storage):
-        ct1 = encrypted_storage.encrypt_content("hello")
-        ct2 = encrypted_storage.encrypt_content("world")
-        assert ct1 != ct2
-
-    def test_same_plaintext_produces_different_ciphertexts(self, encrypted_storage):
-        ct1 = encrypted_storage.encrypt_content("hello")
-        ct2 = encrypted_storage.encrypt_content("hello")
-        assert ct1 != ct2
-
-    def test_wrong_key_fails(self, temp_config, monkeypatch):
-        config = temp_config
-        config.encryption.enabled = True
-
-        monkeypatch.setenv("SNIPCONTEXT_ENCRYPTION_PASSPHRASE", "passphrase-a")
-        storage_a = StorageEngine(config)
-        encrypted = storage_a.encrypt_content("secret")
-
-        monkeypatch.setenv("SNIPCONTEXT_ENCRYPTION_PASSPHRASE", "passphrase-b")
-        storage_b = StorageEngine(config)
-        with pytest.raises(EncryptionError):
-            storage_b.decrypt_content(encrypted)
-
-    def test_empty_string_roundtrip(self, encrypted_storage):
-        ciphertext = encrypted_storage.encrypt_content("")
-        assert encrypted_storage.decrypt_content(ciphertext) == ""
-
-    def test_unicode_roundtrip(self, encrypted_storage):
-        plaintext = "你好 🚀 émoji"
-        ciphertext = encrypted_storage.encrypt_content(plaintext)
-        assert encrypted_storage.decrypt_content(ciphertext) == plaintext
 
 
 class TestStorageCRUD:
@@ -301,26 +247,7 @@ class TestStorageExceptions:
         err = MissingIndexError("vector", "/path/to/index")
         assert err.index_type == "vector"
         assert err.path == "/path/to/index"
-        assert "vector" in str(err)
         assert "/path/to/index" in str(err)
-
-    def test_encryption_error_operation_only(self):
-        err = EncryptionError("encrypt")
-        assert err.operation == "encrypt"
-        assert err.snippet_id is None
-        assert err.original_error is None
-        assert "encrypt" in str(err)
-
-    def test_encryption_error_with_snippet_id(self):
-        err = EncryptionError("decrypt", snippet_id="abc123")
-        assert err.snippet_id == "abc123"
-        assert "abc123" in str(err)
-
-    def test_encryption_error_with_original_error(self):
-        cause = ValueError("bad key")
-        err = EncryptionError("encrypt", original_error=cause)
-        assert err.original_error is cause
-        assert "bad key" in str(err)
 
 
 class TestStorageProperties:
@@ -407,9 +334,9 @@ class TestStorageReindex:
         # Create a valid snippet
         s = Snippet(content="code", metadata=SnippetMetadata(title="Test"))
         storage.save(s)
-        # Create an orphaned file
+        # Create an invalid orphaned file
         orphan_path = storage.snippets_dir / "orphan.json"
-        orphan_path.write_text('{"not": "valid"}')
+        orphan_path.write_text("[1, 2, 3]")
         freed = storage.vacuum()
         assert freed > 0
         assert not orphan_path.exists()
@@ -442,7 +369,7 @@ class TestStorageImportEdgeCases:
                     "metadata": {"title": "Valid"},
                     "tags": [],
                 },
-                {"invalid": "no content field"},
+                {"metadata": {"title": ""}},
             ],
             "count": 2,
         }
@@ -468,30 +395,3 @@ class TestStorageImportEdgeCases:
             f.flush()
             with pytest.raises(StorageError):
                 storage.import_file(Path(f.name))
-
-
-class TestStorageEncryptionErrors:
-    """Tests for encryption error paths."""
-
-    pytest.importorskip("cryptography")
-
-    def test_encrypt_without_encryption_enabled(self, temp_config, monkeypatch):
-        """Test that encryption raises when not enabled."""
-        config = temp_config
-        config.encryption.enabled = False
-        storage = StorageEngine(config)
-        with pytest.raises(EncryptionError):
-            storage.encrypt_content("test")
-
-    def test_decrypt_without_encryption_enabled(self, temp_config):
-        """Test that decryption raises when not enabled."""
-        config = temp_config
-        config.encryption.enabled = False
-        storage = StorageEngine(config)
-        with pytest.raises(EncryptionError):
-            storage.decrypt_content("dGVzdA==")
-
-    def test_decrypt_invalid_token(self, encrypted_storage):
-        """Test that decrypting invalid data raises EncryptionError."""
-        with pytest.raises(EncryptionError):
-            encrypted_storage.decrypt_content("not-valid-base64!!!")

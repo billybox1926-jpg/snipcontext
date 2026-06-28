@@ -10,7 +10,6 @@ directory tree by tags. This design ensures:
 
 from __future__ import annotations
 
-import base64
 import json
 import logging
 from pathlib import Path
@@ -18,8 +17,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-
-    from cryptography.fernet import Fernet
 
 from snipcontext.config.settings import Config, get_config
 from snipcontext.core.models import Snippet
@@ -55,23 +52,6 @@ class MissingIndexError(StorageError):
         self.index_type = index_type
         self.path = path
         super().__init__(f"Index missing: {index_type} at {path}")
-
-
-class EncryptionError(StorageError):
-    """Raised when encryption/decryption operations fail."""
-
-    def __init__(
-        self, operation: str, snippet_id: str | None = None, original_error: Exception | None = None
-    ):
-        self.operation = operation
-        self.snippet_id = snippet_id
-        self.original_error = original_error
-        msg = f"Encryption error during {operation}"
-        if snippet_id:
-            msg += f" for snippet {snippet_id}"
-        if original_error:
-            msg += f" (caused by: {original_error})"
-        super().__init__(msg)
 
 
 class StorageEngine:
@@ -141,7 +121,6 @@ class StorageEngine:
 
         # Remove embedding from JSON - it's stored in the vector index
         data.pop("embedding", None)
-        # Keep encrypted_content in JSON for persistence
 
         try:
             with open(path, "w", encoding="utf-8") as f:
@@ -285,7 +264,6 @@ class StorageEngine:
                 "tags": {},
                 "oldest": None,
                 "newest": None,
-                "encrypted_count": 0,
                 "deleted_count": 0,
                 "total_size_bytes": 0,
             }
@@ -295,15 +273,12 @@ class StorageEngine:
         languages: Counter = Counter(s.metadata.language.value for s in snippets)
         tags: Counter = Counter()
         total_size = 0
-        encrypted_count = 0
         deleted_count = 0
 
         for s in snippets:
             for tag in s.tags:
                 tags[tag] += 1
             total_size += len(s.content.encode("utf-8"))
-            if s.encrypted_content:
-                encrypted_count += 1
             if s.deleted:
                 deleted_count += 1
 
@@ -314,116 +289,9 @@ class StorageEngine:
             "tags": dict(tags.most_common()),
             "oldest": min(s.created_at for s in snippets).isoformat(),
             "newest": max(s.updated_at for s in snippets).isoformat(),
-            "encrypted_count": encrypted_count,
             "deleted_count": deleted_count,
             "total_size_bytes": total_size,
         }
-
-    # ------------------------------------------------------------------
-    # Encryption
-    # ------------------------------------------------------------------
-
-    def _get_fernet(self) -> Fernet:
-        """Create or retrieve a Fernet cipher from the encryption config.
-
-        Derives a key from the configured passphrase and salt using PBKDF2.
-        The salt is auto-generated and persisted on first use.
-
-        Returns:
-            Configured Fernet cipher instance.
-
-        Raises:
-            EncryptionError: If encryption is not enabled in config.
-            EncryptionError: If cryptography package is not installed.
-        """
-        try:
-            from cryptography.fernet import Fernet
-            from cryptography.hazmat.primitives import hashes
-            from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-        except ImportError as exc:
-            raise EncryptionError(
-                "encrypt/decrypt",
-                original_error=RuntimeError(
-                    "The 'cryptography' package is required for encryption. "
-                    "Install it with: pip install snipcontext[encryption]"
-                ),
-            ) from exc
-
-        if not self._config.encryption.enabled:
-            raise EncryptionError(
-                "encrypt/decrypt",
-                original_error=RuntimeError("Encryption is not enabled in config"),
-            )
-
-        enc_config = self._config.encryption
-        salt = enc_config.get_or_create_salt()
-
-        # Passphrase must be set explicitly via env var — no default fallback.
-        # A default would provide a false sense of security.
-        import os
-
-        passphrase = os.environ.get("SNIPCONTEXT_ENCRYPTION_PASSPHRASE")
-        if not passphrase:
-            raise EncryptionError(
-                "encrypt/decrypt",
-                original_error=RuntimeError(
-                    "SNIPCONTEXT_ENCRYPTION_PASSPHRASE env var must be set "
-                    "when encryption is enabled. "
-                    "Example: export SNIPCONTEXT_ENCRYPTION_PASSPHRASE=$(head -c 32 /dev/urandom | base64)"
-                ),
-            )
-        passphrase_bytes = passphrase.encode()
-
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=salt,
-            iterations=enc_config.key_iterations,
-        )
-        key = base64.urlsafe_b64encode(kdf.derive(passphrase_bytes))
-        return Fernet(key)
-
-    def encrypt_content(self, content: str) -> str:
-        """Encrypt content using Fernet (AES-128).
-
-        Args:
-            content: Plaintext content to encrypt.
-
-        Returns:
-            Base64-encoded encrypted string suitable for storage.
-
-        Raises:
-            EncryptionError: If encryption fails.
-        """
-        try:
-            fernet = self._get_fernet()
-            encrypted = fernet.encrypt(content.encode())
-            return base64.urlsafe_b64encode(encrypted).decode()
-        except Exception as exc:
-            raise EncryptionError("encrypt", original_error=exc) from exc
-
-    def decrypt_content(self, encrypted_content: str) -> str:
-        """Decrypt content using Fernet (AES-128).
-
-        Args:
-            encrypted_content: Base64-encoded encrypted string from storage.
-
-        Returns:
-            Decrypted plaintext content.
-
-        Raises:
-            EncryptionError: If decryption fails (invalid token, wrong key, etc.).
-        """
-        try:
-            fernet = self._get_fernet()
-            encrypted_bytes = base64.urlsafe_b64decode(encrypted_content.encode())
-            decrypted = fernet.decrypt(encrypted_bytes)
-            return decrypted.decode()
-        except Exception as exc:
-            # InvalidToken is a subclass of Exception; _get_fernet() already
-            # handles the ImportError case, so any exception here is a
-            # decryption failure (wrong key, corrupted data, etc.).
-            raise EncryptionError("decrypt", original_error=exc) from exc
 
     # ------------------------------------------------------------------
     # Maintenance
@@ -500,27 +368,31 @@ class StorageEngine:
             Number of snippets imported.
 
         Raises:
-            StorageError: If the file cannot be read or parsed.
+            StorageError: If the file cannot be read.
         """
         input_path = Path(input_path)
-        if not input_path.exists():
-            raise StorageError(f"Import file not found: {input_path}")
-
         try:
             with open(input_path, encoding="utf-8") as f:
-                data = json.load(f)
+                payload = json.load(f)
         except (OSError, json.JSONDecodeError) as exc:
-            raise StorageError(f"Failed to read import file: {exc}") from exc
+            raise StorageError(f"Failed to read import file {input_path}: {exc}") from exc
 
-        snippets_data = data if isinstance(data, list) else data.get("snippets", [])
+        items = payload.get("snippets") if isinstance(payload, dict) else None
+        if items is None and isinstance(payload, list):
+            items = payload
+        elif items is None:
+            items = payload.get("data", []) if isinstance(payload, dict) else []
+        if not isinstance(items, list):
+            items = [items]
+
         count = 0
-        for item in snippets_data:
+        for item in items:
             try:
                 snippet = Snippet.model_validate(item)
                 self.save(snippet)
                 count += 1
-            except Exception:
-                logger.warning("Skipping invalid import item: %s", item)
+            except Exception as exc:
+                logger.warning("Skipping invalid import item: %s", exc)
                 continue
 
         logger.info("Imported %d snippets from %s", count, input_path)

@@ -16,10 +16,9 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from typer.testing import CliRunner
-
 from snipcontext.cli.app import app
 from snipcontext.cli.context import reset_context
+from typer.testing import CliRunner
 
 
 @pytest.fixture(autouse=True)
@@ -97,14 +96,6 @@ class TestHelp:
 
     def test_watch_help(self, runner):
         result = runner.invoke(app, ["watch", "--help"])
-        assert result.exit_code == 0
-
-    def test_encrypt_help(self, runner):
-        result = runner.invoke(app, ["encrypt", "--help"])
-        assert result.exit_code == 0
-
-    def test_decrypt_help(self, runner):
-        result = runner.invoke(app, ["decrypt", "--help"])
         assert result.exit_code == 0
 
     def test_config_path_help(self, runner):
@@ -279,16 +270,6 @@ class TestExport:
         runner.invoke(app, ["add", "print('exp')", "--title", "ExportTest"], env=env)
         result = runner.invoke(app, ["export", "--provider", "generic"], env=env)
         assert result.exit_code == 0
-
-
-# ── ENCRYPT / DECRYPT ──────────────────────────────────────────────────
-
-
-class TestEncrypt:
-    def test_encrypt_no_encryption_enabled(self, runner, env_dir):
-        env = _env(env_dir)
-        result = runner.invoke(app, ["encrypt", "nonexistent"], env=env)
-        assert result.exit_code != 0 or "not enabled" in result.output.lower()
 
 
 # ── SEARCH ─────────────────────────────────────────────────────────────

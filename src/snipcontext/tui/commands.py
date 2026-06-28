@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Any
 
 from snipcontext.core.config_ops import get_config_paths, get_config_values
-from snipcontext.core.crypto_ops import decrypt_content, encrypt_content
 from snipcontext.core.search_ops import ensure_index, search_snippets
 from snipcontext.core.snippet_ops import (
     create_snippet,
@@ -62,8 +61,6 @@ class CommandRegistry:
             CommandSpec("config", "Config subcommands", aliases=["cfg"], handler=self._config)
         )
         self.register(CommandSpec("stats", "Show stats", aliases=["stat"], handler=self._stats))
-        self.register(CommandSpec("encrypt", "Encrypt a snippet", handler=self._encrypt))
-        self.register(CommandSpec("decrypt", "Decrypt a snippet", handler=self._decrypt))
         self.register(CommandSpec("watch", "Watch snippets dir", handler=self._watch))
         self.register(CommandSpec("index", "Index all snippets", handler=self._index))
         self.register(
@@ -130,16 +127,12 @@ class CommandRegistry:
         if not content.strip():
             raise ValueError("Content cannot be empty")
         tags = _coerce_tags(kwargs.get("tags", []))
-        encrypt = bool(kwargs.get("encrypt") or kwargs.get("encrypted"))
-        if encrypt and not config.encryption.enabled:
-            raise RuntimeError("Encryption is not enabled")
         snippet = create_snippet(
             content=content,
             title=title,
             description=kwargs.get("description", "") or kwargs.get("desc", ""),
             language=language,
             tags=tags,
-            encrypt=encrypt,
         )
         storage.save(snippet)
         return {"type": "snippet", "item": snippet}
@@ -265,30 +258,6 @@ class CommandRegistry:
             return {"type": "message", "message": "No snippets in your collection yet."}
         return {"type": "stats", "data": data}
 
-    def _encrypt(self, args: list[str], kwargs: dict[str, Any]) -> Any:
-        if not args:
-            raise ValueError("Snippet ID required")
-        config, storage, _ = self._get_context()
-        snippet_id = args[0]
-        snippet = storage.get(snippet_id)
-        encrypted = encrypt_content(config, storage, snippet.content)
-        snippet.encrypted_content = encrypted
-        snippet.content = ""
-        storage.save(snippet)
-        return {"type": "message", "message": f"Encrypted snippet: {snippet.metadata.title}"}
-
-    def _decrypt(self, args: list[str], kwargs: dict[str, Any]) -> Any:
-        if not args:
-            raise ValueError("Snippet ID required")
-        config, storage, _ = self._get_context()
-        snippet_id = args[0]
-        snippet = storage.get(snippet_id)
-        decrypted = decrypt_content(config, storage, snippet.encrypted_content)
-        snippet.content = decrypted
-        snippet.encrypted_content = None
-        storage.save(snippet)
-        return {"type": "message", "message": f"Decrypted snippet: {snippet.metadata.title}"}
-
     def _watch(self, args: list[str], kwargs: dict[str, Any]) -> Any:
         config, storage, search = self._get_context()
         from snipcontext.core.watch_ops import create_watcher, is_watcher_enabled
@@ -334,9 +303,9 @@ class CommandRegistry:
         return {"type": "providers", "items": providers}
 
 
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------
 # Module-level helpers
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------
 
 _EXT_LANG_MAP: dict[str, str] = {
     "py": "python",

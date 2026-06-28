@@ -6,7 +6,6 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
 from snipcontext.config.settings import Config, StorageConfig, reset_config
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.core.snippet_ops import (
@@ -105,19 +104,6 @@ class TestCreateSnippet:
     def test_invalid_language_becomes_unknown(self):
         s = create_snippet("code", "title", "desc", "not_a_real_language", [])
         assert s.metadata.language == Language.UNKNOWN
-
-    def test_encrypted_snippet(self):
-        s = create_snippet(
-            "",
-            "title",
-            "desc",
-            "python",
-            ["tag"],
-            encrypt=True,
-            encrypted_content="encrypted-blob",
-        )
-        assert s.content == ""
-        assert s.encrypted_content == "encrypted-blob"
 
     def test_normal_snippet(self):
         s = create_snippet("code", "title", "desc", "python", ["tag"])

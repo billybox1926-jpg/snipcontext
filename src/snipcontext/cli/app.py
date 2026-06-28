@@ -80,14 +80,6 @@ register_config(config_app)
 register_init(app)
 register_info(app)
 
-# Optional: cryptography commands (requires snipcontext[encryption])
-try:
-    from snipcontext.cli.crypto import register_commands as register_crypto  # noqa: E402
-
-    register_crypto(app)
-except ImportError:
-    pass  # cryptography not installed, skip encrypt/decrypt commands
-
 
 @app.command()  # type: ignore[untyped-decorator]
 def repl(

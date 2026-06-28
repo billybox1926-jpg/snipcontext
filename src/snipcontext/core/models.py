@@ -126,7 +126,7 @@ class Snippet(BaseModel):  # type: ignore[misc]
     versioning, and optional embedding vector for semantic search.
     """
 
-    model_config = ConfigDict(validate_assignment=True)
+    model_config = ConfigDict(validate_assignment=True, extra="allow")
 
     id: str = Field(default_factory=_generate_id, description="Unique snippet identifier")
     content: str = Field(default="", description="Current code content")
@@ -141,22 +141,11 @@ class Snippet(BaseModel):  # type: ignore[misc]
         description="Dense vector embedding for semantic search",
         exclude=True,  # Don't serialize to JSON - stored in vector index
     )
-    encrypted_content: str | None = Field(
-        default=None,
-        description="Encrypted content for sensitive snippets (Fernet/AES-128)",
-    )
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)
     access_count: int = Field(default=0, description="Number of times snippet was retrieved")
     deleted: bool = Field(default=False, description="Soft deletion flag")
     delete_marker: str = Field(default="", description="Reason or actor for deletion")
-
-    @model_validator(mode="after")  # type: ignore[untyped-decorator]
-    def _validate_content_or_encrypted(self) -> Snippet:
-        """Ensure either content or encrypted_content is provided."""
-        if not self.content and not self.encrypted_content:
-            raise ValueError("Either content or encrypted_content must be provided")
-        return self
 
     @field_validator("tags", mode="before")  # type: ignore[untyped-decorator]
     @classmethod

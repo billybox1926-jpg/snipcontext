@@ -17,7 +17,6 @@ class SnippetCreateRequest(BaseModel):
     description: str | None = None
     language: str | None = None
     tags: list[str] | None = None
-    encrypt: bool = False
 
 
 class SnippetResponse(BaseModel):

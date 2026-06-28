@@ -78,7 +78,7 @@ class PreviewPane(Vertical):
         from rich.panel import Panel
         from rich.syntax import Syntax
 
-        code = snippet.content or snippet.encrypted_content or ""
+        code = snippet.content or ""
         lang = snippet.metadata.language.value
         if lang == "unknown":
             lang = "text"
@@ -452,7 +452,7 @@ class SnippetBrowser(App[None]):
     def action_copy(self) -> None:
         if 0 <= self.cursor_index < len(self.results):
             snippet = self.results[self.cursor_index]
-            text = snippet.content or snippet.encrypted_content or ""
+            text = snippet.content or ""
             try:
                 self.copy_to_clipboard(text)
                 self.notify(f"Copied snippet '{snippet.metadata.title}' to clipboard")
@@ -475,7 +475,7 @@ class SnippetBrowser(App[None]):
         if not selected:
             self.notify("No snippets selected")
             return
-        joined = "\n---\n".join(s.content or s.encrypted_content or "" for s in selected)
+        joined = "\n---\n".join(snippet.content or "" for snippet in selected)
         try:
             self.copy_to_clipboard(joined)
             self.notify(f"Copied {len(selected)} snippets")

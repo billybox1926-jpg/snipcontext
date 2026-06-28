@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
-
 from snipcontext.core.models import (
     Language,
     SearchMode,
@@ -155,9 +154,9 @@ class TestSnippet:
         assert s.metadata.title == "Hello"
         assert len(s.id) == 22
 
-    def test_content_required(self):
-        with pytest.raises(ValidationError):
-            Snippet(content="", metadata=SnippetMetadata(title="Empty"))
+    def test_content_empty_allowed(self):
+        s = Snippet(content="", metadata=SnippetMetadata(title="Empty"))
+        assert s.content == ""
 
     def test_tags_normalized(self):
         s = Snippet(
