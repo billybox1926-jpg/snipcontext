@@ -16,9 +16,10 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
+
 from snipcontext.cli.app import app
 from snipcontext.cli.context import reset_context
-from typer.testing import CliRunner
 
 
 @pytest.fixture(autouse=True)
