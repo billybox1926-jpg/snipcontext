@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from watchdog.observers import Observer
 
     from snipcontext.config.settings import Config
-    from snipcontext.core.search_fusion import HybridSearch
+    from snipcontext.core.search import HybridSearch
     from snipcontext.core.storage import StorageEngine
 
 logger = logging.getLogger(__name__)

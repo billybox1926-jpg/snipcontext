@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from snipcontext.core.indexes.vector_index import VectorIndex
+    from snipcontext.core.search import VectorIndex
     from snipcontext.core.storage import StorageEngine
 
 from snipcontext.config.settings import AutoTagConfig
@@ -60,9 +60,8 @@ def _build_auto_tag_smoke() -> None:
     from pathlib import Path
 
     from snipcontext.config.settings import AutoTagConfig, Config, StorageConfig
-    from snipcontext.core.embeddings import EmbeddingEngine
-    from snipcontext.core.indexes.vector_index import VectorIndex
     from snipcontext.core.models import Language, Snippet, SnippetMetadata
+    from snipcontext.core.search import EmbeddingEngine, VectorIndex
     from snipcontext.core.storage import StorageEngine
 
     with tempfile.TemporaryDirectory() as tmp:
