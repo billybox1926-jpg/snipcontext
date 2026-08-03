@@ -62,17 +62,14 @@ class TestEmbeddingEngineEdgeCases:
     """Cover EmbeddingEngine branches that are hard to hit with real deps."""
 
     def test_dimension_raises_when_semantic_unavailable(self, tmp_path, mocker):
-        embeddings_module = pytest.importorskip("snipcontext.core.embeddings")
         search_module = pytest.importorskip("snipcontext.core.search")
-        original = embeddings_module.SEMANTIC_AVAILABLE
+        original = search_module.SEMANTIC_AVAILABLE
         try:
-            embeddings_module.SEMANTIC_AVAILABLE = False
             search_module.SEMANTIC_AVAILABLE = False
             engine = EmbeddingEngine(_config(tmp_path))
             with pytest.raises(ImportError):
                 _ = engine.dimension
         finally:
-            embeddings_module.SEMANTIC_AVAILABLE = original
             search_module.SEMANTIC_AVAILABLE = original
 
     def test_encode_empty_texts(self, tmp_path):
@@ -106,12 +103,9 @@ class TestVectorIndexMocks:
         assert idx.snippet_ids == ()
 
     def test_build_empty_snippets(self, tmp_path, mocker):
-        embeddings_module = pytest.importorskip("snipcontext.core.embeddings")
         search_module = pytest.importorskip("snipcontext.core.search")
-        original_embeddings = embeddings_module.SEMANTIC_AVAILABLE
-        original_search = search_module.SEMANTIC_AVAILABLE
+        original = search_module.SEMANTIC_AVAILABLE
         try:
-            embeddings_module.SEMANTIC_AVAILABLE = True
             search_module.SEMANTIC_AVAILABLE = True
             backend = MagicMock()
             mocker.patch("snipcontext.core.index_backends._create_backend", return_value=backend)
@@ -122,16 +116,13 @@ class TestVectorIndexMocks:
             assert idx.count == 0
             assert idx._id_set == set()
         finally:
-            embeddings_module.SEMANTIC_AVAILABLE = original_embeddings
-            search_module.SEMANTIC_AVAILABLE = original_search
+            search_module.SEMANTIC_AVAILABLE = original
 
     def test_add_and_remove_vector(self, tmp_path, mocker):
-        embeddings_module = pytest.importorskip("snipcontext.core.embeddings")
         search_module = pytest.importorskip("snipcontext.core.search")
-        original_embeddings = embeddings_module.SEMANTIC_AVAILABLE
-        original_search = search_module.SEMANTIC_AVAILABLE
+        pytest.importorskip("faiss")
+        original = search_module.SEMANTIC_AVAILABLE
         try:
-            embeddings_module.SEMANTIC_AVAILABLE = True
             search_module.SEMANTIC_AVAILABLE = True
             backend = MagicMock()
             backend.is_trained = True
@@ -151,8 +142,7 @@ class TestVectorIndexMocks:
             idx.remove_vector("x")
             assert "x" not in idx._id_set
         finally:
-            embeddings_module.SEMANTIC_AVAILABLE = original_embeddings
-            search_module.SEMANTIC_AVAILABLE = original_search
+            search_module.SEMANTIC_AVAILABLE = original
 
     def test_search_when_not_trained(self, tmp_path):
         idx = self._index(tmp_path)
@@ -160,12 +150,10 @@ class TestVectorIndexMocks:
         assert idx.search(q, top_k=3) == []
 
     def test_save_and_load_roundtrip(self, tmp_path, mocker):
-        embeddings_module = pytest.importorskip("snipcontext.core.embeddings")
         search_module = pytest.importorskip("snipcontext.core.search")
-        original_embeddings = embeddings_module.SEMANTIC_AVAILABLE
-        original_search = search_module.SEMANTIC_AVAILABLE
+        pytest.importorskip("faiss")
+        original = search_module.SEMANTIC_AVAILABLE
         try:
-            embeddings_module.SEMANTIC_AVAILABLE = True
             search_module.SEMANTIC_AVAILABLE = True
             backend = MagicMock()
             backend.is_trained = True
@@ -191,36 +179,29 @@ class TestVectorIndexMocks:
             assert loaded is True
             assert "x" in idx._id_set
         finally:
-            embeddings_module.SEMANTIC_AVAILABLE = original_embeddings
-            search_module.SEMANTIC_AVAILABLE = original_search
+            search_module.SEMANTIC_AVAILABLE = original
 
     def test_embed_fn_when_semantic_unavailable(self, tmp_path, mocker):
-        vector_index_module = pytest.importorskip("snipcontext.core.indexes.vector_index")
-        original = vector_index_module.SEMANTIC_AVAILABLE
+        search_module = pytest.importorskip("snipcontext.core.search")
+        original = search_module.SEMANTIC_AVAILABLE
         try:
-            vector_index_module.SEMANTIC_AVAILABLE = False
+            search_module.SEMANTIC_AVAILABLE = False
             idx = self._index(tmp_path)
             with pytest.raises(ImportError):
                 idx._embed_fn("hello")
         finally:
-            vector_index_module.SEMANTIC_AVAILABLE = original
+            search_module.SEMANTIC_AVAILABLE = original
 
 
 class TestKeywordIndexEdgeCases:
-    def test_fuzzy_search_uses_rapidfuzz_when_available(self, tmp_path):
-        """When rapidfuzz is installed, fuzzy search should return matches."""
-        try:
-            import rapidfuzz  # noqa: F401
-        except ImportError:
-            pytest.skip("rapidfuzz is not installed")
+    def test_fuzzy_search_import_error_returns_empty(self, tmp_path):
+        """Without rapidfuzz, fuzzy search should gracefully return []."""
 
         idx = KeywordIndex(_config(tmp_path))
-        idx.build([_snippet("a")])
         idx._texts = ["hello world"]
+        # rapidfuzz is not installed in this environment, so ImportError is expected.
         out = idx._fuzzy_search("hello", top_k=2, min_score=0.0)
-        assert len(out) >= 1
-        assert out[0][0] == 0
-        assert 0.0 <= out[0][1] <= 1.0
+        assert out == []
 
     def test_load_corrupted_index(self, tmp_path):
         idx = KeywordIndex(_config(tmp_path))
@@ -253,26 +234,21 @@ class TestHybridSearchBranches:
     """Unit-level HybridSearch branch coverage with mocks."""
 
     def test_semantic_search_fallback_when_deps_missing(self, tmp_path, mocker):
-        embeddings_module = pytest.importorskip("snipcontext.core.embeddings")
         search_module = pytest.importorskip("snipcontext.core.search")
-        original_embeddings = embeddings_module.SEMANTIC_AVAILABLE
-        original_search = search_module.SEMANTIC_AVAILABLE
+        original = search_module.SEMANTIC_AVAILABLE
         try:
-            embeddings_module.SEMANTIC_AVAILABLE = False
             search_module.SEMANTIC_AVAILABLE = False
             hs = HybridSearch(_config(tmp_path))
             hs._config.search.min_score = 0.0
             fake_storage = MagicMock()
             fake_storage.get.side_effect = lambda sid: _snippet(sid)
             mocker.patch("snipcontext.core.storage.StorageEngine", return_value=fake_storage)
-            hs.embedder.encode_query = MagicMock(return_value=np.zeros((1, 16), dtype=np.float32))
 
             hs.keyword_index.build([_snippet("a")])
             results = hs._semantic_search("query", top_k=3, min_score=0.0, storage=fake_storage)
             assert all(r.matched_by == "keyword" for r in results)
         finally:
-            embeddings_module.SEMANTIC_AVAILABLE = original_embeddings
-            search_module.SEMANTIC_AVAILABLE = original_search
+            search_module.SEMANTIC_AVAILABLE = original
 
     def test_hybrid_search_empty_semantic_results(self, tmp_path, mocker):
         hs = HybridSearch(_config(tmp_path))

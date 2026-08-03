@@ -165,10 +165,6 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "snipcontext.*"
 ignore_missing_imports = true
-[[tool.mypy.overrides]]
-module = "tests.*"
-ignore_missing_imports = true
-disable_error_code = ["method-assign"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
