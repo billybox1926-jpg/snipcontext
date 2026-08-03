@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from snipcontext.config.settings import Config
-    from snipcontext.core.search import HybridSearch
+    from snipcontext.core.search_fusion import HybridSearch
     from snipcontext.core.storage import StorageEngine
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ def get_context() -> tuple[Config, StorageEngine, HybridSearch]:
             logger.debug("Initialized shared StorageEngine instance")
 
         if _search is None:
-            from snipcontext.core.search import HybridSearch
+            from snipcontext.core.search_fusion import HybridSearch
 
             _search = HybridSearch(_config)
             logger.debug("Initialized shared HybridSearch instance")

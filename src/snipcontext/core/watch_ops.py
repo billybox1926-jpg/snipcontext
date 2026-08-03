@@ -7,7 +7,7 @@ No I/O, no CLI dependencies.
 from __future__ import annotations
 
 from snipcontext.config.settings import Config
-from snipcontext.core.search import HybridSearch
+from snipcontext.core.search_fusion import HybridSearch
 from snipcontext.core.storage import StorageEngine
 from snipcontext.core.watcher import SnippetWatcher
 
