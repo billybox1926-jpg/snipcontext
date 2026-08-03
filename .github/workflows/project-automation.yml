@@ -1,0 +1,116 @@
+name: Project Board Automation
+
+on:
+  issues:
+    types: [opened, closed, reopened]
+
+jobs:
+  manage-project:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+      repository-projects: write
+    steps:
+      - name: Get project data
+        id: project
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+        run: |
+          gh api graphql -f query='
+            query {
+              user(login: "billybox1926-jpg") {
+                projectV2(number: 4) {
+                  id
+                  fields(first: 30) {
+                    nodes {
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options { id name }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ' > project_data.json
+          
+          echo "PROJECT_ID=$(jq -r '.data.user.projectV2.id' project_data.json)" >> $GITHUB_ENV
+          
+          # Sprint field
+          echo "SPRINT_FIELD=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name=="Sprint") | .id' project_data.json)" >> $GITHUB_ENV
+          echo "SPRINT1_OPT=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name=="Sprint") | .options[] | select(.name=="Sprint 1 — Foundation") | .id' project_data.json)" >> $GITHUB_ENV
+          echo "SPRINT2_OPT=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name=="Sprint") | .options[] | select(.name=="Sprint 2 — Search & Core") | .id' project_data.json)" >> $GITHUB_ENV
+          echo "SPRINT3_OPT=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name=="Sprint") | .options[] | select(.name=="Sprint 3 — Features & Scale") | .id' project_data.json)" >> $GITHUB_ENV
+          echo "SPRINT4_OPT=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name=="Sprint") | .options[] | select(.name=="Sprint 4 — Polish & Ecosystem") | .id' project_data.json)" >> $GITHUB_ENV
+          
+          # Priority field
+          echo "PRIORITY_FIELD=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name=="Priority") | .id' project_data.json)" >> $GITHUB_ENV
+          echo "P0_OPT=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name=="Priority") | .options[] | select(.name=="P0 — Blocker") | .id' project_data.json)" >> $GITHUB_ENV
+          echo "P1_OPT=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name=="Priority") | .options[] | select(.name=="P1 — High") | .id' project_data.json)" >> $GITHUB_ENV
+          echo "P2_OPT=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name=="Priority") | .options[] | select(.name=="P2 — Normal") | .id' project_data.json)" >> $GITHUB_ENV
+          echo "P3_OPT=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name=="Priority") | .options[] | select(.name=="P3 — Nice to have") | .id' project_data.json)" >> $GITHUB_ENV
+          
+          # Status field
+          echo "STATUS_FIELD=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name=="Status") | .id' project_data.json)" >> $GITHUB_ENV
+          echo "TODO_OPT=$(jq -r '.data.user.projectV2.fields.nodes[] | select(.name=="Status") | .options[] | select(.name=="Todo") | .id' project_data.json)" >> $GITHUB_ENV
+
+      - name: Add new issue to project
+        if: github.event.action == 'opened'
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          ISSUE_NODE_ID: ${{ github.event.issue.node_id }}
+        run: |
+          # Determine sprint from issue labels or milestone
+          ISSUE_NUMBER=${{ github.event.issue.number }}
+          MILESTONE=$(gh issue view $ISSUE_NUMBER --json milestone --jq '.milestone.title // empty' 2>/dev/null || echo "")
+          
+          # Map milestone to sprint
+          if echo "$MILESTONE" | grep -q "Sprint 1"; then
+            SPRINT_OPT=$SPRINT1_OPT
+          elif echo "$MILESTONE" | grep -q "Sprint 2"; then
+            SPRINT_OPT=$SPRINT2_OPT
+          elif echo "$MILESTONE" | grep -q "Sprint 3"; then
+            SPRINT_OPT=$SPRINT3_OPT
+          elif echo "$MILESTONE" | grep -q "Sprint 4"; then
+            SPRINT_OPT=$SPRINT4_OPT
+          else
+            SPRINT_OPT=$SPRINT1_OPT
+          fi
+          
+          # Add issue to project
+          ITEM_ID=$(gh api graphql -f query='
+            mutation($project:ID!, $issue:ID!) {
+              addProjectV2ItemById(input: {projectId: $project, contentId: $issue}) {
+                item { id }
+              }
+            }
+          ' -f project=$PROJECT_ID -f issue=$ISSUE_NODE_ID --jq '.data.addProjectV2ItemById.item.id')
+          
+          echo "ITEM_ID=$ITEM_ID" >> $GITHUB_ENV
+          
+          # Set Sprint
+          gh api graphql -f query="
+            mutation {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: \"$PROJECT_ID\"
+                itemId: \"$ITEM_ID\"
+                fieldId: \"$SPRINT_FIELD\"
+                value: { singleSelectOptionId: \"$SPRINT_OPT\" }
+              }) { clientMutationId }
+            }
+          "
+          
+          # Set Status to Todo
+          gh api graphql -f query="
+            mutation {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: \"$PROJECT_ID\"
+                itemId: \"$ITEM_ID\"
+                fieldId: \"$STATUS_FIELD\"
+                value: { singleSelectOptionId: \"$TODO_OPT\" }
+              }) { clientMutationId }
+            }
+          "
+          
+          echo "Added issue #$ISSUE_NUMBER to project"
