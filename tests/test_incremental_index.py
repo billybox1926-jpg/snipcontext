@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-
 if TYPE_CHECKING:
     from pathlib import Path
-import pytest
 from unittest.mock import MagicMock, patch
 
 
@@ -86,7 +84,7 @@ def test_add_snippet_skips_vector_when_semantic_unavailable() -> None:
 
     with (
         patch("snipcontext.core.storage.StorageEngine", return_value=MagicMock()),
-        patch.object(search.vector_index, "save") as mock_save,
+        patch.object(search.vector_index, "save"),
         patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False),
     ):
         search.add_snippet(snippet_b)
@@ -107,7 +105,7 @@ def test_remove_snippet_skips_vector_when_semantic_unavailable() -> None:
 
     with (
         patch("snipcontext.core.storage.StorageEngine", return_value=MagicMock()),
-        patch.object(search.vector_index, "save") as mock_save,
+        patch.object(search.vector_index, "save"),
         patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False),
     ):
         search.remove_snippet("snippet-a")
@@ -159,7 +157,6 @@ def test_mark_deleted_sets_flag_and_saves(tmp_path: Path) -> None:
     config.ensure_directories()
 
     engine = StorageEngine(config)
-    # Override save to avoid depending on internal serialization details
     saved_calls = []
     engine.save = lambda snippet: saved_calls.append(snippet)
 
