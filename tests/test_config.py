@@ -102,6 +102,42 @@ def test_init_local_fails_if_exists(tmp_path: Path):
     assert result.exit_code != 0
 
 
+def test_init_local_git_creates_repo(tmp_path: Path) -> None:
+    os.chdir(tmp_path)
+    result = runner.invoke(app, ["init", "--local", "--git"])
+    assert result.exit_code == 0, result.output
+    target = tmp_path / ".snipcontext"
+    assert (target / ".git").is_dir()
+    assert (target / ".gitignore").is_file()
+    assert (target / "config.yaml").is_file()
+    assert (target / "snippets").is_dir()
+    assert any("initialize SnipContext storage" in line for line in _run(["log", "--oneline"], target).stdout.splitlines())
+
+
+def test_init_local_git_with_remote(tmp_path: Path) -> None:
+    os.chdir(tmp_path)
+    result = runner.invoke(app, ["init", "--local", "--git", "--remote", "https://example.com/repo.git"])
+    assert result.exit_code == 0, result.output
+    target = tmp_path / ".snipcontext"
+    remote_output = _run(["remote", "get-url", "origin"], target).stdout.strip()
+    assert remote_output == "https://example.com/repo.git"
+
+
+def test_init_local_git_fails_without_git(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("shutil.which", lambda name: None if name == "git" else True)
+    os.chdir(tmp_path)
+    result = runner.invoke(app, ["init", "--local", "--git"])
+    assert result.exit_code != 0
+    assert "git" in result.output.lower()
+
+
+from subprocess import run
+
+
+def _run(args: list[str], cwd: Path) -> "subprocess.CompletedProcess[str]":
+    return run(["git", *args], cwd=str(cwd), capture_output=True, text=True, check=False)
+
+
 def test_storage_engine_uses_resolved_root(tmp_path: Path):
     from snipcontext.core.storage import StorageEngine
 
