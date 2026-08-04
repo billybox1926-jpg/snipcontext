@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -62,7 +63,7 @@ class TestEmbeddingEngineEdgeCases:
     """Cover EmbeddingEngine branches that are hard to hit with real deps."""
 
     def test_dimension_raises_when_semantic_unavailable(self, tmp_path, mocker):
-        search_module = pytest.importorskip("snipcontext.core.search")
+        search_module = pytest.importorskip("snipcontext.core.embeddings")
         original = search_module.SEMANTIC_AVAILABLE
         try:
             search_module.SEMANTIC_AVAILABLE = False
@@ -103,7 +104,7 @@ class TestVectorIndexMocks:
         assert idx.snippet_ids == ()
 
     def test_build_empty_snippets(self, tmp_path, mocker):
-        search_module = pytest.importorskip("snipcontext.core.search")
+        search_module = pytest.importorskip("snipcontext.core.indexes.vector_index")
         original = search_module.SEMANTIC_AVAILABLE
         try:
             search_module.SEMANTIC_AVAILABLE = True
@@ -119,7 +120,7 @@ class TestVectorIndexMocks:
             search_module.SEMANTIC_AVAILABLE = original
 
     def test_add_and_remove_vector(self, tmp_path, mocker):
-        search_module = pytest.importorskip("snipcontext.core.search")
+        search_module = pytest.importorskip("snipcontext.core.indexes.vector_index")
         pytest.importorskip("faiss")
         original = search_module.SEMANTIC_AVAILABLE
         try:
@@ -150,7 +151,7 @@ class TestVectorIndexMocks:
         assert idx.search(q, top_k=3) == []
 
     def test_save_and_load_roundtrip(self, tmp_path, mocker):
-        search_module = pytest.importorskip("snipcontext.core.search")
+        search_module = pytest.importorskip("snipcontext.core.indexes.vector_index")
         pytest.importorskip("faiss")
         original = search_module.SEMANTIC_AVAILABLE
         try:
@@ -182,7 +183,7 @@ class TestVectorIndexMocks:
             search_module.SEMANTIC_AVAILABLE = original
 
     def test_embed_fn_when_semantic_unavailable(self, tmp_path, mocker):
-        search_module = pytest.importorskip("snipcontext.core.search")
+        search_module = pytest.importorskip("snipcontext.core.indexes.vector_index")
         original = search_module.SEMANTIC_AVAILABLE
         try:
             search_module.SEMANTIC_AVAILABLE = False
@@ -194,12 +195,13 @@ class TestVectorIndexMocks:
 
 
 class TestKeywordIndexEdgeCases:
-    def test_fuzzy_search_import_error_returns_empty(self, tmp_path):
+    def test_fuzzy_search_import_error_returns_empty(self, tmp_path, monkeypatch):
         """Without rapidfuzz, fuzzy search should gracefully return []."""
+
+        monkeypatch.setitem(sys.modules, "rapidfuzz", None)
 
         idx = KeywordIndex(_config(tmp_path))
         idx._texts = ["hello world"]
-        # rapidfuzz is not installed in this environment, so ImportError is expected.
         out = idx._fuzzy_search("hello", top_k=2, min_score=0.0)
         assert out == []
 
@@ -234,7 +236,7 @@ class TestHybridSearchBranches:
     """Unit-level HybridSearch branch coverage with mocks."""
 
     def test_semantic_search_fallback_when_deps_missing(self, tmp_path, mocker):
-        search_module = pytest.importorskip("snipcontext.core.search")
+        search_module = pytest.importorskip("snipcontext.core.search_fusion")
         original = search_module.SEMANTIC_AVAILABLE
         try:
             search_module.SEMANTIC_AVAILABLE = False

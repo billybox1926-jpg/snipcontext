@@ -31,7 +31,7 @@ def _make_snippet(snippet_id: str, tags: list[str] | None = None) -> Snippet:
 
 @pytest.fixture(autouse=True)
 def _force_semantic_available(mocker):
-    import snipcontext.core.search as search_module
+    import snipcontext.core.search_fusion as search_module
 
     original = search_module.SEMANTIC_AVAILABLE
     mocker.patch.object(search_module, "SEMANTIC_AVAILABLE", True)

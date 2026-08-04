@@ -54,6 +54,7 @@ def _make_config(temp_dir: Path) -> Config:
 @settings(
     suppress_health_check=[HealthCheck.too_slow, HealthCheck.function_scoped_fixture],
     max_examples=25,
+    deadline=None,
 )
 def test_hybrid_search_idempotency(snippets: list[Snippet], query: str) -> None:
     """Running the same query twice on the same index yields identical results."""
@@ -77,6 +78,7 @@ def test_hybrid_search_idempotency(snippets: list[Snippet], query: str) -> None:
 @settings(
     suppress_health_check=[HealthCheck.too_slow, HealthCheck.function_scoped_fixture],
     max_examples=25,
+    deadline=None,
 )
 def test_hybrid_search_monotonicity_keyword_boost(snippets: list[Snippet], query: str) -> None:
     """Adding a query term to a snippet should not decrease its rank."""

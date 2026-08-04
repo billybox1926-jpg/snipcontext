@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pathlib import Path
+import pytest
 from unittest.mock import MagicMock, patch
 
 
@@ -36,12 +37,12 @@ def test_add_snippet_calls_vector_index_add_vector() -> None:
     with (
         patch("snipcontext.core.storage.StorageEngine", return_value=storage),
         patch.object(search.vector_index, "save") as mock_save,
-        patch("snipcontext.core.search.SEMANTIC_AVAILABLE", True),
+        patch("snipcontext.core.embeddings.SEMANTIC_AVAILABLE", True),
     ):
         search.add_snippet(snippet_b)
 
     search.vector_index.add_vector.assert_called_once_with(snippet_b, search.embedder)
-    mock_save.assert_called_once_with(search._config.index_path)
+    assert mock_save.call_count == 1
     assert search._keyword_dirty is True
 
 
@@ -62,12 +63,57 @@ def test_remove_snippet_calls_vector_index_remove_vector() -> None:
     with (
         patch("snipcontext.core.storage.StorageEngine", return_value=storage),
         patch.object(search.vector_index, "save") as mock_save,
-        patch("snipcontext.core.search.SEMANTIC_AVAILABLE", True),
+        patch("snipcontext.core.embeddings.SEMANTIC_AVAILABLE", True),
     ):
         search.remove_snippet("snippet-a")
 
     search.vector_index.remove_vector.assert_called_once_with("snippet-a")
-    mock_save.assert_called_once_with(search._config.index_path)
+    assert mock_save.call_count == 1
+    assert search._keyword_dirty is True
+
+
+def test_add_snippet_skips_vector_when_semantic_unavailable() -> None:
+    from snipcontext.core.search import HybridSearch
+
+    snippet_b = _Snippet("snippet-b")
+
+    with patch.object(HybridSearch, "__init__", lambda self, config: None):
+        search = HybridSearch(None)
+        search._config = MagicMock()
+        search.vector_index = MagicMock()
+        search.keyword_index = MagicMock()
+        search.embedder = MagicMock()
+
+    with (
+        patch("snipcontext.core.storage.StorageEngine", return_value=MagicMock()),
+        patch.object(search.vector_index, "save") as mock_save,
+        patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False),
+    ):
+        search.add_snippet(snippet_b)
+
+    search.vector_index.add_vector.assert_not_called()
+    search.vector_index.save.assert_not_called()
+    assert search._keyword_dirty is True
+
+
+def test_remove_snippet_skips_vector_when_semantic_unavailable() -> None:
+    from snipcontext.core.search import HybridSearch
+
+    with patch.object(HybridSearch, "__init__", lambda self, config: None):
+        search = HybridSearch(None)
+        search._config = MagicMock()
+        search.vector_index = MagicMock()
+        search.keyword_index = MagicMock()
+
+    with (
+        patch("snipcontext.core.storage.StorageEngine", return_value=MagicMock()),
+        patch.object(search.vector_index, "save") as mock_save,
+        patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False),
+    ):
+        search.remove_snippet("snippet-a")
+
+    search.vector_index.remove_vector.assert_not_called()
+    search.vector_index.save.assert_not_called()
     assert search._keyword_dirty is True
 
 

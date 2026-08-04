@@ -21,6 +21,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _require_faiss() -> faiss.ModuleType:
+    try:
+        import faiss  # noqa: F401
+    except ImportError as exc:
+        raise ImportError(
+            "Semantic search requires the 'faiss-cpu' package. "
+            "Install it with: pip install snipcontext[semantic]"
+        ) from exc
+    globals()["faiss"] = faiss
+    return faiss
+
+
 class IndexBackend(ABC):
     """Contract for vector index backends."""
 
@@ -102,13 +114,7 @@ class FlatIndexBackend(IndexBackend):
     """Exact inner-product index via ``faiss.IndexFlatIP``."""
 
     def __init__(self, dimension: int) -> None:
-        try:
-            import faiss
-        except ImportError as exc:
-            raise ImportError(
-                "Semantic search requires the 'faiss-cpu' package. "
-                "Install it with: pip install snipcontext[semantic]"
-            ) from exc
+        _require_faiss()
         self._index: faiss.Index = faiss.IndexFlatIP(dimension)
         self._id_map: list[str] = []
         self._id_to_idx: dict[str, int] = {}
@@ -138,10 +144,7 @@ class FlatIndexBackend(IndexBackend):
         return None
 
     def remove(self, ids: list[str]) -> None:
-        try:
-            import faiss
-        except ImportError as exc:
-            raise ImportError("faiss is required for index removal") from exc
+        _require_faiss()
         if not ids:
             return
         idxs = [self._id_to_idx.pop(sid) for sid in ids if sid in self._id_to_idx]
@@ -155,19 +158,13 @@ class FlatIndexBackend(IndexBackend):
 
     def save(self, path: Path) -> None:
         path.mkdir(parents=True, exist_ok=True)
-        try:
-            import faiss
-        except ImportError as exc:
-            raise ImportError("faiss is required for index persistence") from exc
+        _require_faiss()
         faiss.write_index(self._index, str(path / "vector.faiss"))
         (path / "idmap.json").write_text(json.dumps(self._id_map), encoding="utf-8")
         logger.debug("Saved flat index to %s", path)
 
     def load(self, path: Path) -> bool:
-        try:
-            import faiss
-        except ImportError as exc:
-            raise ImportError("faiss is required for index loading") from exc
+        _require_faiss()
         index_file = path / "vector.faiss"
         idmap_file = path / "idmap.json"
         if not index_file.exists() or not idmap_file.exists():
@@ -206,13 +203,7 @@ class HNSWIndexBackend(IndexBackend):
     """HNSW approximate nearest-neighbor index via ``faiss.IndexHNSWFlat``."""
 
     def __init__(self, dimension: int, m: int, ef_construction: int, ef_search: int) -> None:
-        try:
-            import faiss
-        except ImportError as exc:
-            raise ImportError(
-                "Semantic search requires the 'faiss-cpu' package. "
-                "Install it with: pip install snipcontext[semantic]"
-            ) from exc
+        _require_faiss()
         self._index: faiss.Index = faiss.IndexHNSWFlat(dimension, m)
         self._index.hnsw.efConstruction = ef_construction
         self._ef_search = ef_search
@@ -259,10 +250,7 @@ class HNSWIndexBackend(IndexBackend):
 
     def save(self, path: Path) -> None:
         path.mkdir(parents=True, exist_ok=True)
-        try:
-            import faiss
-        except ImportError as exc:
-            raise ImportError("faiss is required for index persistence") from exc
+        _require_faiss()
         faiss.write_index(self._index, str(path / "vector.faiss"))
         payload = {
             "id_map": self._id_map,
@@ -272,10 +260,7 @@ class HNSWIndexBackend(IndexBackend):
         logger.debug("Saved HNSW index to %s", path)
 
     def load(self, path: Path) -> bool:
-        try:
-            import faiss
-        except ImportError as exc:
-            raise ImportError("faiss is required for index loading") from exc
+        _require_faiss()
         index_file = path / "vector.faiss"
         state_file = path / "hnsw_state.json"
         if not index_file.exists() or not state_file.exists():
@@ -318,13 +303,7 @@ class IVFPQIndexBackend(IndexBackend):
         pq_nbits: int,
         nprobe: int,
     ) -> None:
-        try:
-            import faiss
-        except ImportError as exc:
-            raise ImportError(
-                "Semantic search requires the 'faiss-cpu' package. "
-                "Install it with: pip install snipcontext[semantic]"
-            ) from exc
+        _require_faiss()
         quantizer = faiss.IndexFlatIP(dimension)
         self._index: faiss.Index = faiss.IndexIVFPQ(quantizer, dimension, nlist, pq_m, pq_nbits)
         self._nprobe = int(nprobe)
@@ -363,10 +342,7 @@ class IVFPQIndexBackend(IndexBackend):
     def remove(self, ids: list[str]) -> None:
         if not ids:
             return
-        try:
-            import faiss
-        except ImportError as exc:
-            raise ImportError("faiss is required for index removal") from exc
+        _require_faiss()
         idxs = [self._id_to_idx.pop(sid) for sid in ids if sid in self._id_to_idx]
         if not idxs:
             return
@@ -378,19 +354,13 @@ class IVFPQIndexBackend(IndexBackend):
 
     def save(self, path: Path) -> None:
         path.mkdir(parents=True, exist_ok=True)
-        try:
-            import faiss
-        except ImportError as exc:
-            raise ImportError("faiss is required for index persistence") from exc
+        _require_faiss()
         faiss.write_index(self._index, str(path / "vector.faiss"))
         (path / "idmap.json").write_text(json.dumps(self._id_map), encoding="utf-8")
         logger.debug("Saved IVFPQ index to %s", path)
 
     def load(self, path: Path) -> bool:
-        try:
-            import faiss
-        except ImportError as exc:
-            raise ImportError("faiss is required for index loading") from exc
+        _require_faiss()
         index_file = path / "vector.faiss"
         idmap_file = path / "idmap.json"
         if not index_file.exists() or not idmap_file.exists():
@@ -457,6 +427,7 @@ def _create_backend(
             import faiss
         except ImportError:
             return FlatIndexBackend(dimension)
+        _require_faiss()
         logger.info(
             "Collection size exceeded threshold (%d). Automatically switching to IVFPQ index.",
             threshold,
@@ -479,10 +450,7 @@ def _create_backend(
             ef_search=config.search.hnsw_efSearch,
         )
     if index_type == "ivf":
-        try:
-            import faiss
-        except ImportError as exc:
-            raise ImportError("faiss is required for IVF index") from exc
+        _require_faiss()
         nlist = getattr(config.search, "ivf_nlist", 128)
         quantizer = faiss.IndexFlatIP(int(dimension))
         backend = IVFPQIndexBackend.__new__(IVFPQIndexBackend)
