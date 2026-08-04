@@ -11,8 +11,6 @@ import pytest
 from snipcontext.config.settings import Config, StorageConfig, reset_config
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.core.storage import (
-    IndexCorruptedError,
-    MissingIndexError,
     SnippetNotFoundError,
     StorageEngine,
     StorageError,
@@ -229,26 +227,6 @@ class TestStorageExceptions:
     def test_snippet_not_found_error(self):
         with pytest.raises(SnippetNotFoundError):
             raise SnippetNotFoundError("not found")
-
-    def test_index_corrupted_error_without_cause(self):
-        err = IndexCorruptedError("vector", "/path/to/index")
-        assert err.index_type == "vector"
-        assert err.path == "/path/to/index"
-        assert err.original_error is None
-        assert "vector" in str(err)
-        assert "/path/to/index" in str(err)
-
-    def test_index_corrupted_error_with_cause(self):
-        cause = RuntimeError("disk full")
-        err = IndexCorruptedError("keyword", "/path/to/index", original_error=cause)
-        assert err.original_error is cause
-        assert "disk full" in str(err)
-
-    def test_missing_index_error(self):
-        err = MissingIndexError("vector", "/path/to/index")
-        assert err.index_type == "vector"
-        assert err.path == "/path/to/index"
-        assert "/path/to/index" in str(err)
 
 
 class TestStorageProperties:

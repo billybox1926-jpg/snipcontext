@@ -32,28 +32,6 @@ class SnippetNotFoundError(StorageError):
     """Raised when a requested snippet does not exist."""
 
 
-class IndexCorruptedError(StorageError):
-    """Raised when a search index is detected as corrupted or invalid."""
-
-    def __init__(self, index_type: str, path: str, original_error: Exception | None = None):
-        self.index_type = index_type
-        self.path = path
-        self.original_error = original_error
-        msg = f"Index corrupted: {index_type} at {path}"
-        if original_error:
-            msg += f" (caused by: {original_error})"
-        super().__init__(msg)
-
-
-class MissingIndexError(StorageError):
-    """Raised when a required search index is missing."""
-
-    def __init__(self, index_type: str, path: str):
-        self.index_type = index_type
-        self.path = path
-        super().__init__(f"Index missing: {index_type} at {path}")
-
-
 class StorageEngine:
     """Manages persistent storage of snippets on the local filesystem.
 
