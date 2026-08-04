@@ -60,6 +60,7 @@ from snipcontext.cli.agent import register_commands as register_agent  # noqa: E
 from snipcontext.cli.benchmark import register_commands as register_benchmark  # noqa: E402
 from snipcontext.cli.config import register_commands as register_config  # noqa: E402
 from snipcontext.cli.export import register_commands as register_export  # noqa: E402
+from snipcontext.cli.git import register_commands as register_git  # noqa: E402
 from snipcontext.cli.history import register_commands as register_history  # noqa: E402
 from snipcontext.cli.info import register_commands as register_info  # noqa: E402
 from snipcontext.cli.init import register_commands as register_init  # noqa: E402
@@ -79,6 +80,7 @@ register_benchmark(app)
 register_config(config_app)
 register_init(app)
 register_info(app)
+register_git(app)
 
 
 @app.command()  # type: ignore[untyped-decorator]

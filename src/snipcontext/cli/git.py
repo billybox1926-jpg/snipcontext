@@ -1,0 +1,103 @@
+"""Git domain CLI commands for SnipContext.
+
+Provides `sc git status`, `sc git pull`, and `sc git push`, matching
+the conventions established by `sc init --git` and the existing CLI
+error/output style (Rich markup, non-zero exit on failure).
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import typer
+from rich.console import Console
+
+from snipcontext.cli.context import get_context as _get_context
+from snipcontext.core.git_integration import GitError, GitIntegration
+
+console = Console()
+
+git_app = typer.Typer(
+    name="git",
+    help="Git-backed sync for snippet collections",
+    no_args_is_help=True,
+)
+
+
+@git_app.command("status")
+def git_status() -> None:
+    """Show git status for the current snippet collection."""
+    config, storage, _ = _get_context()
+    gi = GitIntegration(config.storage.data_dir)
+
+    if not gi.is_initialized():
+        console.print("[yellow]Not a git repository. Run `sc init --local --git` first.[/yellow]")
+        raise typer.Exit(1)
+
+    try:
+        output = gi.status()
+    except GitError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1)
+
+    console.print(output)
+
+
+@git_app.command("pull")
+def git_pull(
+    force: bool = typer.Option(False, "--force", help="Skip conflict check and pull anyway."),
+) -> None:
+    """Pull latest snippet collection from the remote.
+
+    Runs conflict detection first and blocks if the same snippet was
+    edited on both sides since the last common ancestor.
+    """
+    config, storage, _ = _get_context()
+    gi = GitIntegration(config.storage.data_dir)
+
+    if not gi.is_initialized():
+        console.print("[yellow]Not a git repository. Run `sc init --local --git` first.[/yellow]")
+        raise typer.Exit(1)
+
+    if not force:
+        try:
+            report = gi.detect_conflicts(storage)
+        except GitError as exc:
+            console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1)
+
+        if report.has_conflicts:
+            console.print(f"[yellow]{report.summary()}[/yellow]")
+            console.print(
+                "Run with --force to pull anyway, or resolve manually first "
+                "(consider `git stash` if you have uncommitted local edits)."
+            )
+            raise typer.Exit(code=2)
+
+    try:
+        console.print(gi.pull())
+    except GitError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1)
+
+
+@git_app.command("push")
+def git_push() -> None:
+    """Push local snippet collection to the remote."""
+    config, storage, _ = _get_context()
+    gi = GitIntegration(config.storage.data_dir)
+
+    if not gi.is_initialized():
+        console.print("[yellow]Not a git repository. Run `sc init --local --git` first.[/yellow]")
+        raise typer.Exit(1)
+
+    try:
+        console.print(gi.push())
+    except GitError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1)
+
+
+def register_commands(app: typer.Typer) -> None:
+    """Register git subcommands on the root Typer app."""
+    app.add_typer(git_app, name="git", help="Git-backed sync for snippet collections")

@@ -232,6 +232,19 @@ class GitIntegration:
 
         return ConflictReport(conflicts)
 
+    # ---------------------------------------------------- push / pull ---
+
+    def pull(self, remote_name: str = "origin", rebase: bool = True) -> str:
+        branch = self.current_branch()
+        args = ["pull"]
+        if rebase:
+            args.append("--rebase")
+        args.extend([remote_name, branch])
+        return self._run(*args)
+
+    def push(self, remote_name: str = "origin") -> str:
+        return self._run("push", remote_name)
+
     # ------------------------------------------------------- internals --
 
     def _read_local_snippets(self, storage) -> dict[str, dict]:
