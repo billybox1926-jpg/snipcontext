@@ -17,9 +17,8 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from typer.testing import CliRunner
-
 from snipcontext.cli.app import app
+from typer.testing import CliRunner
 
 runner = CliRunner()
 
@@ -99,11 +98,11 @@ def _normalize(output: str, temp_dir: Path) -> str:
 
 @pytest.fixture(autouse=True)
 def _reset_registry():
-    from snipcontext.plugins.registry import PluginRegistry
+    from snipcontext.plugins.registry import reset_registry_for_testing
 
-    PluginRegistry._instance = None
+    reset_registry_for_testing()
     yield
-    PluginRegistry._instance = None
+    reset_registry_for_testing()
 
 
 @pytest.fixture(autouse=True)

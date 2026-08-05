@@ -23,26 +23,15 @@ PLUGIN_GROUP = "snipcontext.plugins"
 PROVIDER_GROUP = "snipcontext.providers"
 
 
-class PluginRegistry:
-    """Singleton registry for all SnipContext plugins."""
-
-    _instance: PluginRegistry | None = None
-
-    def __new__(cls) -> PluginRegistry:
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
+class _PluginRegistryImpl:
+    """Actual plugin registry implementation."""
 
     def __init__(self) -> None:
-        if getattr(self, "_initialized", False):
-            return
         self._plugins: dict[str, type[Any]] = {}
         self._instances: dict[str, Any] = {}
         self._manifests: dict[str, PluginManifest] = {}
         self._loaded: dict[str, bool] = {}
         self._discovered = False
-        self._initialized = True
 
     def _is_compatible(self, manifest: PluginManifest) -> bool:
         current = Version(snipcontext.__version__)
@@ -271,3 +260,53 @@ class PluginRegistry:
             except Exception as exc:
                 logger.error("Error in %s on_search: %s", getattr(plugin, "manifest", None), exc)
         return results
+
+
+_registry_instance: _PluginRegistryImpl | None = None
+
+
+def _registry() -> _PluginRegistryImpl:
+    global _registry_instance
+    if _registry_instance is None:
+        _registry_instance = _PluginRegistryImpl()
+    return _registry_instance
+
+
+def PluginRegistry() -> _PluginRegistryImpl:
+    """Backward-compatible accessor returning the shared registry instance."""
+    return _registry()
+
+
+def reset_registry_for_testing() -> None:
+    """Test-only helper to reset the module-level registry state."""
+
+    global _registry_instance
+    _registry_instance = None
+
+
+class _PluginRegistryType:
+    """Makes legacy type usage safe after converting ``PluginRegistry`` from a class to a function."""
+
+    def __call__(self) -> _PluginRegistryImpl:  # pragma: no cover - runtime wrapper
+        return _registry()
+
+    def __instancecheck__(self, instance: object) -> bool:
+        return isinstance(instance, _PluginRegistryImpl)
+
+    def __subclasscheck__(self, subclass: type) -> bool:
+        return issubclass(subclass, _PluginRegistryImpl)
+
+
+PluginRegistry = _PluginRegistryType()
+
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    PluginRegistry = _PluginRegistryImpl
+
+__all__ = [
+    "Plugin",
+    "PluginManifest",
+    "PluginRegistry",
+    "_registry",
+    "reset_registry_for_testing",
+]

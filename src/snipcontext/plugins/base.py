@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
-    from snipcontext.plugins.registry import PluginRegistry
+    from snipcontext.plugins.registry import _PluginRegistryImpl
 
 logger = logging.getLogger(__name__)
 
@@ -78,15 +78,15 @@ class Plugin(ABC):
 class PluginManager:
     """Legacy facade for the plugin registry.
 
-    Delegates all real work to the shared ``PluginRegistry`` singleton
+    Delegates all real work to the shared plugin registry singleton
     while keeping the same import surface as before.
     """
 
     @staticmethod
-    def _registry() -> PluginRegistry:
-        from snipcontext.plugins.registry import PluginRegistry
+    def _registry() -> _PluginRegistryImpl:
+        from snipcontext.plugins.registry import _registry
 
-        return PluginRegistry()
+        return _registry()
 
     @staticmethod
     def discover() -> int:

@@ -7,16 +7,15 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-
 from snipcontext.plugins.base import Plugin, PluginManager, PluginManifest
-from snipcontext.plugins.registry import PluginRegistry
+from snipcontext.plugins.registry import reset_registry_for_testing
 
 
 @pytest.fixture(autouse=True)
 def _reset_plugin_registry():
-    PluginRegistry._instance = None
+    reset_registry_for_testing()
     yield
-    PluginRegistry._instance = None
+    reset_registry_for_testing()
 
 
 class _TrackedPlugin(Plugin):

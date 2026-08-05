@@ -7,12 +7,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from typer.testing import CliRunner
-
 from snipcontext.cli.app import app
 from snipcontext.plugins.base import PluginManifest
-from snipcontext.plugins.registry import PluginRegistry
+from snipcontext.plugins.registry import reset_registry_for_testing
 from snipcontext.providers.base import BaseProvider, ExportFormat
+from typer.testing import CliRunner
 
 runner = CliRunner()
 
@@ -37,9 +36,9 @@ def _snippet_id(output: str) -> str:
 
 @pytest.fixture(autouse=True)
 def _reset_registry() -> None:
-    PluginRegistry._instance = None
+    reset_registry_for_testing()
     yield
-    PluginRegistry._instance = None
+    reset_registry_for_testing()
 
 
 class FakeE2EProvider(BaseProvider):

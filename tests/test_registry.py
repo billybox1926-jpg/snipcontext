@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from snipcontext.plugins.base import Plugin, PluginManifest
-from snipcontext.plugins.registry import PluginRegistry
+from snipcontext.plugins.registry import PluginRegistry, reset_registry_for_testing
 from snipcontext.providers import get_provider, list_providers
 
 
@@ -52,7 +52,7 @@ def _build_test_entry(plugin_name, requires):
 
 
 def test_version_compatibility_compatible():
-    PluginRegistry._instance = None
+    reset_registry_for_testing()
     registry = PluginRegistry()
     mock_ep = _build_test_entry("test_plugin", ["snipcontext>=0.3.0"])
 
@@ -73,7 +73,7 @@ def test_version_compatibility_compatible():
 
 
 def test_version_compatibility_incompatible():
-    PluginRegistry._instance = None
+    reset_registry_for_testing()
     registry = PluginRegistry()
     mock_ep = _build_test_entry("test_plugin", ["snipcontext>=2.0"])
 
@@ -94,7 +94,7 @@ def test_version_compatibility_incompatible():
 
 
 def test_version_compatibility_no_constraints():
-    PluginRegistry._instance = None
+    reset_registry_for_testing()
     registry = PluginRegistry()
     mock_ep = _build_test_entry("test_plugin", [])
 

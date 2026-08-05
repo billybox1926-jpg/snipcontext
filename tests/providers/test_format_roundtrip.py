@@ -9,10 +9,9 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.plugins.base import Plugin
-from snipcontext.plugins.registry import PluginRegistry
+from snipcontext.plugins.registry import reset_registry_for_testing
 from snipcontext.providers.base import BaseProvider
 from snipcontext.providers.claude import ClaudeProvider
 from snipcontext.providers.cursor import CursorProvider
@@ -22,9 +21,9 @@ from snipcontext.providers.openai import OpenAIProvider
 
 @pytest.fixture(autouse=True)
 def _reset_registry():
-    PluginRegistry._instance = None
+    reset_registry_for_testing()
     yield
-    PluginRegistry._instance = None
+    reset_registry_for_testing()
 
 
 def _build_snippet(
