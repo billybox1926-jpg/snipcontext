@@ -7,6 +7,8 @@ error/output style (Rich markup, non-zero exit on failure).
 
 from __future__ import annotations
 
+import sys
+
 import typer
 from rich.console import Console
 
@@ -65,13 +67,45 @@ def git_pull(
             raise typer.Exit(1)
 
         if report.has_conflicts:
-            console.print(f"[yellow]{report.summary()}[/yellow]")
-            console.print(
-                "Run with --force to pull anyway, or resolve manually first "
-                "(consider `git stash` if you have uncommitted local edits)."
-            )
-            # 2 = blocked by conflict detection; caller should inspect/manually resolve.
-            raise typer.Exit(code=2)
+            if not sys.stdin.isatty():
+                console.print(f"[yellow]{report.summary()}[/yellow]")
+                console.print(
+                    "Run with --force to pull anyway, or resolve manually first "
+                    "(consider `git stash` if you have uncommitted local edits)."
+                )
+                # 2 = blocked by conflict detection; caller should inspect/manually resolve.
+                raise typer.Exit(code=2)
+
+            # Interactive resolution
+            for c in report.conflicts:
+                console.print(f"\n[yellow]Conflict in snippet {c.snippet_id}[/yellow]")
+                try:
+                    diff = gi.get_conflict_diff(c.snippet_id, storage)
+                    if diff:
+                        console.print(diff)
+                except GitError as exc:
+                    console.print(f"[red]Could not show diff: {exc}[/red]")
+
+                choice = typer.prompt(
+                    "Choose: [l]ocal, [r]emote, [s]tash-and-pull, [a]bort", default="a"
+                ).strip().lower()
+
+                if choice == "l":
+                    gi.resolve_accept_local(c.snippet_id, storage)
+                    console.print(f"  → Keeping local version of {c.snippet_id}")
+                elif choice == "r":
+                    gi.resolve_accept_remote(c.snippet_id, storage)
+                    console.print(f"  → Accepting remote version of {c.snippet_id}")
+                elif choice == "s":
+                    console.print("  → Stashing local changes, pulling, then restoring...")
+                    gi.stash()
+                    console.print(gi.pull())
+                    gi.stash_pop()
+                    console.print("[green]Pull complete with stash restored.[/green]")
+                    raise typer.Exit(code=0)
+                else:
+                    console.print("Aborted.")
+                    raise typer.Exit(code=2)
 
     try:
         console.print(gi.pull())

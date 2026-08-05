@@ -55,6 +55,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from snipcontext.core.models import Snippet
+
 _SNIPPETS_SUBDIR = "snippets"
 
 
@@ -320,6 +322,107 @@ class GitIntegration:
                 pass
             shutil.rmtree(tmp, ignore_errors=True)
         return result
+
+    def _read_ref_snippet_content(self, ref: str, snippet_id: str) -> str | None:
+        """Read the content of a single snippet from a git ref.
+
+        Materializes `ref` into a throwaway worktree and reads the specific
+        snippet JSON file, returning its `content` field (not the hash).
+        """
+        tmp = Path(tempfile.mkdtemp(prefix="sc-conflict-"))
+        tmp.rmdir()
+        try:
+            self._run("worktree", "add", "--detach", str(tmp), ref)
+            snippet_dir = tmp / _SNIPPETS_SUBDIR
+            if not snippet_dir.is_dir():
+                snippet_dir = tmp
+            for path in snippet_dir.glob("*.json"):
+                try:
+                    data = json.loads(path.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    continue
+                if data.get("id", path.stem) == snippet_id:
+                    return data.get("content", "")
+        except GitError:
+            return None
+        finally:
+            try:
+                self._run("worktree", "remove", "--force", str(tmp))
+            except GitError:
+                pass
+            shutil.rmtree(tmp, ignore_errors=True)
+        return None
+
+    def get_conflict_diff(
+        self, snippet_id: str, storage, remote_name: str = "origin"
+    ) -> str:
+        """Return a unified diff between local and remote content for a conflicting snippet.
+
+        Call only for snippet_ids already flagged by detect_conflicts() --
+        this does not itself re-run conflict detection.
+        """
+        remote_ref = self._remote_tracking_ref(remote_name)
+        if remote_ref is None:
+            raise GitError("No remote-tracking ref found.")
+
+        local_snippet = next(
+            (s for s in storage.list_all() if s.id == snippet_id), None
+        )
+        if local_snippet is None:
+            raise GitError(f"Snippet {snippet_id!r} not found locally.")
+
+        remote_content = self._read_ref_snippet_content(remote_ref, snippet_id)
+        if remote_content is None:
+            raise GitError(f"Snippet {snippet_id!r} not found on {remote_ref}.")
+
+        import difflib
+
+        diff = difflib.unified_diff(
+            remote_content.splitlines(keepends=True),
+            local_snippet.content.splitlines(keepends=True),
+            fromfile=f"{remote_ref}:{snippet_id}",
+            tofile=f"local:{snippet_id}",
+        )
+        return "".join(diff)
+
+    def resolve_accept_local(self, snippet_id: str, storage) -> None:
+        """No-op on the git side — local content wins, will be committed/pushed as-is."""
+        # Local content is already what's on disk; nothing to do.
+        pass
+
+    def resolve_accept_remote(
+        self, snippet_id: str, storage, remote_name: str = "origin"
+    ) -> Snippet:
+        """Overwrite the local snippet's content with the remote version and save it.
+
+        Returns the updated snippet.
+        """
+        remote_ref = self._remote_tracking_ref(remote_name)
+        if remote_ref is None:
+            raise GitError("No remote-tracking ref found.")
+
+        remote_content = self._read_ref_snippet_content(remote_ref, snippet_id)
+        if remote_content is None:
+            raise GitError(f"Snippet {snippet_id!r} not found on {remote_ref}.")
+
+        local_snippet = next(
+            (s for s in storage.list_all() if s.id == snippet_id), None
+        )
+        if local_snippet is None:
+            raise GitError(f"Snippet {snippet_id!r} not found locally.")
+
+        local_snippet.content = remote_content
+        local_snippet.touch()
+        storage.save(local_snippet)
+        return local_snippet
+
+    def stash(self) -> str:
+        """Stash local changes."""
+        return self._run("stash")
+
+    def stash_pop(self) -> str:
+        """Pop the latest stash."""
+        return self._run("stash", "pop")
 
     def _run(self, *args: str) -> str:
         try:

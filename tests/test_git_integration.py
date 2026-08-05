@@ -740,3 +740,190 @@ class TestGitCli:
 
         assert result.exit_code == 1, result.output
         assert "git push origin failed" in result.output
+
+
+class TestGitIntegrationResolution:
+    """Unit tests for the new conflict resolution methods on GitIntegration."""
+
+    def test_get_conflict_diff_returns_unified_diff(self, tmp_path: Path) -> None:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        snippets_dir = repo / "snippets"
+        snippets_dir.mkdir()
+
+        config = Config(
+            storage=StorageConfig(
+                data_dir=repo,
+                snippets_dir="snippets",
+                index_dir="index",
+            )
+        )
+        storage = StorageEngine(config)
+        local = _make_snippet("s1", "print('local')", "Local")
+        remote_content_snippet = _make_snippet("s1", "print('remote')", "Remote")
+        _write_snippet(storage, local)
+
+        remote = _make_bare_remote(tmp_path)
+        _init_git_repo(repo)
+        subprocess.run(
+            ["git", "-C", str(repo), "remote", "add", "origin", str(remote)],
+            check=True,
+            capture_output=True,
+        )
+
+        base_sha = _commit_all(repo, "base")
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True
+        )
+
+        # Simulate remote: change content and push
+        _write_snippet(storage, remote_content_snippet)
+        _commit_all(repo, "remote: edit s1")
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True
+        )
+
+        # Reset to base, then simulate local: different change
+        subprocess.run(
+            ["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True
+        )
+        _write_snippet(storage, _make_snippet("s1", "print('local-v2')", "Local V2"))
+        _commit_all(repo, "local: edit s1")
+
+        git = GitIntegration(repo)
+        diff = git.get_conflict_diff("s1", storage, remote_name="origin")
+
+        assert "print('remote')" in diff
+        assert "print('local-v2')" in diff
+        assert "--- origin/main:s1" in diff or "--- " in diff
+        assert "+++ local:s1" in diff or "+++ " in diff
+
+    def test_resolve_accept_remote_overwrites_local(self, tmp_path: Path) -> None:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        snippets_dir = repo / "snippets"
+        snippets_dir.mkdir()
+
+        config = Config(
+            storage=StorageConfig(
+                data_dir=repo,
+                snippets_dir="snippets",
+                index_dir="index",
+            )
+        )
+        storage = StorageEngine(config)
+        local = _make_snippet("s1", "print('local')", "Local")
+        remote_content_snippet = _make_snippet("s1", "print('remote')", "Remote")
+        _write_snippet(storage, local)
+
+        remote = _make_bare_remote(tmp_path)
+        _init_git_repo(repo)
+        subprocess.run(
+            ["git", "-C", str(repo), "remote", "add", "origin", str(remote)],
+            check=True,
+            capture_output=True,
+        )
+
+        base_sha = _commit_all(repo, "base")
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True
+        )
+
+        _write_snippet(storage, remote_content_snippet)
+        _commit_all(repo, "remote: edit s1")
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True
+        )
+
+        subprocess.run(
+            ["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True
+        )
+        _write_snippet(storage, _make_snippet("s1", "print('local-v2')", "Local V2"))
+        _commit_all(repo, "local: edit s1")
+
+        git = GitIntegration(repo)
+        updated = git.resolve_accept_remote("s1", storage, remote_name="origin")
+
+        assert updated.content == "print('remote')"
+        # Verify it was saved
+        reloaded = next(s for s in storage.list_all() if s.id == "s1")
+        assert reloaded.content == "print('remote')"
+
+    def test_resolve_accept_local_is_noop(self, tmp_path: Path) -> None:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        snippets_dir = repo / "snippets"
+        snippets_dir.mkdir()
+
+        config = Config(
+            storage=StorageConfig(
+                data_dir=repo,
+                snippets_dir="snippets",
+                index_dir="index",
+            )
+        )
+        storage = StorageEngine(config)
+        local = _make_snippet("s1", "print('local')", "Local")
+        _write_snippet(storage, local)
+
+        remote = _make_bare_remote(tmp_path)
+        _init_git_repo(repo)
+        subprocess.run(
+            ["git", "-C", str(repo), "remote", "add", "origin", str(remote)],
+            check=True,
+            capture_output=True,
+        )
+
+        _commit_all(repo, "base")
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True
+        )
+
+        git = GitIntegration(repo)
+        # Should not raise
+        git.resolve_accept_local("s1", storage)
+
+    def test_stash_stash_pop_roundtrip(self, tmp_path: Path) -> None:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        snippets_dir = repo / "snippets"
+        snippets_dir.mkdir()
+
+        config = Config(
+            storage=StorageConfig(
+                data_dir=repo,
+                snippets_dir="snippets",
+                index_dir="index",
+            )
+        )
+        storage = StorageEngine(config)
+        local = _make_snippet("s1", "print('original')", "Original")
+        _write_snippet(storage, local)
+
+        remote = _make_bare_remote(tmp_path)
+        _init_git_repo(repo)
+        subprocess.run(
+            ["git", "-C", str(repo), "remote", "add", "origin", str(remote)],
+            check=True,
+            capture_output=True,
+        )
+
+        _commit_all(repo, "base")
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True
+        )
+
+        # Make an uncommitted change
+        _write_snippet(storage, _make_snippet("s1", "print('uncommitted')", "Uncommitted"))
+
+        git = GitIntegration(repo)
+        git.stash()
+
+        # Change should be gone from working tree
+        stashed_snippets = list(storage.list_all())
+        assert stashed_snippets[0].content == "print('original')"
+
+        # Pop should restore it
+        git.stash_pop()
+        restored_snippets = list(storage.list_all())
+        assert restored_snippets[0].content == "print('uncommitted')"
