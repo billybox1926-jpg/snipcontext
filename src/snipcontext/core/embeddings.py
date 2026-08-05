@@ -81,7 +81,10 @@ class EmbeddingEngine:
     @property
     def dimension(self) -> int:
         """Return the embedding vector dimensionality."""
-        return self.model.get_sentence_embedding_dimension()
+        dimension = self.model.get_sentence_embedding_dimension()
+        if dimension is None:
+            raise RuntimeError("Embedding model returned no dimension; check model initialization.")
+        return int(dimension)
 
     def encode(self, texts: list[str]) -> np.ndarray:
         """Encode a list of texts into embedding vectors.

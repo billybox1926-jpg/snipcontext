@@ -14,7 +14,7 @@ All processing happens locally — no data leaves the machine.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 
@@ -62,7 +62,7 @@ class SemanticSearch:
     def _hydrate(
         self,
         raw_results: list[tuple[str, float]],
-        matched_by: str,
+        matched_by: Literal["semantic", "keyword", "hybrid", "tag"],
         top_k: int,
         storage: StorageEngine,
     ) -> list[SearchResult]:
@@ -493,7 +493,7 @@ class HybridSearch:
     def _hydrate(
         self,
         raw_results: list[tuple[str, float]],
-        matched_by: str,
+        matched_by: Literal["semantic", "keyword", "hybrid", "tag"],
         top_k: int,
         storage: StorageEngine,
     ) -> list[SearchResult]:
