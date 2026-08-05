@@ -7,6 +7,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+
 from snipcontext.plugins.base import Plugin, PluginManager, PluginManifest
 from snipcontext.plugins.registry import reset_registry_for_testing
 

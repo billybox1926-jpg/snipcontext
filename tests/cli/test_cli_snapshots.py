@@ -17,8 +17,9 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from snipcontext.cli.app import app
 from typer.testing import CliRunner
+
+from snipcontext.cli.app import app
 
 runner = CliRunner()
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.plugins.base import Plugin
 from snipcontext.plugins.registry import reset_registry_for_testing

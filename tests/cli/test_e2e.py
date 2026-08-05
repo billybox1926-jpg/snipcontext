@@ -7,11 +7,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from typer.testing import CliRunner
+
 from snipcontext.cli.app import app
 from snipcontext.plugins.base import PluginManifest
 from snipcontext.plugins.registry import reset_registry_for_testing
 from snipcontext.providers.base import BaseProvider, ExportFormat
-from typer.testing import CliRunner
 
 runner = CliRunner()
 
