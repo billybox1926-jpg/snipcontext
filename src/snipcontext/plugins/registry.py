@@ -272,11 +272,6 @@ def _registry() -> _PluginRegistryImpl:
     return _registry_instance
 
 
-def PluginRegistry() -> _PluginRegistryImpl:
-    """Backward-compatible accessor returning the shared registry instance."""
-    return _registry()
-
-
 def reset_registry_for_testing() -> None:
     """Test-only helper to reset the module-level registry state."""
 
@@ -285,7 +280,7 @@ def reset_registry_for_testing() -> None:
 
 
 class _PluginRegistryType:
-    """Makes legacy type usage safe after converting ``PluginRegistry`` from a class to a function."""
+    """Backward-compatible callable wrapper for the shared plugin registry."""
 
     def __call__(self) -> _PluginRegistryImpl:  # pragma: no cover - runtime wrapper
         return _registry()
@@ -297,11 +292,8 @@ class _PluginRegistryType:
         return issubclass(subclass, _PluginRegistryImpl)
 
 
-PluginRegistry = _PluginRegistryType()
+PluginRegistry = _PluginRegistryType()  # type: ignore[assignment]
 
-
-if TYPE_CHECKING:  # pragma: no cover - typing only
-    PluginRegistry = _PluginRegistryImpl
 
 __all__ = [
     "Plugin",
@@ -309,4 +301,5 @@ __all__ = [
     "PluginRegistry",
     "_registry",
     "reset_registry_for_testing",
+    "_PluginRegistryImpl",
 ]
