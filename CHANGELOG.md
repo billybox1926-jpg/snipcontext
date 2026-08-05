@@ -55,7 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Interactive TUI mode (`tui/` module) — full terminal UI with commands, completer, and formatter
-- Project board automation (`.github/workflows/project-automation.yml`) — auto-adds issues to board on open/close
 - Optional dependency groups: `[semantic]`, `[encryption]`, `[tui]`, `[all]` — core CLI works without Rust toolchain (closes #62)
 
 ### Changed
