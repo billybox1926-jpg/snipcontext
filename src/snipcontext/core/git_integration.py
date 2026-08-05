@@ -50,10 +50,10 @@ import json
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Optional
 
 _SNIPPETS_SUBDIR = "snippets"
 
@@ -74,8 +74,8 @@ class GitError(RuntimeError):
 @dataclass
 class ConflictEntry:
     snippet_id: str
-    local_updated_at: Optional[datetime]
-    remote_updated_at: Optional[datetime]
+    local_updated_at: datetime | None
+    remote_updated_at: datetime | None
 
 
 @dataclass
@@ -117,7 +117,7 @@ class GitIntegration:
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self._run("init")
 
-    def write_gitignore(self, extra_patterns: Optional[Iterable[str]] = None) -> Path:
+    def write_gitignore(self, extra_patterns: Iterable[str] | None = None) -> Path:
         """Create .gitignore, excluding the search index, temp files, and .env.
 
         Merges with an existing .gitignore if one is already present, rather
@@ -145,9 +145,12 @@ class GitIntegration:
 
         return path
 
-    def initial_commit(self, message: str = "Initial snippet collection") -> Optional[str]:
-        """Stage everything and commit. Returns the new commit SHA, or None
-        if there was nothing to commit (e.g. an empty collection)."""
+    def initial_commit(self, message: str = "Initial snippet collection") -> str | None:
+        """Stage everything and commit.
+
+        Returns the new commit SHA, or None if there was nothing to commit
+        (e.g. an empty collection).
+        """
         self._run("add", "-A")
         status = self._run("status", "--porcelain")
         if not status.strip():
@@ -257,7 +260,7 @@ class GitIntegration:
             }
         return result
 
-    def _remote_tracking_ref(self, remote_name: str = "origin") -> Optional[str]:
+    def _remote_tracking_ref(self, remote_name: str = "origin") -> str | None:
         try:
             branch = self.current_branch()
             ref = f"{remote_name}/{branch}"
@@ -267,7 +270,9 @@ class GitIntegration:
             return None
 
     def _read_ref_snippets(self, ref: str) -> dict[str, dict]:
-        """Materialize `ref` into a throwaway worktree and read every
+        """Read snippet metadata from a git ref.
+
+        Materializes `ref` into a throwaway worktree and reads every
         snippet JSON file, returning id -> {content_hash, deleted, updated_at}.
 
         `content_hash` is recomputed from `content` here rather than trusted

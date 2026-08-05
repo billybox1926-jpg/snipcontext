@@ -7,8 +7,6 @@ error/output style (Rich markup, non-zero exit on failure).
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import typer
 from rich.console import Console
 
@@ -72,6 +70,7 @@ def git_pull(
                 "Run with --force to pull anyway, or resolve manually first "
                 "(consider `git stash` if you have uncommitted local edits)."
             )
+            # 2 = blocked by conflict detection; caller should inspect/manually resolve.
             raise typer.Exit(code=2)
 
     try:

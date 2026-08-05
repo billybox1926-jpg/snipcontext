@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -131,11 +132,8 @@ def test_init_local_git_fails_without_git(tmp_path: Path, monkeypatch: pytest.Mo
     assert "git" in result.output.lower()
 
 
-from subprocess import run
-
-
-def _run(args: list[str], cwd: Path) -> "subprocess.CompletedProcess[str]":
-    return run(["git", *args], cwd=str(cwd), capture_output=True, text=True, check=False)
+def _run(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True, check=False)
 
 
 def test_storage_engine_uses_resolved_root(tmp_path: Path):

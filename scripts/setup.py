@@ -54,21 +54,21 @@ def main():
         print("  WARNING: typer not found")
 
     try:
-        import rich
+        import rich  # noqa: F401
 
         print("  rich OK")
     except ImportError:
         print("  WARNING: rich not found")
 
     try:
-        import sentence_transformers
+        import sentence_transformers  # noqa: F401
 
         print("  sentence-transformers OK")
     except ImportError:
         print("  WARNING: sentence-transformers not found (needed for semantic search)")
 
     try:
-        import faiss
+        import faiss  # noqa: F401
 
         print("  faiss OK")
     except ImportError:
@@ -86,7 +86,7 @@ def main():
 
     # Run quick tests
     print("\n[4/4] Running quick validation tests...")
-    result = run(f"{sys.executable} -m pytest {project_root / 'tests'} -x -q", cwd=project_root)
+    run(f"{sys.executable} -m pytest {project_root / 'tests'} -x -q", cwd=project_root)
 
     print("\n" + "=" * 60)
     print("Setup complete! Try these commands:")

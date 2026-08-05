@@ -9,14 +9,14 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from snipcontext.config.settings import Config, StorageConfig, reset_config
-from snipcontext.core.models import Snippet, SnippetMetadata
-from snipcontext.core.storage import StorageEngine
-from snipcontext.core.git_integration import GitError, GitIntegration
 from typer.testing import CliRunner
 
 from snipcontext.cli.app import app
 from snipcontext.cli.context import reset_context
+from snipcontext.config.settings import Config, StorageConfig
+from snipcontext.core.git_integration import GitIntegration
+from snipcontext.core.models import Snippet, SnippetMetadata
+from snipcontext.core.storage import StorageEngine
 
 runner = CliRunner()
 
@@ -237,13 +237,17 @@ class TestGitIntegrationConflictDetection:
             check=True,
             capture_output=True,
         )
-        orphan_sha = subprocess.run(
+        subprocess.run(
             ["git", "-C", str(repo), "rev-parse", "HEAD"],
             check=True,
             capture_output=True,
             text=True,
         ).stdout.strip()
-        subprocess.run(["git", "-C", str(repo), "push", "--force", "origin", "HEAD:main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "--force", "origin", "HEAD:main"],
+            check=True,
+            capture_output=True,
+        )
 
         git = GitIntegration(repo)
         report = git.detect_conflicts(storage, remote_name="origin")
@@ -399,10 +403,6 @@ class TestGitCli:
         )
         subprocess.run(["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True)
         subprocess.run(["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "local: edit s1"], check=True, capture_output=True)
-
-        before = subprocess.run(
-            ["git", "-C", str(repo / ".snipcontext"), "rev-parse", "HEAD"], check=True, capture_output=True, text=True
-        ).stdout.strip()
 
         reset_context()
         result = runner.invoke(app, ["git", "pull", "--force"])
