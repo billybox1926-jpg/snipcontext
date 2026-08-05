@@ -24,7 +24,7 @@ git_app = typer.Typer(
 )
 
 
-@git_app.command("status")  # type: ignore[misc]
+@git_app.command("status")  # type: ignore[untyped-decorator]
 def git_status() -> None:
     """Show git status for the current snippet collection."""
     config, storage, _ = _get_context()
@@ -43,7 +43,7 @@ def git_status() -> None:
     console.print(output)
 
 
-@git_app.command("pull")  # type: ignore[misc]
+@git_app.command("pull")  # type: ignore[untyped-decorator]
 def git_pull(
     force: bool = typer.Option(False, "--force", help="Skip conflict check and pull anyway."),
     interactive: bool | None = typer.Option(
@@ -135,7 +135,7 @@ def git_pull(
         raise typer.Exit(1)
 
 
-@git_app.command("push")  # type: ignore[misc]
+@git_app.command("push")  # type: ignore[untyped-decorator]
 def git_push() -> None:
     """Push local snippet collection to the remote."""
     config, storage, _ = _get_context()
