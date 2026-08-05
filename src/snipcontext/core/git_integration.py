@@ -160,6 +160,18 @@ class GitIntegration:
         self._run("commit", "-m", message)
         return self._run("rev-parse", "HEAD").strip()
 
+    def commit(self, message: str) -> str:
+        """Stage all changes and commit with the given message.
+
+        Like `initial_commit`, but does not short-circuit on an empty
+        working tree — useful after conflict resolution where there may
+        be nothing new to record. Uses `--allow-empty` so resolution
+        steps always produce an explicit commit SHA.
+        """
+        self._run("add", "-A")
+        self._run("commit", "-m", message, "--allow-empty")
+        return self._run("rev-parse", "HEAD").strip()
+
     def add_remote(self, url: str, name: str = "origin") -> None:
         existing = self._run("remote").split()
         if name in existing:
@@ -243,11 +255,24 @@ class GitIntegration:
 
     # ---------------------------------------------------- push / pull ---
 
-    def pull(self, remote_name: str = "origin", rebase: bool = True) -> str:
+    def pull(
+        self,
+        remote_name: str = "origin",
+        rebase: bool = True,
+        strategy_option: str | None = None,
+    ) -> str:
+        """Pull and rebase the current branch against the remote.
+
+        Pass `strategy_option` to `git pull -X <option>` when you need to
+        bias conflict resolution during rebase (e.g. "ours"/"theirs" for
+        interactive conflict resolution in the CLI).
+        """
         branch = self.current_branch()
         args = ["pull"]
         if rebase:
             args.append("--rebase")
+        if strategy_option:
+            args.extend(["-X", strategy_option])
         args.extend([remote_name, branch])
         return self._run(*args)
 

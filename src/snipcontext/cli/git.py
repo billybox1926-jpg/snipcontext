@@ -46,6 +46,12 @@ def git_status() -> None:
 @git_app.command("pull")
 def git_pull(
     force: bool = typer.Option(False, "--force", help="Skip conflict check and pull anyway."),
+    interactive: bool | None = typer.Option(
+        None,
+        "--interactive/--no-interactive",
+        hidden=True,
+        help="Force or disable TTY conflict-resolution flow.",
+    ),
 ) -> None:
     """Pull latest snippet collection from the remote.
 
@@ -67,7 +73,8 @@ def git_pull(
             raise typer.Exit(1)
 
         if report.has_conflicts:
-            if not sys.stdin.isatty():
+            is_interactive = interactive if interactive is not None else sys.stdin.isatty()
+            if not is_interactive:
                 console.print(f"[yellow]{report.summary()}[/yellow]")
                 console.print(
                     "Run with --force to pull anyway, or resolve manually first "
@@ -76,7 +83,7 @@ def git_pull(
                 # 2 = blocked by conflict detection; caller should inspect/manually resolve.
                 raise typer.Exit(code=2)
 
-            # Interactive resolution
+            resolved = False
             for c in report.conflicts:
                 console.print(f"\n[yellow]Conflict in snippet {c.snippet_id}[/yellow]")
                 try:
@@ -96,10 +103,14 @@ def git_pull(
 
                 if choice == "l":
                     gi.resolve_accept_local(c.snippet_id, storage)
+                    gi.commit(f"resolve {c.snippet_id}: keep local")
                     console.print(f"  → Keeping local version of {c.snippet_id}")
+                    resolved = True
                 elif choice == "r":
                     gi.resolve_accept_remote(c.snippet_id, storage)
+                    gi.commit(f"resolve {c.snippet_id}: accept remote")
                     console.print(f"  → Accepting remote version of {c.snippet_id}")
+                    resolved = True
                 elif choice == "s":
                     console.print("  → Stashing local changes, pulling, then restoring...")
                     gi.stash()
@@ -110,6 +121,10 @@ def git_pull(
                 else:
                     console.print("Aborted.")
                     raise typer.Exit(code=2)
+
+            if resolved:
+                console.print("[green]Conflict(s) resolved locally. Run `sc git push` to share.[/green]")
+                raise typer.Exit(code=0)
 
     try:
         console.print(gi.pull())
