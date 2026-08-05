@@ -283,7 +283,9 @@ def register_commands(app: typer.Typer) -> None:
                 for s in matches:
                     console.print(f"  [dim]{s.id}[/dim] — {s.metadata.title}")
                 raise typer.Exit(1) from StorageError(
-                    "multiple matches", code="not_found", detail={"snippet_id": snippet_id, "matches": len(matches)}
+                    "multiple matches",
+                    code="not_found",
+                    detail={"snippet_id": snippet_id, "matches": len(matches)},
                 )
             else:
                 console.print(f"[red]Snippet not found: {snippet_id}[/red]")
