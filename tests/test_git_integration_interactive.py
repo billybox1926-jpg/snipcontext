@@ -45,7 +45,11 @@ class TestGitCliInteractive:
 
         remote = tmp_path / "remote.git"
         subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
-        subprocess.run(["git", "init", "-b", "main", str(repo / ".snipcontext")], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "init", "-b", "main", str(repo / ".snipcontext")],
+            check=True,
+            capture_output=True,
+        )
         subprocess.run(
             ["git", "-C", str(repo / ".snipcontext"), "config", "user.email", "local@test.test"],
             check=True,

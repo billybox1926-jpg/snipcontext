@@ -123,7 +123,9 @@ def git_pull(
                     raise typer.Exit(code=2)
 
             if resolved:
-                console.print("[green]Conflict(s) resolved locally. Run `sc git push` to share.[/green]")
+                console.print(
+                    "[green]Conflict(s) resolved locally. Run `sc git push` to share.[/green]"
+                )
                 raise typer.Exit(code=0)
 
     try:
