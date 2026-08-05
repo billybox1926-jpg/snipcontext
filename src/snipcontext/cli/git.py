@@ -86,9 +86,13 @@ def git_pull(
                 except GitError as exc:
                     console.print(f"[red]Could not show diff: {exc}[/red]")
 
-                choice = typer.prompt(
-                    "Choose: [l]ocal, [r]emote, [s]tash-and-pull, [a]bort", default="a"
-                ).strip().lower()
+                choice = (
+                    typer.prompt(
+                        "Choose: [l]ocal, [r]emote, [s]tash-and-pull, [a]bort", default="a"
+                    )
+                    .strip()
+                    .lower()
+                )
 
                 if choice == "l":
                     gi.resolve_accept_local(c.snippet_id, storage)

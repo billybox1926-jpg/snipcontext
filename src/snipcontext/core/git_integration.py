@@ -353,9 +353,7 @@ class GitIntegration:
             shutil.rmtree(tmp, ignore_errors=True)
         return None
 
-    def get_conflict_diff(
-        self, snippet_id: str, storage, remote_name: str = "origin"
-    ) -> str:
+    def get_conflict_diff(self, snippet_id: str, storage, remote_name: str = "origin") -> str:
         """Return a unified diff between local and remote content for a conflicting snippet.
 
         Call only for snippet_ids already flagged by detect_conflicts() --
@@ -365,9 +363,7 @@ class GitIntegration:
         if remote_ref is None:
             raise GitError("No remote-tracking ref found.")
 
-        local_snippet = next(
-            (s for s in storage.list_all() if s.id == snippet_id), None
-        )
+        local_snippet = next((s for s in storage.list_all() if s.id == snippet_id), None)
         if local_snippet is None:
             raise GitError(f"Snippet {snippet_id!r} not found locally.")
 
@@ -405,9 +401,7 @@ class GitIntegration:
         if remote_content is None:
             raise GitError(f"Snippet {snippet_id!r} not found on {remote_ref}.")
 
-        local_snippet = next(
-            (s for s in storage.list_all() if s.id == snippet_id), None
-        )
+        local_snippet = next((s for s in storage.list_all() if s.id == snippet_id), None)
         if local_snippet is None:
             raise GitError(f"Snippet {snippet_id!r} not found locally.")
 
