@@ -41,22 +41,36 @@ def _write_snippet(storage: StorageEngine, snippet: Snippet) -> None:
 
 def _init_git_repo(path: Path) -> None:
     subprocess.run(["git", "init", "-b", "main", str(path)], check=True, capture_output=True)
-    subprocess.run(["git", "-C", str(path), "config", "user.email", "test@test.test"], check=True, capture_output=True)
-    subprocess.run(["git", "-C", str(path), "config", "user.name", "Test"], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(path), "config", "user.email", "test@test.test"],
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(path), "config", "user.name", "Test"], check=True, capture_output=True
+    )
     (path / ".gitignore").write_text("index.faiss\n")
 
 
 def _make_bare_remote(tmp_path: Path, name: str = "remote.git") -> Path:
     remote = tmp_path / name
     subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
-    subprocess.run(["git", "-C", str(remote), "config", "user.email", "remote@test.test"], check=True, capture_output=True)
-    subprocess.run(["git", "-C", str(remote), "config", "user.name", "Remote"], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(remote), "config", "user.email", "remote@test.test"],
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(remote), "config", "user.name", "Remote"], check=True, capture_output=True
+    )
     return remote
 
 
 def _commit_all(repo: Path, message: str) -> str:
     subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True, capture_output=True)
-    subprocess.run(["git", "-C", str(repo), "commit", "-m", message], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "-m", message], check=True, capture_output=True
+    )
     return subprocess.run(
         ["git", "-C", str(repo), "rev-parse", "HEAD"],
         check=True,
@@ -96,18 +110,28 @@ class TestGitIntegrationConflictDetection:
 
         remote = _make_bare_remote(tmp_path)
         _init_git_repo(repo)
-        subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", str(remote)], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "remote", "add", "origin", str(remote)],
+            check=True,
+            capture_output=True,
+        )
 
         base_sha = _commit_all(repo, "base: add s1")
-        subprocess.run(["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True
+        )
 
         # Simulate remote: change content and push
         _write_snippet(storage, remote_snippet)
         _commit_all(repo, "remote: edit s1")
-        subprocess.run(["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True
+        )
 
         # Reset to base, then simulate local: different change
-        subprocess.run(["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True
+        )
         _write_snippet(storage, _make_snippet("s1", "print('local-v2')", "Local V2"))
         _commit_all(repo, "local: edit s1")
 
@@ -138,23 +162,41 @@ class TestGitIntegrationConflictDetection:
 
         remote = _make_bare_remote(tmp_path)
         _init_git_repo(repo)
-        subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", str(remote)], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "remote", "add", "origin", str(remote)],
+            check=True,
+            capture_output=True,
+        )
 
         base_sha = _commit_all(repo, "base")
-        subprocess.run(["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True
+        )
 
-        subprocess.run(["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True
+        )
         _write_snippet(storage, _make_snippet("s1", "print('s1-v2')", "S1 V2"))
         _commit_all(repo, "local: edit s1")
 
         # Simulate remote changing only s2
-        subprocess.run(["git", "-C", str(repo), "checkout", "-b", "remote"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "checkout", "-b", "remote"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True
+        )
         _write_snippet(storage, remote_s2)
         _commit_all(repo, "remote: add s2")
-        subprocess.run(["git", "-C", str(repo), "push", "--force", "origin", "remote:main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "--force", "origin", "remote:main"],
+            check=True,
+            capture_output=True,
+        )
 
-        subprocess.run(["git", "-C", str(repo), "checkout", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "checkout", "main"], check=True, capture_output=True
+        )
 
         git = GitIntegration(repo)
         report = git.detect_conflicts(storage, remote_name="origin")
@@ -180,24 +222,42 @@ class TestGitIntegrationConflictDetection:
 
         remote = _make_bare_remote(tmp_path)
         _init_git_repo(repo)
-        subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", str(remote)], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "remote", "add", "origin", str(remote)],
+            check=True,
+            capture_output=True,
+        )
 
         base_sha = _commit_all(repo, "base")
-        subprocess.run(["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True
+        )
 
-        subprocess.run(["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True
+        )
         _write_snippet(storage, local_s1)
         local_s1.touch()
         _write_snippet(storage, local_s1)
         _commit_all(repo, "local: touch s1")
 
-        subprocess.run(["git", "-C", str(repo), "checkout", "-b", "remote"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "checkout", "-b", "remote"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True
+        )
         _write_snippet(storage, local_s1)
         _commit_all(repo, "remote: touch s1")
-        subprocess.run(["git", "-C", str(repo), "push", "--force", "origin", "remote:main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "--force", "origin", "remote:main"],
+            check=True,
+            capture_output=True,
+        )
 
-        subprocess.run(["git", "-C", str(repo), "checkout", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "checkout", "main"], check=True, capture_output=True
+        )
 
         git = GitIntegration(repo)
         report = git.detect_conflicts(storage, remote_name="origin")
@@ -223,15 +283,23 @@ class TestGitIntegrationConflictDetection:
 
         remote = _make_bare_remote(tmp_path)
         _init_git_repo(repo)
-        subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", str(remote)], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "remote", "add", "origin", str(remote)],
+            check=True,
+            capture_output=True,
+        )
 
         _commit_all(repo, "base")
-        subprocess.run(["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True
+        )
 
         # Create a second root commit unrelated to HEAD, push it as the remote ref.
         orphan = repo / "orphan.txt"
         orphan.write_text("orphan")
-        subprocess.run(["git", "-C", str(repo), "add", "orphan.txt"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "add", "orphan.txt"], check=True, capture_output=True
+        )
         subprocess.run(
             ["git", "-C", str(repo), "commit", "-m", "orphan", "--allow-empty"],
             check=True,
@@ -273,31 +341,91 @@ class TestGitCli:
         remote = tmp_path / "remote.git"
         subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
 
-        subprocess.run(["git", "init", "-b", "main", str(repo / ".snipcontext")], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "config", "user.email", "local@test.test"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "config", "user.name", "Local"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "remote", "add", "origin", str(remote)], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "init"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "push", "origin", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "init", "-b", "main", str(repo / ".snipcontext")],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "config", "user.email", "local@test.test"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "config", "user.name", "Local"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "remote", "add", "origin", str(remote)],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "init"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "push", "origin", "main"],
+            check=True,
+            capture_output=True,
+        )
 
         # Remote makes a harmless change on a different snippet.
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "checkout", "-b", "remote"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "reset", "--hard", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "checkout", "-b", "remote"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "reset", "--hard", "main"],
+            check=True,
+            capture_output=True,
+        )
         (repo / ".snipcontext" / "snippets" / "s2.json").write_text(
-            json.dumps({"id": "s2", "content": "print('s2')", "tags": [], "updated_at": _now_iso(), "deleted": False}),
+            json.dumps(
+                {
+                    "id": "s2",
+                    "content": "print('s2')",
+                    "tags": [],
+                    "updated_at": _now_iso(),
+                    "deleted": False,
+                }
+            ),
             encoding="utf-8",
         )
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "remote: add s2"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "push", "--force", "origin", "remote:main"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "checkout", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "remote: add s2"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "push", "--force", "origin", "remote:main"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "checkout", "main"],
+            check=True,
+            capture_output=True,
+        )
 
         reset_context()
         result = runner.invoke(app, ["git", "pull"])
 
         assert result.exit_code == 0, result.output
-        assert "Updating" in result.output or "Fast-forward" in result.output or "Already up to date" in result.output
+        assert (
+            "Updating" in result.output
+            or "Fast-forward" in result.output
+            or "Already up to date" in result.output
+        )
 
     def test_git_pull_conflict_blocks(self, tmp_path: Path) -> None:
         repo = tmp_path / "repo"
@@ -313,47 +441,131 @@ class TestGitCli:
         remote = tmp_path / "remote.git"
         subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
 
-        subprocess.run(["git", "init", "-b", "main", str(repo / ".snipcontext")], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "config", "user.email", "local@test.test"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "config", "user.name", "Local"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "remote", "add", "origin", str(remote)], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "init", "-b", "main", str(repo / ".snipcontext")],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "config", "user.email", "local@test.test"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "config", "user.name", "Local"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "remote", "add", "origin", str(remote)],
+            check=True,
+            capture_output=True,
+        )
         (repo / ".snipcontext" / "snippets" / "s1.json").write_text(
-            json.dumps({"id": "s1", "content": "print('base')", "tags": [], "updated_at": _now_iso(), "deleted": False}),
+            json.dumps(
+                {
+                    "id": "s1",
+                    "content": "print('base')",
+                    "tags": [],
+                    "updated_at": _now_iso(),
+                    "deleted": False,
+                }
+            ),
             encoding="utf-8",
         )
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "base"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "push", "origin", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "base"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "push", "origin", "main"],
+            check=True,
+            capture_output=True,
+        )
 
         # Remote edits s1 and pushes.
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "checkout", "-b", "remote"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "reset", "--hard", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "checkout", "-b", "remote"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "reset", "--hard", "main"],
+            check=True,
+            capture_output=True,
+        )
         (repo / ".snipcontext" / "snippets" / "s1.json").write_text(
-            json.dumps({"id": "s1", "content": "print('remote')", "tags": [], "updated_at": _now_iso(), "deleted": False}),
+            json.dumps(
+                {
+                    "id": "s1",
+                    "content": "print('remote')",
+                    "tags": [],
+                    "updated_at": _now_iso(),
+                    "deleted": False,
+                }
+            ),
             encoding="utf-8",
         )
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "remote: edit s1"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "push", "--force", "origin", "remote:main"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "checkout", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "remote: edit s1"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "push", "--force", "origin", "remote:main"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "checkout", "main"],
+            check=True,
+            capture_output=True,
+        )
 
         # Local edits s1 differently.
         (repo / ".snipcontext" / "snippets" / "s1.json").write_text(
-            json.dumps({"id": "s1", "content": "print('local')", "tags": [], "updated_at": _now_iso(), "deleted": False}),
+            json.dumps(
+                {
+                    "id": "s1",
+                    "content": "print('local')",
+                    "tags": [],
+                    "updated_at": _now_iso(),
+                    "deleted": False,
+                }
+            ),
             encoding="utf-8",
         )
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "local: edit s1"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "local: edit s1"],
+            check=True,
+            capture_output=True,
+        )
 
         before = subprocess.run(
-            ["git", "-C", str(repo / ".snipcontext"), "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+            ["git", "-C", str(repo / ".snipcontext"), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
         ).stdout.strip()
 
         reset_context()
         result = runner.invoke(app, ["git", "pull"])
 
         after = subprocess.run(
-            ["git", "-C", str(repo / ".snipcontext"), "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+            ["git", "-C", str(repo / ".snipcontext"), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
         ).stdout.strip()
 
         assert result.exit_code == 2, result.output
@@ -374,35 +586,113 @@ class TestGitCli:
         remote = tmp_path / "remote.git"
         subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
 
-        subprocess.run(["git", "init", "-b", "main", str(repo / ".snipcontext")], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "config", "user.email", "local@test.test"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "config", "user.name", "Local"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "remote", "add", "origin", str(remote)], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "init", "-b", "main", str(repo / ".snipcontext")],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "config", "user.email", "local@test.test"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "config", "user.name", "Local"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "remote", "add", "origin", str(remote)],
+            check=True,
+            capture_output=True,
+        )
         (repo / ".snipcontext" / "snippets" / "s1.json").write_text(
-            json.dumps({"id": "s1", "content": "print('base')", "tags": [], "updated_at": _now_iso(), "deleted": False}),
+            json.dumps(
+                {
+                    "id": "s1",
+                    "content": "print('base')",
+                    "tags": [],
+                    "updated_at": _now_iso(),
+                    "deleted": False,
+                }
+            ),
             encoding="utf-8",
         )
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "base"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "push", "origin", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "base"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "push", "origin", "main"],
+            check=True,
+            capture_output=True,
+        )
 
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "checkout", "-b", "remote"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "reset", "--hard", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "checkout", "-b", "remote"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "reset", "--hard", "main"],
+            check=True,
+            capture_output=True,
+        )
         (repo / ".snipcontext" / "snippets" / "s1.json").write_text(
-            json.dumps({"id": "s1", "content": "print('remote')", "tags": [], "updated_at": _now_iso(), "deleted": False}),
+            json.dumps(
+                {
+                    "id": "s1",
+                    "content": "print('remote')",
+                    "tags": [],
+                    "updated_at": _now_iso(),
+                    "deleted": False,
+                }
+            ),
             encoding="utf-8",
         )
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "remote: edit s1"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "push", "--force", "origin", "remote:main"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "checkout", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "remote: edit s1"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "push", "--force", "origin", "remote:main"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "checkout", "main"],
+            check=True,
+            capture_output=True,
+        )
 
         (repo / ".snipcontext" / "snippets" / "s1.json").write_text(
-            json.dumps({"id": "s1", "content": "print('local')", "tags": [], "updated_at": _now_iso(), "deleted": False}),
+            json.dumps(
+                {
+                    "id": "s1",
+                    "content": "print('local')",
+                    "tags": [],
+                    "updated_at": _now_iso(),
+                    "deleted": False,
+                }
+            ),
             encoding="utf-8",
         )
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "local: edit s1"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "local: edit s1"],
+            check=True,
+            capture_output=True,
+        )
 
         reset_context()
         result = runner.invoke(app, ["git", "pull", "--force"])
@@ -421,11 +711,29 @@ class TestGitCli:
         )
         os.chdir(repo)
 
-        subprocess.run(["git", "init", "-b", "main", str(repo / ".snipcontext")], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "config", "user.email", "local@test.test"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "config", "user.name", "Local"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "init"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "init", "-b", "main", str(repo / ".snipcontext")],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "config", "user.email", "local@test.test"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "config", "user.name", "Local"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "add", "-A"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "-C", str(repo / ".snipcontext"), "commit", "-m", "init"],
+            check=True,
+            capture_output=True,
+        )
 
         reset_context()
         result = runner.invoke(app, ["git", "push"])

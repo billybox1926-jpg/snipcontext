@@ -112,12 +112,17 @@ def test_init_local_git_creates_repo(tmp_path: Path) -> None:
     assert (target / ".gitignore").is_file()
     assert (target / "config.yaml").is_file()
     assert (target / "snippets").is_dir()
-    assert any("initialize SnipContext storage" in line for line in _run(["log", "--oneline"], target).stdout.splitlines())
+    assert any(
+        "initialize SnipContext storage" in line
+        for line in _run(["log", "--oneline"], target).stdout.splitlines()
+    )
 
 
 def test_init_local_git_with_remote(tmp_path: Path) -> None:
     os.chdir(tmp_path)
-    result = runner.invoke(app, ["init", "--local", "--git", "--remote", "https://example.com/repo.git"])
+    result = runner.invoke(
+        app, ["init", "--local", "--git", "--remote", "https://example.com/repo.git"]
+    )
     assert result.exit_code == 0, result.output
     target = tmp_path / ".snipcontext"
     remote_output = _run(["remote", "get-url", "origin"], target).stdout.strip()

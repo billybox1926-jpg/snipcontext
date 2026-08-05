@@ -213,7 +213,10 @@ class GitIntegration:
             if local is None or remote is None:
                 continue  # added/deleted on only one side — not a same-snippet conflict
 
-            if local["content_hash"] == remote["content_hash"] and local["deleted"] == remote["deleted"]:
+            if (
+                local["content_hash"] == remote["content_hash"]
+                and local["deleted"] == remote["deleted"]
+            ):
                 continue  # both sides ended up in the same state — nothing to warn about
 
             base = base_snippets.get(snippet_id)
@@ -221,7 +224,8 @@ class GitIntegration:
                 local["content_hash"] != base["content_hash"] or local["deleted"] != base["deleted"]
             )
             remote_changed = base is None or (
-                remote["content_hash"] != base["content_hash"] or remote["deleted"] != base["deleted"]
+                remote["content_hash"] != base["content_hash"]
+                or remote["deleted"] != base["deleted"]
             )
 
             if local_changed and remote_changed:
@@ -299,9 +303,7 @@ class GitIntegration:
                 content = data.get("content", "")
                 updated_at_raw = data.get("updated_at")
                 try:
-                    updated_at = (
-                        datetime.fromisoformat(updated_at_raw) if updated_at_raw else None
-                    )
+                    updated_at = datetime.fromisoformat(updated_at_raw) if updated_at_raw else None
                 except ValueError:
                     updated_at = None
                 result[snippet_id] = {

@@ -51,7 +51,9 @@ def _init_git(target: Path, remote: str | None = None) -> None:
     config_args += ["config", "user.name", "SnipContext"]
     config = _run_git(config_args, target)
     if config.returncode != 0:
-        console.print(f"[yellow]Warning: could not set git identity: {config.stderr.strip()}[/yellow]")
+        console.print(
+            f"[yellow]Warning: could not set git identity: {config.stderr.strip()}[/yellow]"
+        )
 
     add = _run_git(["add", "."], target)
     if add.returncode != 0:
