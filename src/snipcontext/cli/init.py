@@ -47,13 +47,13 @@ def _init_git(target: Path, remote: str | None = None) -> None:
             encoding="utf-8",
         )
 
-    config_args = ["config", "user.email", "snipcontext@local"]
-    config_args += ["config", "user.name", "SnipContext"]
-    config = _run_git(config_args, target)
-    if config.returncode != 0:
-        console.print(
-            f"[yellow]Warning: could not set git identity: {config.stderr.strip()}[/yellow]"
-        )
+    config_email = _run_git(["config", "user.email", "snipcontext@local"], target)
+    if config_email.returncode != 0:
+        console.print(f"[yellow]Warning: could not set git identity: {config_email.stderr.strip()}[/yellow]")
+
+    config_name = _run_git(["config", "user.name", "SnipContext"], target)
+    if config_name.returncode != 0:
+        console.print(f"[yellow]Warning: could not set git identity: {config_name.stderr.strip()}[/yellow]")
 
     add = _run_git(["add", "."], target)
     if add.returncode != 0:
