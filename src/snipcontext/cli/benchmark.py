@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import math
 import time
+from typing import Literal
 
 import typer
 from rich.box import ASCII as ASCII_BOX
@@ -33,7 +34,9 @@ def benchmark_index(
     vectors: int = typer.Option(10000, "--vectors", "-n", help="Synthetic vector count"),
     dimension: int = typer.Option(384, "--dim", "-d", help="Embedding dimension"),
     top_k: int = typer.Option(10, "--top-k", "-k", help="Top-k search depth"),
-    index_type: str = typer.Option("flat", "--index-type", help="Flat, hnsw, ivf, or ivfpq"),
+    index_type: Literal["flat", "hnsw", "ivf", "ivfpq"] = typer.Option(
+        "flat", "--index-type", help="Flat, hnsw, ivf, or ivfpq"
+    ),
     no_auto_switch: bool = typer.Option(
         False, "--no-auto-switch", help="Disable auto-promotion from flat to IVFPQ"
     ),

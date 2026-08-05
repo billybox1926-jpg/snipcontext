@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _require_faiss() -> faiss.ModuleType:
+def _require_faiss() -> faiss.ModuleType:  # type: ignore[name-defined]  # faiss import is runtime-only
     try:
         import faiss  # noqa: F401
     except ImportError as exc:
@@ -150,7 +150,7 @@ class FlatIndexBackend(IndexBackend):
         idxs = [self._id_to_idx.pop(sid) for sid in ids if sid in self._id_to_idx]
         if not idxs:
             return
-        selector = faiss.IDSelectorBatch(idxs)
+        selector = faiss.IDSelectorBatch(np.array(idxs, dtype=np.int64))
         self._index.remove_ids(selector)
         kept = [sid for sid in self._id_map if sid not in ids]
         self._id_map = kept
@@ -224,7 +224,7 @@ class HNSWIndexBackend(IndexBackend):
         self._id_to_idx.update({sid: start + i for i, sid in enumerate(ids)})
 
     def search(self, query: np.ndarray, k: int) -> list[tuple[str, float]]:
-        self._index.hnsw.efSearch = self._ef_search
+        self._index.hnsw.efSearch = self._ef_search  # type: ignore[attr-defined]  # faiss dynamic index attribute
         scores, indices = self._index.search(np.ascontiguousarray(query, dtype=np.float32), k)
         results: list[tuple[str, float]] = []
         for score, idx in zip(scores[0], indices[0], strict=False):
@@ -325,7 +325,7 @@ class IVFPQIndexBackend(IndexBackend):
         self._id_to_idx.update({sid: start + i for i, sid in enumerate(ids)})
 
     def search(self, query: np.ndarray, k: int) -> list[tuple[str, float]]:
-        self._index.nprobe = self._nprobe
+        self._index.nprobe = self._nprobe  # type: ignore[attr-defined]  # faiss dynamic index attribute
         scores, indices = self._index.search(np.ascontiguousarray(query, dtype=np.float32), k)
         results: list[tuple[str, float]] = []
         for score, idx in zip(scores[0], indices[0], strict=False):
@@ -346,7 +346,7 @@ class IVFPQIndexBackend(IndexBackend):
         idxs = [self._id_to_idx.pop(sid) for sid in ids if sid in self._id_to_idx]
         if not idxs:
             return
-        selector = faiss.IDSelectorBatch(idxs)
+        selector = faiss.IDSelectorBatch(np.array(idxs, dtype=np.int64))
         self._index.remove_ids(selector)
         kept = [sid for sid in self._id_map if sid not in ids]
         self._id_map = kept
