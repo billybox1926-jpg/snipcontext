@@ -25,11 +25,20 @@ logger = logging.getLogger(__name__)
 
 
 class StorageError(Exception):
-    """Base exception for storage operations."""
+    """Base exception for storage operations.
 
+    Structured error codes:
+        not_found: Snippet ID does not exist.
+        io_failed: File read/write/parse failure.
+        index_corrupted: Index file is unreadable or malformed.
+        missing_index: Index path is missing.
+        encryption_failed: Encryption or decryption failure.
+    """
 
-class SnippetNotFoundError(StorageError):
-    """Raised when a requested snippet does not exist."""
+    def __init__(self, message: str, *, code: str, detail: dict | None = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.detail = detail or {}
 
 
 class StorageEngine:
@@ -108,7 +117,11 @@ class StorageEngine:
                     json.dump(data, f, ensure_ascii=False)
                 f.write("\n")
         except (OSError, TypeError) as exc:
-            raise StorageError(f"Failed to save snippet {snippet.id}: {exc}") from exc
+            raise StorageError(
+                f"Failed to save snippet {snippet.id}: {exc}",
+                code="io_failed",
+                detail={"snippet_id": snippet.id},
+            ) from exc
 
         logger.debug("Saved snippet %s to %s", snippet.id, path)
         return path
@@ -123,12 +136,15 @@ class StorageEngine:
             The deserialized Snippet object.
 
         Raises:
-            SnippetNotFoundError: If the snippet file does not exist.
-            StorageError: If the file cannot be read or parsed.
+            StorageError: If the file does not exist or cannot be read or parsed.
         """
         path = self._snippet_path(snippet_id)
         if not path.exists():
-            raise SnippetNotFoundError(f"Snippet not found: {snippet_id}")
+            raise StorageError(
+                f"Snippet not found: {snippet_id}",
+                code="not_found",
+                detail={"snippet_id": snippet_id},
+            )
 
         try:
             with open(path, encoding="utf-8") as f:
@@ -353,7 +369,11 @@ class StorageEngine:
             with open(input_path, encoding="utf-8") as f:
                 payload = json.load(f)
         except (OSError, json.JSONDecodeError) as exc:
-            raise StorageError(f"Failed to read import file {input_path}: {exc}") from exc
+            raise StorageError(
+                f"Failed to read import file {input_path}: {exc}",
+                code="io_failed",
+                detail={"path": str(input_path)},
+            ) from exc
 
         items = payload.get("snippets") if isinstance(payload, dict) else None
         if items is None and isinstance(payload, list):

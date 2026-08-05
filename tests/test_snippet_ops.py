@@ -20,7 +20,7 @@ from snipcontext.core.snippet_ops import (
     record_snippet_access,
     resolve_language,
 )
-from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
+from snipcontext.core.storage import StorageEngine, StorageError
 
 
 @pytest.fixture
@@ -133,8 +133,9 @@ class TestGetSnippet:
         assert result.id == saved_snippet.id
 
     def test_get_not_found(self, storage):
-        with pytest.raises(SnippetNotFoundError):
+        with pytest.raises(StorageError, match="not found") as exc_info:
             get_snippet(storage, "nonexistent")
+        assert exc_info.value.code == "not_found"
 
     def test_get_ambiguous_prefix(self, storage):
         s1 = Snippet(content="a", metadata=SnippetMetadata(title="A"))
@@ -259,8 +260,9 @@ class TestDeleteSnippet:
         assert not storage.exists(saved_snippet.id)
 
     def test_delete_not_found(self, storage):
-        with pytest.raises(SnippetNotFoundError):
+        with pytest.raises(StorageError, match="not found") as exc_info:
             delete_snippet(storage, "nonexistent")
+        assert exc_info.value.code == "not_found"
 
 
 class TestRecordSnippetAccess:

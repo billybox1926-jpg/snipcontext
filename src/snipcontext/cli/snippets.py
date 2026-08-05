@@ -17,7 +17,7 @@ from rich.table import Table
 
 from snipcontext.cli.context import get_context as _get_context
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
-from snipcontext.core.storage import SnippetNotFoundError
+from snipcontext.core.storage import StorageError
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -272,7 +272,9 @@ def register_commands(app: typer.Typer) -> None:
         config, storage, _ = _get_context()
         try:
             snippet = storage.get(snippet_id)
-        except SnippetNotFoundError:
+        except StorageError as err:
+            if err.code != "not_found":
+                raise
             matches = [s for s in storage.iter_all() if s.id.startswith(snippet_id)]
             if len(matches) == 1:
                 snippet = matches[0]
@@ -280,10 +282,14 @@ def register_commands(app: typer.Typer) -> None:
                 console.print(f"[yellow]Multiple matches for prefix '{snippet_id}':[/yellow]")
                 for s in matches:
                     console.print(f"  [dim]{s.id}[/dim] — {s.metadata.title}")
-                raise typer.Exit(1) from SnippetNotFoundError()
+                raise typer.Exit(1) from StorageError(
+                    "multiple matches", code="not_found", detail={"snippet_id": snippet_id, "matches": len(matches)}
+                )
             else:
                 console.print(f"[red]Snippet not found: {snippet_id}[/red]")
-                raise typer.Exit(1) from SnippetNotFoundError()
+                raise typer.Exit(1) from StorageError(
+                    "snippet not found", code="not_found", detail={"snippet_id": snippet_id}
+                )
         snippet.record_access()
         storage.save(snippet)
         if raw:
@@ -377,7 +383,9 @@ def register_commands(app: typer.Typer) -> None:
         config, storage, _ = _get_context()
         try:
             snippet = storage.get(snippet_id)
-        except SnippetNotFoundError as err:
+        except StorageError as err:
+            if err.code != "not_found":
+                raise
             console.print(f"[red]Snippet not found: {snippet_id}[/red]")
             raise typer.Exit(1) from err
 
@@ -500,7 +508,9 @@ def register_commands(app: typer.Typer) -> None:
         config, storage, _ = _get_context()
         try:
             snippet = storage.get(snippet_id)
-        except SnippetNotFoundError as err:
+        except StorageError as err:
+            if err.code != "not_found":
+                raise
             console.print(f"[red]Snippet not found: {snippet_id}[/red]")
             raise typer.Exit(1) from err
         if not force and not _confirm_action(f"Delete '{snippet.metadata.title}'?"):

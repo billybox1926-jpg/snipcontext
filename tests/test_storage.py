@@ -11,7 +11,6 @@ import pytest
 from snipcontext.config.settings import Config, StorageConfig, reset_config
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.core.storage import (
-    SnippetNotFoundError,
     StorageEngine,
     StorageError,
 )
@@ -67,8 +66,10 @@ class TestStorageCRUD:
 
     def test_get_not_found(self, temp_config):
         storage = StorageEngine(temp_config)
-        with pytest.raises(SnippetNotFoundError):
+        with pytest.raises(StorageError, match="not found") as exc_info:
             storage.get("nonexistent-id")
+        assert exc_info.value.code == "not_found"
+        assert exc_info.value.detail["snippet_id"] == "nonexistent-id"
 
     def test_delete(self, temp_config, sample_snippet):
         storage = StorageEngine(temp_config)
@@ -218,15 +219,22 @@ class TestStorageImportExport:
 
 
 class TestStorageExceptions:
-    """Tests for storage exception classes."""
+    """Tests for structured StorageError codes."""
 
-    def test_storage_error(self):
-        with pytest.raises(StorageError):
-            raise StorageError("test error")
+    def test_storage_error_requires_code(self):
+        with pytest.raises(TypeError):
+            StorageError("test")  # type: ignore[call-arg]
 
-    def test_snippet_not_found_error(self):
-        with pytest.raises(SnippetNotFoundError):
-            raise SnippetNotFoundError("not found")
+    def test_not_found_code(self):
+        with pytest.raises(StorageError, match="not found") as exc_info:
+            raise StorageError("not found", code="not_found")
+        assert exc_info.value.code == "not_found"
+        assert exc_info.value.detail == {}
+
+    def test_not_found_with_detail(self):
+        err = StorageError("not found", code="not_found", detail={"snippet_id": "abc"})
+        assert err.code == "not_found"
+        assert err.detail == {"snippet_id": "abc"}
 
 
 class TestStorageProperties:

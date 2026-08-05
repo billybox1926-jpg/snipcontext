@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
-from snipcontext.core.storage import SnippetNotFoundError, StorageEngine
+from snipcontext.core.storage import StorageEngine, StorageError
 
 # Extension-to-language mapping for auto-detection
 EXT_LANG_MAP: dict[str, str] = {
@@ -158,12 +158,14 @@ def get_snippet(storage: StorageEngine, snippet_id: str) -> Snippet:
         The matching Snippet.
 
     Raises:
-        SnippetNotFoundError: If no matching snippet found.
+        StorageError: If no matching snippet found.
         ValueError: If multiple snippets match the prefix.
     """
     try:
         return storage.get(snippet_id)
-    except SnippetNotFoundError:
+    except StorageError as err:
+        if err.code != "not_found":
+            raise
         matches = [s for s in storage.iter_all() if s.id.startswith(snippet_id)]
         if len(matches) == 1:
             return matches[0]
@@ -247,7 +249,7 @@ def edit_snippet(
         The updated Snippet instance.
 
     Raises:
-        SnippetNotFoundError: If snippet not found.
+        StorageError: If snippet not found.
     """
     snippet = storage.get(snippet_id)
 
@@ -317,7 +319,7 @@ def delete_snippet(storage: StorageEngine, snippet_id: str) -> Snippet:
         The deleted Snippet instance.
 
     Raises:
-        SnippetNotFoundError: If snippet not found.
+        StorageError: If snippet not found.
     """
     snippet = storage.get(snippet_id)
     storage.delete(snippet.id)

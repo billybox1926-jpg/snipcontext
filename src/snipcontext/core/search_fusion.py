@@ -195,7 +195,10 @@ class HybridSearch:
             self.keyword_index.save(self._config.index_path)
         except Exception as exc:
             logger.error("Keyword index build failed: %s", exc)
-            raise StorageError(f"Failed to build keyword index: {exc}") from exc
+            raise StorageError(
+                f"Failed to build keyword index: {exc}",
+                code="index_corrupted",
+            ) from exc
 
         self._keyword_dirty = False
 
