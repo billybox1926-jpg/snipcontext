@@ -150,7 +150,11 @@ class StorageEngine:
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except (OSError, json.JSONDecodeError) as exc:
-            raise StorageError(f"Failed to load snippet {snippet_id}: {exc}") from exc
+            raise StorageError(
+                f"Failed to load snippet {snippet_id}: {exc}",
+                code="io_failed",
+                detail={"snippet_id": snippet_id},
+            ) from exc
 
         return Snippet.model_validate(data)
 
