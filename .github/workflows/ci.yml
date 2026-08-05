@@ -44,7 +44,6 @@ jobs:
           fi
 
       - name: Mypy type check
-        continue-on-error: true
         run: mypy src/snipcontext --ignore-missing-imports --no-site-packages
 
   # ── Tests across Python versions ─────────────────────────────────
