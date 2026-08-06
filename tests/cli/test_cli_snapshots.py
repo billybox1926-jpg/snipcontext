@@ -106,9 +106,23 @@ def _reset_registry():
     reset_registry_for_testing()
 
 
+class _DeterministicUUID:
+    def __init__(self, value: str) -> None:
+        self._value = value
+
+    def __str__(self) -> str:
+        return self._value
+
+    @property
+    def hex(self) -> str:
+        return self._value.replace("-", "")[:32]
+
+
 @pytest.fixture(autouse=True)
 def _fixed_ids(mocker):
-    fake_uuid = MagicMock(side_effect=["f" + str(i).zfill(21) for i in range(100)])
+    fake_uuid = MagicMock(
+        side_effect=[_DeterministicUUID("f" + str(i).zfill(21)) for i in range(100)]
+    )
     mocker.patch("snipcontext.core.models.uuid.uuid4", fake_uuid)
 
 
