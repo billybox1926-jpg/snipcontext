@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from snipcontext.cli.context import get_context as _get_context
-from snipcontext.core.importers import parse_import, to_snippet
+from snipcontext.core.importers import import_tar_gz, parse_import, to_snippet
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -33,7 +33,7 @@ def register_commands(app: typer.Typer) -> None:
             None,
             "--format",
             "-f",
-            help="Import format: yaml, json, markdown. Default: auto-detect",
+            help="Import format: yaml, json, markdown, tar.gz. Default: auto-detect",
         ),
         dry_run: bool = typer.Option(False, "--dry-run", help="Preview snippets without importing"),
     ) -> None:
@@ -46,9 +46,9 @@ def register_commands(app: typer.Typer) -> None:
         normalized_format = None
         if format:
             normalized_format = format.lower()
-            if normalized_format not in {"yaml", "json", "markdown"}:
+            if normalized_format not in {"yaml", "json", "markdown", "tar.gz"}:
                 console.print(
-                    f"[red]Unsupported format: {format}. Use yaml, json, or markdown.[/red]"
+                    f"[red]Unsupported format: {format}. Use yaml, json, markdown, or tar.gz.[/red]"
                 )
                 raise typer.Exit(1)
 
@@ -71,13 +71,19 @@ def register_commands(app: typer.Typer) -> None:
                     with httpx.Client(timeout=30) as client:
                         response = client.get(url)
                         response.raise_for_status()
-                        raw = response.text
+                        if normalized_format == "tar.gz":
+                            raw = response.content
+                        else:
+                            raw = response.text
                 except Exception as exc:
                     console.print(f"[red]Failed to fetch remote file:[/red] {exc}")
                     raise typer.Exit(1) from exc
             else:
                 path = Path(url)
-                raw = path.read_text(encoding="utf-8")
+                if normalized_format == "tar.gz":
+                    raw = path.read_bytes()
+                else:
+                    raw = path.read_text(encoding="utf-8")
         except FileNotFoundError as exc:
             console.print(f"[red]File not found:[/red] {exc}")
             raise typer.Exit(1) from exc
@@ -86,7 +92,15 @@ def register_commands(app: typer.Typer) -> None:
             raise typer.Exit(1) from exc
 
         try:
-            snippets = parse_import(raw, format=normalized_format)
+            if normalized_format == "tar.gz" or (
+                normalized_format is None
+                and isinstance(raw, bytes)
+                and raw.startswith(b"\x1f\x8b")
+            ):
+                snippets = import_tar_gz(raw)
+            else:
+                text = raw if isinstance(raw, str) else raw.decode("utf-8", errors="replace")
+                snippets = parse_import(text, format=normalized_format)
         except ValueError as exc:
             console.print(f"[red]Invalid import format:[/red] {exc}")
             raise typer.Exit(1) from exc

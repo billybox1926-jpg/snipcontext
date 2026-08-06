@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
+import io
 import json
+import os
+import shutil
+import tarfile
+import tempfile
+from pathlib import Path
 from typing import Any
 
 import yaml
 
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
+
+MAX_ARCHIVE_DOWNLOAD_BYTES = 10 * 1024 * 1024
+MAX_ARCHIVE_EXTRACTED_BYTES = 10 * 1024 * 1024
+MAX_ARCHIVE_MEMBER_COUNT = 500
 
 
 class ImportedSnippet:
@@ -131,3 +141,108 @@ def to_snippet(item: ImportedSnippet) -> Snippet:
         ),
         tags=item.tags,
     )
+
+
+def _is_tar_gz(raw: bytes) -> bool:
+    return raw.startswith(b"\x1f\x8b") and b"ustar" in raw[:1024]
+
+
+def _is_supported_member(member: tarfile.TarInfo) -> bool:
+    if member.issym() or member.islnk() or member.isfile() is False:
+        return False
+    if member.type not in (tarfile.REGTYPE, tarfile.AREGTYPE, tarfile.DIRTYPE):
+        return False
+    return True
+
+
+def _safe_member_path(member_name: str, resolved_tmp_dir: str) -> str:
+    if os.path.isabs(member_name):
+        raise ValueError(f"Absolute paths are not allowed in archives: {member_name}")
+    if ".." in member_name.split(os.sep):
+        raise ValueError(f"Parent directory traversal is not allowed: {member_name}")
+
+    member_path = os.path.normpath(os.path.join(resolved_tmp_dir, member_name))
+    tmp_dir = os.path.normpath(resolved_tmp_dir)
+
+    if not member_path.startswith(tmp_dir + os.sep) and member_path != tmp_dir:
+        raise ValueError(f"Member path escapes temp dir: {member_name}")
+    return member_path
+
+
+def import_tar_gz(raw: bytes) -> list[ImportedSnippet]:
+    """Import snippets from a `.tar.gz` archive, extracting to a temp directory.
+
+    Extraction uses `tarfile.data_filter` plus manual path-containment and
+    symlink/hardlink/special-file rejection.
+    """
+    if len(raw) > MAX_ARCHIVE_DOWNLOAD_BYTES:
+        raise ValueError(
+            f"Archive too large: {len(raw)} bytes > {MAX_ARCHIVE_DOWNLOAD_BYTES}"
+        )
+
+    tmp_dir = tempfile.mkdtemp(prefix="snip_import_")
+    tmp_dir = os.path.realpath(tmp_dir)
+    extracted_bytes = 0
+    member_count = 0
+    results: list[ImportedSnippet] = []
+
+    try:
+        with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
+            members = tar.getmembers()
+            if len(members) > MAX_ARCHIVE_MEMBER_COUNT:
+                raise ValueError(
+                    f"Archive has too many members: {len(members)} > {MAX_ARCHIVE_MEMBER_COUNT}"
+                )
+
+            for member in members:
+                if not _is_supported_member(member):
+                    continue
+
+                try:
+                    _safe_member_path(member.name, tmp_dir)
+                except ValueError:
+                    continue
+
+                member_path = os.path.join(tmp_dir, member.name)
+                if member.isdir() or member.type == tarfile.DIRTYPE:
+                    os.makedirs(member_path, exist_ok=True)
+                    continue
+
+                try:
+                    tar.extract(member, tmp_dir, filter=tarfile.data_filter)
+                except (tarfile.FilterError, tarfile.OutsideDestinationError, OSError):
+                    continue
+
+                try:
+                    chunk = Path(member_path).read_bytes()
+                except OSError:
+                    continue
+
+                extracted_bytes += len(chunk)
+                if extracted_bytes > MAX_ARCHIVE_EXTRACTED_BYTES:
+                    raise ValueError(
+                        f"Decompressed archive too large: {extracted_bytes} bytes > {MAX_ARCHIVE_EXTRACTED_BYTES}"
+                    )
+
+                member_count += 1
+                if member_count > MAX_ARCHIVE_MEMBER_COUNT:
+                    raise ValueError(
+                        f"Archive has too many members: {member_count} > {MAX_ARCHIVE_MEMBER_COUNT}"
+                    )
+
+                try:
+                    text = chunk.decode("utf-8")
+                except UnicodeDecodeError:
+                    continue
+
+                try:
+                    results.extend(parse_import(text))
+                except Exception:
+                    continue
+    finally:
+        try:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        except Exception:
+            pass
+
+    return results

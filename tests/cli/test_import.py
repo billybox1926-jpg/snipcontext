@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import io
 import json
+import tarfile
+from pathlib import Path
 
 import pytest
 import yaml
@@ -10,7 +13,12 @@ from typer.testing import CliRunner
 
 from snipcontext.cli.app import app
 from snipcontext.core.importers import (
+    MAX_ARCHIVE_DOWNLOAD_BYTES,
     ImportedSnippet,
+    _is_supported_member,
+    _is_tar_gz,
+    _safe_member_path,
+    import_tar_gz,
     parse_import,
     parse_json_import,
     parse_markdown_import,
@@ -237,3 +245,94 @@ def test_to_snippet_builds_real_domain_snippet() -> None:
     assert snippet.content == "c"
     assert snippet.metadata.language.value == "python"
     assert snippet.tags == ["a"]
+
+
+def test_is_tar_gz_detects_gzip_magic() -> None:
+    assert _is_tar_gz(b"\x1f\x8b\x08\x00ustar\x00\x00") is True
+    assert _is_tar_gz(b"not-a-tar") is False
+
+
+def test_safe_member_path_blocks_traversal() -> None:
+    with pytest.raises(ValueError, match="escapes temp dir"):
+        _safe_member_path("../../etc/passwd", "/tmp/snip_import_abc")
+
+
+def test_safe_member_path_blocks_absolute() -> None:
+    with pytest.raises(ValueError, match="Absolute paths"):
+        _safe_member_path("C:/etc/passwd", "/tmp/snip_import_abc")
+
+
+def test_safe_member_path_allows_relative() -> None:
+    resolved = _safe_member_path("snippets/a.yaml", "/tmp/snip_import_abc")
+    assert resolved.replace("\\", "/").startswith("/tmp/snip_import_abc/")
+
+
+def test_is_supported_member_rejects_symlink() -> None:
+    member = tarfile.TarInfo(name="link.py")
+    member.type = tarfile.SYMTYPE
+    member.linkname = "target.py"
+    assert _is_supported_member(member) is False
+
+
+def test_import_tar_gz_happy_path(tmp_path: Path) -> None:
+    archive = tmp_path / "snippets.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        info = tarfile.TarInfo(name="snippet.yaml")
+        payload = b"- title: Archive YAML\n  content: \"x=1\"\n  lang: python\n"
+        info.size = len(payload)
+        tar.addfile(info, io.BytesIO(payload))
+    snippets = import_tar_gz(archive.read_bytes())
+    assert len(snippets) == 1
+    assert snippets[0].title == "Archive YAML"
+
+
+def test_import_tar_gz_rejects_traversal_member(tmp_path: Path) -> None:
+    archive = tmp_path / "evil.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        info = tarfile.TarInfo(name="../../etc/cron.d/evil")
+        payload = b"- title: Evil\n  content: x\n"
+        info.size = len(payload)
+        tar.addfile(info, io.BytesIO(payload))
+    snippets = import_tar_gz(archive.read_bytes())
+    assert snippets == []
+
+
+def test_import_tar_gz_rejects_symlink_member(tmp_path: Path) -> None:
+    archive = tmp_path / "symlink.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        info = tarfile.TarInfo(name="link.py")
+        info.type = tarfile.SYMTYPE
+        info.linkname = "/etc/passwd"
+        tar.addfile(info)
+    snippets = import_tar_gz(archive.read_bytes())
+    assert snippets == []
+
+
+def test_import_tar_gz_rejects_oversized_payload() -> None:
+    payload = b"\x1f\x8b\x08\x00" + b"\x00" * (MAX_ARCHIVE_DOWNLOAD_BYTES + 1)
+    with pytest.raises(ValueError, match="Archive too large"):
+        import_tar_gz(payload)
+
+
+def test_import_tar_gz_cleans_up_temp_dir(tmp_path: Path) -> None:
+    archive = tmp_path / "clean.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        info = tarfile.TarInfo(name="snippet.yaml")
+        payload = b"- title: Clean\n  content: ok\n"
+        info.size = len(payload)
+        tar.addfile(info, io.BytesIO(payload))
+    import_tar_gz(archive.read_bytes())
+    temp_dirs = [p for p in tmp_path.glob("snip_import_*") if p.is_dir()]
+    assert temp_dirs == []
+
+
+def test_import_cli_accepts_local_tar_gz_file(tmp_path: Path) -> None:
+    target = tmp_path / "snippets.tar.gz"
+    with tarfile.open(target, "w:gz") as tar:
+        info = tarfile.TarInfo(name="snippet.yaml")
+        payload = b"- title: Tar YAML\n  content: hi\n"
+        info.size = len(payload)
+        tar.addfile(info, io.BytesIO(payload))
+    result = runner.invoke(app, ["import-", str(target), "--format", "tar.gz"])
+    assert result.exit_code == 0, result.output
+    assert "Tar YAML" in result.output
