@@ -23,7 +23,7 @@ from snipcontext.core.snippet_ops import (
     list_snippets,
     record_snippet_access,
 )
-from snipcontext.plugins.base import PluginManager
+from snipcontext.plugins.registry import PluginRegistry
 
 
 @dataclass
@@ -231,9 +231,9 @@ class CommandRegistry:
             snippets = storage.list_all()
         if not snippets:
             return {"type": "message", "message": "No snippets to export."}
-        pm = PluginManager()
-        pm.load_builtin_providers()
-        prov = pm.get_provider(provider)
+        registry = PluginRegistry()
+        registry.load_builtin_providers()
+        prov = registry.get_provider(provider)
         formatted = prov.export_batch(snippets)
         if output:
             Path(output).write_text(formatted)
@@ -288,13 +288,13 @@ class CommandRegistry:
         return {"type": "message", "message": f"Index complete. {len(snippets)} snippets indexed."}
 
     def _providers(self, args: list[str], kwargs: dict[str, Any]) -> Any:
-        pm = PluginManager()
-        pm.load_builtin_providers()
+        registry = PluginRegistry()
+        registry.load_builtin_providers()
         providers: list[tuple[str, str, str]] = []
-        for name in pm.list_providers():
+        for name in registry.list_provider_names():
             try:
-                p = pm._providers.get(name)
-                desc = pm.list_providers().get(name, "")
+                p = registry._plugins.get(name)
+                desc = registry.list_providers().get(name, "")
                 fmt = getattr(p, "format", "?")
             except Exception:
                 desc = ""

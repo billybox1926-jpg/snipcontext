@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from snipcontext.plugins.registry import PluginRegistry
 from snipcontext.providers.base import BaseProvider
 from snipcontext.providers.claude import ClaudeProvider
 from snipcontext.providers.cursor import CursorProvider
@@ -81,10 +82,8 @@ class TestProviderRegistry:
                 return "ok"
 
         # This class should satisfy the contract but not be auto-discovered
-        # unless added to PluginManager. The test enforces that adding a new
+        # unless added to PluginRegistry. The test enforces that adding a new
         # concrete provider requires explicit registration or entry point.
-        from snipcontext.plugins.base import PluginManager
-
-        pm = PluginManager()
-        pm.load_builtin_providers()
-        assert "unregistered" not in pm.list_providers()
+        registry = PluginRegistry()
+        registry.load_builtin_providers()
+        assert "unregistered" not in registry.list_provider_names()

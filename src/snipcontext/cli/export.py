@@ -10,7 +10,6 @@ from rich.table import Table
 
 from snipcontext.cli.context import get_context as _get_context
 from snipcontext.core.models import Snippet
-from snipcontext.plugins.base import PluginManager
 from snipcontext.plugins.registry import PluginRegistry
 
 logger = logging.getLogger(__name__)
@@ -32,13 +31,13 @@ def register_commands(app: typer.Typer) -> None:
     ) -> None:
         """Export snippets in LLM-optimized format."""
         config, storage, searcher = _get_context()
-        pm = PluginManager()
-        pm.load_builtin_providers()
+        registry = PluginRegistry()
+        registry.load_builtin_providers()
         try:
-            prov = pm.get_provider(provider)
+            prov = registry.get_provider(provider)
         except KeyError as err:
             console.print(f"[red]Unknown provider: {provider}[/red]")
-            console.print(f"Available: {', '.join(pm.list_providers().keys())}")
+            console.print(f"Available: {', '.join(registry.list_provider_names())}")
             raise typer.Exit(1) from err
         snippets: list[Snippet] = []
         if ids:
@@ -74,18 +73,21 @@ def register_commands(app: typer.Typer) -> None:
 
         Use --health to run a health check on each provider.
         """
-        pm = PluginManager()
-        pm.load_builtin_providers()
+        registry = PluginRegistry()
+        registry.load_builtin_providers()
         if health:
-            if not pm.list_providers():
+            if not registry.list_provider_names():
                 console.print("[yellow]No providers registered.[/yellow]")
                 raise typer.Exit(1)
             table = Table(title="Provider Health", show_header=True, box=ASCII_BOX)
             table.add_column("Name", style="cyan")
             table.add_column("Status", style="green")
             table.add_column("Error", style="red")
-            for name, provider_cls in pm._providers.items():
+            for name in registry.list_provider_names():
                 try:
+                    provider_cls = registry._plugins.get(name)
+                    if provider_cls is None:
+                        continue
                     provider = provider_cls()
                     status = provider.health_check()
                     error = ""
@@ -99,9 +101,12 @@ def register_commands(app: typer.Typer) -> None:
         table.add_column("Name", style="cyan")
         table.add_column("Description", style="white")
         table.add_column("Format", style="green")
-        for name, desc in pm.list_providers().items():
-            fmt = pm._providers.get(name)
-            fmt_name = fmt.format if fmt and hasattr(fmt, "format") else "?"
+        for name, desc in registry.list_providers().items():
+            try:
+                fmt = registry._plugins.get(name)
+                fmt_name = fmt.format if fmt and hasattr(fmt, "format") else "?"
+            except Exception:
+                fmt_name = "?"
             table.add_row(name, desc, str(fmt_name))
         console.print(table)
 
@@ -121,9 +126,8 @@ def register_commands(app: typer.Typer) -> None:
             )
             raise typer.Exit(1)
 
-        pm = PluginManager()
-        pm.load_builtin_providers()
         registry = PluginRegistry()
+        registry.load_builtin_providers()
 
         if load_name:
             try:
@@ -144,14 +148,14 @@ def register_commands(app: typer.Typer) -> None:
             return
 
         if health:
-            if not pm.list_providers():
+            if not registry.list_provider_names():
                 console.print("[yellow]No providers registered.[/yellow]")
                 raise typer.Exit(1)
             table = Table(title="Provider Health", show_header=True, box=ASCII_BOX)
             table.add_column("Name", style="cyan")
             table.add_column("Status", style="green")
             table.add_column("Error", style="red")
-            for name in list(pm.list_providers().keys()):
+            for name in registry.list_provider_names():
                 try:
                     provider = registry.get_provider(name)
                     status = provider.health_check()
@@ -164,7 +168,7 @@ def register_commands(app: typer.Typer) -> None:
             return
 
         if list_cmd:
-            if not pm.plugins:
+            if not registry._instances:
                 console.print("[yellow]No plugins registered.[/yellow]")
                 return
             table = Table(title="Plugins", show_header=True, box=ASCII_BOX)
@@ -172,7 +176,7 @@ def register_commands(app: typer.Typer) -> None:
             table.add_column("Version", style="green")
             table.add_column("API", style="blue")
             table.add_column("Status", style="white")
-            for manifest in pm.list_plugins():
+            for manifest in registry.list_plugins():
                 table.add_row(
                     manifest.name,
                     manifest.version,

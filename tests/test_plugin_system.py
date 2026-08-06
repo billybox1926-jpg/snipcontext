@@ -7,9 +7,9 @@ from typing import Any
 from snipcontext.plugins.base import (
     CORE_API_VERSION,
     Plugin,
-    PluginManager,
     PluginManifest,
 )
+from snipcontext.plugins.registry import PluginRegistry
 
 
 class HelloWorldPlugin(Plugin):
@@ -63,39 +63,40 @@ class TestPluginSystem:
             loaded = getattr(plugin, "loaded", False)
         assert loaded is False
 
-    def test_pm_run_snippet_saved_hooks(self) -> None:
-        pm = PluginManager()
+    def test_registry_run_snippet_saved_hooks(self) -> None:
+        registry = PluginRegistry()
         plugin = HelloWorldPlugin()
-        pm._plugins[plugin.manifest.name] = plugin
+        registry._instances[plugin.manifest.name] = plugin
         plugin.on_load()
         snippet = {"id": "1"}
-        pm.run_snippet_saved_hooks(snippet)  # type: ignore[arg-type]
+        registry.run_snippet_saved_hooks(snippet)
         assert getattr(plugin, "saved_snippet", None) == snippet
 
-    def test_pm_shutdown_calls_hooks(self) -> None:
-        pm = PluginManager()
+    def test_registry_shutdown_calls_hooks(self) -> None:
+        registry = PluginRegistry()
         plugin = HelloWorldPlugin()
-        pm._plugins[plugin.manifest.name] = plugin
+        registry._instances[plugin.manifest.name] = plugin
         plugin.on_load()
-        pm.shutdown()
+        registry.shutdown()
         assert getattr(plugin, "shutdown", False) is True
-        assert not pm.plugins
+        assert not registry._instances
 
     def test_list_plugins_returns_manifests(self) -> None:
-        pm = PluginManager()
+        registry = PluginRegistry()
         plugin = HelloWorldPlugin()
-        pm._plugins[plugin.manifest.name] = plugin
+        registry._instances[plugin.manifest.name] = plugin
+        registry._manifests[plugin.manifest.name] = plugin.manifest
         plugin.on_load()
-        manifests = pm.list_plugins()
+        manifests = registry.list_plugins()
         assert len(manifests) == 1
         assert manifests[0].name == "hello-world"
         assert manifests[0].version == "0.2.0"
         assert manifests[0].api_version == CORE_API_VERSION
 
     def test_load_builtin_providers_registers_expected(self) -> None:
-        pm = PluginManager()
-        pm.load_builtin_providers()
-        providers = pm.list_providers()
+        registry = PluginRegistry()
+        registry.load_builtin_providers()
+        providers = registry.list_provider_names()
         assert "generic" in providers
         assert "claude" in providers
         assert "cursor" in providers

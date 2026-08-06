@@ -8,8 +8,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from snipcontext.plugins.base import Plugin, PluginManager, PluginManifest
-from snipcontext.plugins.registry import reset_registry_for_testing
+from snipcontext.plugins.base import Plugin, PluginManifest
+from snipcontext.plugins.registry import PluginRegistry, reset_registry_for_testing
 
 
 @pytest.fixture(autouse=True)
@@ -40,9 +40,10 @@ class TestPluginDiscovery:
     def test_discover_returns_registered_plugins(self, temp_entry_points, fake_plugin_factory):
         ep = fake_plugin_factory("discovered")
         with temp_entry_points({"snipcontext.plugins": [ep]}):
-            count = PluginManager.discover()
+            registry = PluginRegistry()
+            count = registry.discover()
             assert count == 1
-            assert "discovered" in PluginManager._registry()._plugins
+            assert "discovered" in registry._plugins
 
     def test_discover_skips_non_plugin_entry(self, temp_entry_points):
         bad_cls = type("NotAPlugin", (), {"manifest": object()})
@@ -51,15 +52,17 @@ class TestPluginDiscovery:
         ep.load.return_value = bad_cls
 
         with temp_entry_points({"snipcontext.plugins": [ep]}):
-            count = PluginManager.discover()
+            registry = PluginRegistry()
+            count = registry.discover()
             assert count == 0
-            assert "bad" not in PluginManager._registry()._plugins
+            assert "bad" not in registry._plugins
 
     def test_discover_empty_group_returns_zero(self, temp_entry_points):
         with temp_entry_points({}):
-            count = PluginManager.discover()
+            registry = PluginRegistry()
+            count = registry.discover()
             assert count == 0
-            assert PluginManager._registry()._plugins == {}
+            assert registry._plugins == {}
 
 
 class TestPluginLifecycle:
@@ -72,15 +75,15 @@ class TestPluginLifecycle:
         ep.load.return_value = tracked_cls
 
         with temp_entry_points({"snipcontext.plugins": [ep]}):
-            PluginManager.discover()
+            registry = PluginRegistry()
+            registry.discover()
 
-            registry = PluginManager._registry()
             registry._plugins["tracked-plugin"] = tracked_cls
             registry._loaded["tracked-plugin"] = False
             registry._instances.pop("tracked-plugin", None)
 
-            instance = PluginManager.load_plugin("tracked-plugin")
-            PluginManager.shutdown()
+            instance = registry.load_plugin("tracked-plugin")
+            registry.shutdown()
 
         assert instance is not None
         assert getattr(instance, "events", None) == ["load", "shutdown"]
@@ -95,9 +98,10 @@ class TestPluginLoadErrors:
         ep.load.side_effect = ImportError("boom")
 
         with temp_entry_points({"snipcontext.plugins": [ep]}):
-            count = PluginManager.discover()
+            registry = PluginRegistry()
+            count = registry.discover()
             assert count == 0
-            assert "broken" not in PluginManager._registry()._plugins
+            assert "broken" not in registry._plugins
         assert any("Failed to load plugin broken" in r.message for r in caplog.records)
 
     def test_duplicate_names_last_wins(self, temp_entry_points, caplog):
@@ -131,8 +135,8 @@ class TestPluginLoadErrors:
         second_ep.load.return_value = second_cls
 
         with temp_entry_points({"snipcontext.plugins": [first_ep, second_ep]}):
-            count = PluginManager.discover()
+            registry = PluginRegistry()
+            count = registry.discover()
             assert count == 2
-            assert PluginManager.list_providers() or True  # no crash
-            registry = PluginManager._registry()
+            assert registry.list_provider_names() or True  # no crash
             assert registry._plugins["dup"] is second_cls

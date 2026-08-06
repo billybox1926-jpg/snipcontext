@@ -13,6 +13,7 @@ from hypothesis.strategies import sampled_from
 from snipcontext.config.settings import Config, EmbeddingConfig, SearchConfig, StorageConfig
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.core.search import HybridSearch
+from snipcontext.plugins.registry import PluginRegistry
 
 # Strategies for generating snippet data
 snippet_id = st.text(
@@ -217,11 +218,9 @@ provider_name = sampled_from(["openai", "claude", "cursor", "generic"])
 @settings(suppress_health_check=[HealthCheck.too_slow], max_examples=50)
 def test_provider_export_batch_returns_string(provider_name: str, snippets: list[Snippet]) -> None:
     """Each built-in provider should return a non-empty string for any snippet list."""
-    from snipcontext.plugins.base import PluginManager
-
-    pm = PluginManager()
-    pm.load_builtin_providers()
-    provider = pm.get_provider(provider_name)
+    registry = PluginRegistry()
+    registry.load_builtin_providers()
+    provider = registry.get_provider(provider_name)
 
     # Include metadata to exercise more code paths
     output = provider.export_batch(snippets, title="Property Test")

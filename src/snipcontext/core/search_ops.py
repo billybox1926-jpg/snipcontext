@@ -9,7 +9,7 @@ from __future__ import annotations
 from snipcontext.core.models import Snippet
 from snipcontext.core.search import HybridSearch
 from snipcontext.core.storage import StorageEngine
-from snipcontext.plugins.base import PluginManager
+from snipcontext.plugins.registry import PluginRegistry
 
 
 def ensure_index(
@@ -98,9 +98,9 @@ def export_snippets(
     Raises:
         KeyError: If provider_name is not found.
     """
-    pm = PluginManager()
-    pm.load_builtin_providers()
-    prov = pm.get_provider(provider_name)
+    registry = PluginRegistry()
+    registry.load_builtin_providers()
+    prov = registry.get_provider(provider_name)
 
     snippets: list[Snippet] = []
 

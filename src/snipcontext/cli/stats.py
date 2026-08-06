@@ -362,11 +362,11 @@ def register_commands(app: typer.Typer) -> None:
 
         console.print("\n[bold]Sample export (generic):[/bold]")
         try:
-            from snipcontext.plugins.base import PluginManager
+            from snipcontext.plugins.registry import PluginRegistry
 
-            pm = PluginManager()
-            pm.load_builtin_providers()
-            provider = pm.get_provider("generic")
+            registry = PluginRegistry()
+            registry.load_builtin_providers()
+            provider = registry.get_provider("generic")
             saved = storage.list_all()
             console.print(Markdown(provider.export_batch(saved)))
         except Exception as exc:

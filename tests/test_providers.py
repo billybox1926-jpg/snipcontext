@@ -262,41 +262,41 @@ class TestProviderRegistry:
     """Tests for the plugin manager provider registry."""
 
     def test_load_builtin_providers(self):
-        from snipcontext.plugins.base import PluginManager
+        from snipcontext.plugins.registry import PluginRegistry
 
-        pm = PluginManager()
-        pm.load_builtin_providers()
+        registry = PluginRegistry()
+        registry.load_builtin_providers()
 
-        providers = pm.list_providers()
+        providers = registry.list_provider_names()
         assert "claude" in providers
         assert "cursor" in providers
         assert "generic" in providers
         assert "openai" in providers
 
     def test_get_provider(self):
-        from snipcontext.plugins.base import PluginManager
+        from snipcontext.plugins.registry import PluginRegistry
 
-        pm = PluginManager()
-        pm.load_builtin_providers()
+        registry = PluginRegistry()
+        registry.load_builtin_providers()
 
-        claude = pm.get_provider("claude")
+        claude = registry.get_provider("claude")
         assert isinstance(claude, ClaudeProvider)
 
-        generic = pm.get_provider("generic")
+        generic = registry.get_provider("generic")
         assert isinstance(generic, GenericProvider)
 
     def test_get_unknown_provider(self):
-        from snipcontext.plugins.base import PluginManager
+        from snipcontext.plugins.registry import PluginRegistry
 
-        pm = PluginManager()
-        pm.load_builtin_providers()
+        registry = PluginRegistry()
+        registry.load_builtin_providers()
 
         with pytest.raises(KeyError):
-            pm.get_provider("nonexistent")
+            registry.get_provider("nonexistent")
 
     def test_default_provider(self):
-        from snipcontext.plugins.base import PluginManager
+        from snipcontext.plugins.registry import PluginRegistry
 
-        pm = PluginManager()
-        pm.load_builtin_providers()
-        assert pm.default_provider == "generic"
+        registry = PluginRegistry()
+        registry.load_builtin_providers()
+        assert registry.default_provider == "generic"

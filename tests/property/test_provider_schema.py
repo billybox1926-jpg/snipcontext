@@ -8,7 +8,7 @@ from hypothesis import strategies as st
 from hypothesis.strategies import builds, sampled_from
 
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
-from snipcontext.plugins.base import PluginManager
+from snipcontext.plugins.registry import PluginRegistry
 
 # Strategies for generating snippet data (similar to hybrid test but independent)
 snippet_id = st.text(
@@ -40,9 +40,9 @@ provider_name = sampled_from(["openai", "claude", "cursor", "generic"])
 @settings(suppress_health_check=[HealthCheck.too_slow], max_examples=50)
 def test_provider_export_batch_schema(provider_name: str, snippets: list[Snippet]) -> None:
     """Each built-in provider should return a string and not crash on any snippet list."""
-    pm = PluginManager()
-    pm.load_builtin_providers()
-    provider = pm.get_provider(provider_name)
+    registry = PluginRegistry()
+    registry.load_builtin_providers()
+    provider = registry.get_provider(provider_name)
 
     # Exercise the provider with include_metadata=True (default) and a title
     output = provider.export_batch(snippets, title="Property Test Schema")
@@ -70,17 +70,17 @@ def test_provider_export_batch_schema(provider_name: str, snippets: list[Snippet
         # OpenAI format: each snippet is separated by divider lines
         # The divider is 40 '═' characters repeated twice (i.e., 80?) Actually in code:
         #   _DIVIDER = "═" * 40
-        #   lines = [f\"{self._DIVIDER}{self._DIVIDER}\", ...]
+        #   lines = [f"{self._DIVIDER}{self._DIVIDER}", ...]
         # So we expect to see the divider repeated.
         divider = "═" * 40
         # The output should start and end with divider? Actually:
         #   lines = [
-        #           f\"{self._DIVIDER}{self._DIVIDER}\",
-        #           f\"  {safe_title}\",
-        #           f\"  {len(snippets)} code snippets provided below\",
-        #           \"  Use these as reference for your response.\",
-        #           f\"{self._DIVIDER}{self._DIVIDER}\",
-        #           \"\",
+        #           f"{self._DIVIDER}{self._DIVIDER}",
+        #           f"  {safe_title}",
+        #           f"  {len(snippets)} code snippets provided below",
+        #           "  Use these as reference for your response.",
+        #           f"{self._DIVIDER}{self._DIVIDER}",
+        #           ""
         #       ]
         # Then for each snippet: export_single which adds its own divider block.
         # So we expect at least one occurrence of the double divider.
@@ -99,8 +99,6 @@ def test_plugin_registry_load_plugin_does_not_crash_on_random_names(
     plugin_names: list[str],
 ) -> None:
     """PluginRegistry.load_plugin should raise ValueError for unknown names, not crash."""
-    from snipcontext.plugins.registry import PluginRegistry
-
     registry = PluginRegistry()
     registry.load_builtin_providers()  # load built-ins so we know what exists
 
