@@ -424,10 +424,9 @@ def _create_backend(
         and snippet_count > threshold
     ):
         try:
-            import faiss
+            _require_faiss()
         except ImportError:
             return FlatIndexBackend(dimension)
-        _require_faiss()
         logger.info(
             "Collection size exceeded threshold (%d). Automatically switching to IVFPQ index.",
             threshold,
