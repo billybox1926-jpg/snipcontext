@@ -47,7 +47,9 @@ def register_commands(app: typer.Typer) -> None:
         if format:
             normalized_format = format.lower()
             if normalized_format not in {"yaml", "json", "markdown"}:
-                console.print(f"[red]Unsupported format: {format}. Use yaml, json, or markdown.[/red]")
+                console.print(
+                    f"[red]Unsupported format: {format}. Use yaml, json, or markdown.[/red]"
+                )
                 raise typer.Exit(1)
 
         console.print(f"[bold]Importing from:[/bold] {url}")

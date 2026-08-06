@@ -82,12 +82,14 @@ def test_parse_yaml_import_rejects_unsafe_payload() -> None:
 
 
 def test_parse_json_import_object() -> None:
-    raw = json.dumps({
-        "title": "Single JSON",
-        "content": "console.log(1)",
-        "lang": "javascript",
-        "tags": ["js"],
-    })
+    raw = json.dumps(
+        {
+            "title": "Single JSON",
+            "content": "console.log(1)",
+            "lang": "javascript",
+            "tags": ["js"],
+        }
+    )
     results = parse_json_import(raw)
     assert len(results) == 1
     assert results[0].title == "Single JSON"
@@ -96,10 +98,12 @@ def test_parse_json_import_object() -> None:
 
 
 def test_parse_json_import_array() -> None:
-    raw = json.dumps([
-        {"title": "A", "content": "a=1"},
-        {"title": "B", "content": "b=2", "tags": ["more"]},
-    ])
+    raw = json.dumps(
+        [
+            {"title": "A", "content": "a=1"},
+            {"title": "B", "content": "b=2", "tags": ["more"]},
+        ]
+    )
     results = parse_json_import(raw)
     assert [item.title for item in results] == ["A", "B"]
     assert results[1].tags == ["more"]

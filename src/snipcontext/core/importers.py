@@ -35,7 +35,9 @@ def parse_yaml_import(raw: str) -> list[ImportedSnippet]:
         tags = item.get("tags") or []
         if isinstance(tags, str):
             tags = [tags]
-        results.append(ImportedSnippet(title=title, content=content, language=language, tags=list(tags)))
+        results.append(
+            ImportedSnippet(title=title, content=content, language=language, tags=list(tags))
+        )
     return results
 
 
