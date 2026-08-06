@@ -57,6 +57,7 @@ def register_commands(app: typer.Typer) -> None:
             console.print("[yellow]Dry run enabled; no snippets will be written.[/yellow]")
 
         try:
+            raw: bytes | str | None = None
             if parsed.scheme == "https":
                 try:
                     import httpx  # noqa: F401
@@ -91,8 +92,15 @@ def register_commands(app: typer.Typer) -> None:
             console.print(f"[red]Failed to read source:[/red] {exc}")
             raise typer.Exit(1) from exc
 
+        if raw is None:
+            raise RuntimeError("Failed to load source payload")
+
         try:
-            if normalized_format == "tar.gz" or (
+            if normalized_format == "tar.gz":
+                if not isinstance(raw, bytes):
+                    raise RuntimeError("Tar.gz source must be binary")
+                snippets = import_tar_gz(raw)
+            elif (
                 normalized_format is None
                 and isinstance(raw, bytes)
                 and raw.startswith(b"\x1f\x8b")

@@ -11,6 +11,7 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
+import snipcontext.core.importers as importers
 from snipcontext.cli.app import app
 from snipcontext.core.importers import (
     MAX_ARCHIVE_DOWNLOAD_BYTES,
@@ -336,3 +337,40 @@ def test_import_cli_accepts_local_tar_gz_file(tmp_path: Path) -> None:
     result = runner.invoke(app, ["import-", str(target), "--format", "tar.gz"])
     assert result.exit_code == 0, result.output
     assert "Tar YAML" in result.output
+
+
+def test_import_tar_gz_layered_defense_rejects_traversal_even_without_data_filter(monkeypatch: pytest.MonkeyPatch) -> None:
+    import warnings
+
+    monkeypatch.delattr(tarfile, "data_filter", raising=False)
+    monkeypatch.setattr(importers, "tarfile", tarfile, raising=False)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        archive = _build_tar_gz([("../../etc/cron.d/evil", b"- title: Evil\n  content: x\n")])
+    snippets = import_tar_gz(archive)
+    assert snippets == []
+
+
+def test_import_tar_gz_incremental_cap_triggers_during_extraction(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(importers, "MAX_ARCHIVE_EXTRACTED_BYTES", 512)
+    archive = tmp_path / "bomb.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        info = tarfile.TarInfo(name="member.txt")
+        payload = b"x" * 2048
+        info.size = len(payload)
+        tar.addfile(info, io.BytesIO(payload))
+    with pytest.raises(ValueError, match="Decompressed archive too large"):
+        import_tar_gz(archive.read_bytes())
+
+
+def _build_tar_gz(members: list[tuple[str, bytes]], compressed_size_cap: int | None = None) -> bytes:
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        for name, payload in members:
+            info = tarfile.TarInfo(name=name)
+            info.size = len(payload)
+            tar.addfile(info, io.BytesIO(payload))
+    data = buf.getvalue()
+    if compressed_size_cap is not None and len(data) < compressed_size_cap:
+        data += b"\x00" * (compressed_size_cap - len(data))
+    return data
