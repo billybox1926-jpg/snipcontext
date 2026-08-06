@@ -17,7 +17,6 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
-    from snipcontext.plugins.registry import _PluginRegistryImpl
 
 logger = logging.getLogger(__name__)
 
