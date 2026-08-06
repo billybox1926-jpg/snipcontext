@@ -58,11 +58,11 @@ Consumers should check this version and handle accordingly.
 Providers can be loaded directly or discovered via entry points:
 
 ```python
-from snipcontext.plugins.base import PluginManager
+from snipcontext.plugins.registry import PluginRegistry
 
-pm = PluginManager()
-pm.load_builtin_providers()
-provider = pm.get_provider("generic")
+registry = PluginRegistry()
+registry.load_builtin_providers()
+provider = registry.get_provider("generic")
 ```
 
 Entry-point discovery uses the `snipcontext.providers` group.

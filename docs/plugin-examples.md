@@ -135,7 +135,7 @@ import json
 import logging
 from pathlib import Path
 
-from snipcontext.core.models import Snippet
+from snipcontext.core.models import Snippet, SnippetMetadata
 from snipcontext.plugins.base import Plugin, PluginManifest
 
 
@@ -191,7 +191,7 @@ from pathlib import Path
 import pytest
 
 from snipcontext.core.models import Snippet, SnippetMetadata
-from snipcontext.plugins.base import PluginManager
+from snipcontext.plugins.registry import PluginRegistry
 from my_plugin.audit import JsonAuditLogger
 
 
@@ -226,11 +226,11 @@ def test_on_shutdown_completes_cleanly(audit_plugin: JsonAuditLogger):
 ### Step 4: Verify entry-point discovery
 
 ```python
-from snipcontext.plugins.base import PluginManager
+from snipcontext.plugins.registry import PluginRegistry
 
-pm = PluginManager()
-pm.discover()
-manifest = next(m for m in pm.list_plugins() if m.name == "json_audit_logger")
+registry = PluginRegistry()
+registry.discover()
+manifest = next(m for m in registry.list_plugins() if m.name == "json_audit_logger")
 assert manifest.version == "1.0.0"
 ```
 
@@ -238,12 +238,12 @@ assert manifest.version == "1.0.0"
 
 ## Choosing Between Provider and Generic Plugin
 
-| Scenario | Use |
-|----------|-----|
-| Exporting snippets to a new format | **Provider** (`BaseProvider`) |
-| Responding to save/load/search events | **Generic plugin** (`Plugin`) |
-| Adding new CLI commands | **Provider** (registry supports `get_provider`) or generic plugin with custom hooks |
-| Integrating an external service | **Generic plugin** with `on_load`/`on_shutdown` for connections |
+|| Scenario | Use ||
+||----------|-----||
+|| Exporting snippets to a new format | **Provider** (`BaseProvider`) ||
+|| Responding to save/load/search events | **Generic plugin** (`Plugin`) ||
+|| Adding new CLI commands | **Provider** (registry supports `get_provider`) or generic plugin with custom hooks ||
+|| Integrating an external service | **Generic plugin** with `on_load`/`on_shutdown` for connections ||
 
 Providers are a specialised subtype of plugins. All providers are plugins,
 but not all plugins are providers. If you only need lifecycle hooks

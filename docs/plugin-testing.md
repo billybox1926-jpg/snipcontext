@@ -76,37 +76,38 @@ To verify that your plugin is discoverable via entry points, use
 from __future__ import annotations
 
 import pytest
-from snipcontext.plugins.base import PluginManager, PluginRegistry
-
+from snipcontext.plugins.registry import PluginRegistry
 
 def test_plugin_discovery():
-    pm = PluginManager()
-    count = pm.discover()
-    manifests = pm.list_plugins()
+    registry = PluginRegistry()
+    count = registry.discover()
+    manifests = registry.list_plugins()
     names = [m.name for m in manifests]
     assert "json_audit_logger" in names
     assert manifests[names.index("json_audit_logger")].version == "1.0.0"
 
 
 def test_plugin_load_and_unload():
-    pm = PluginManager()
-    pm.discover()
-    plugin = pm.load_plugin("json_audit_logger")
+    registry = PluginRegistry()
+    registry.discover()
+    plugin = registry.load_plugin("json_audit_logger")
     assert plugin is not None
-    health = pm.get_health("json_audit_logger")
+    health = registry.get_health("json_audit_logger")
     assert health["status"] == "ok"
-    pm.unload_plugin("json_audit_logger")
+    registry.unload_plugin("json_audit_logger")
 ```
 
 ### Resetting registry state between tests
 
 ```python
+from snipcontext.plugins.registry import reset_registry_for_testing
+
 @pytest.fixture(autouse=True)
 def _reset_registry():
     """Force a fresh registry per test to avoid cross-test pollution."""
-    PluginRegistry._instance = None
+    reset_registry_for_testing()
     yield
-    PluginRegistry._instance = None
+    reset_registry_for_testing()
 ```
 
 ## Mocking External Dependencies

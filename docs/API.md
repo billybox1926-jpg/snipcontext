@@ -226,14 +226,14 @@ for result in results:
 ### Using Providers
 
 ```python
-from snipcontext.plugins.base import PluginManager
+from snipcontext.plugins.registry import PluginRegistry
 
-pm = PluginManager()
-pm.load_builtin_providers()
+registry = PluginRegistry()
+registry.load_builtin_providers()
 
 # Get a provider
-claude = pm.get_provider("claude")
-generic = pm.get_provider("generic")
+claude = registry.get_provider("claude")
+generic = registry.get_provider("generic")
 
 # Export single snippet
 output = claude.export_single(snippet)
