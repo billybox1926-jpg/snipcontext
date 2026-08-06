@@ -11,24 +11,44 @@ from rich.console import Console
 from rich.panel import Panel
 
 from snipcontext.cli.context import get_context as _get_context
-from snipcontext.core.importers import parse_yaml_import
-from snipcontext.core.storage import StorageError
+from snipcontext.core.importers import parse_import, to_snippet
 
 logger = logging.getLogger(__name__)
 console = Console()
 
 
+def _is_windows_abs_path(url: str) -> bool:
+    if len(url) >= 3 and url[1] == ":" and url[2] in ("/", "\\"):
+        return True
+    if len(url) >= 3 and url[0] == "/" and url[1:2].isalpha() and url[2] in ("/", "\\"):
+        return True
+    return False
+
+
 def register_commands(app: typer.Typer) -> None:
     @app.command()  # type: ignore[untyped-decorator]
     def import_(
-        url: str = typer.Argument(..., help="URL or https:// URL to a YAML snippet collection"),
+        url: str = typer.Argument(..., help="URL or path to a snippet collection"),
+        format: str | None = typer.Option(
+            None,
+            "--format",
+            "-f",
+            help="Import format: yaml, json, markdown. Default: auto-detect",
+        ),
         dry_run: bool = typer.Option(False, "--dry-run", help="Preview snippets without importing"),
     ) -> None:
-        """Import snippets from a remote YAML file."""
+        """Import snippets from a remote or local file."""
         parsed = urllib.parse.urlparse(url)
-        if parsed.scheme not in {"", "https"}:
+        if parsed.scheme not in {"", "https"} and not _is_windows_abs_path(url):
             console.print("[red]Only https:// URLs are supported for remote imports.[/red]")
             raise typer.Exit(1)
+
+        normalized_format = None
+        if format:
+            normalized_format = format.lower()
+            if normalized_format not in {"yaml", "json", "markdown"}:
+                console.print(f"[red]Unsupported format: {format}. Use yaml, json, or markdown.[/red]")
+                raise typer.Exit(1)
 
         console.print(f"[bold]Importing from:[/bold] {url}")
         if dry_run:
@@ -64,7 +84,7 @@ def register_commands(app: typer.Typer) -> None:
             raise typer.Exit(1) from exc
 
         try:
-            snippets = parse_yaml_import(raw)
+            snippets = parse_import(raw, format=normalized_format)
         except ValueError as exc:
             console.print(f"[red]Invalid import format:[/red] {exc}")
             raise typer.Exit(1) from exc
@@ -91,15 +111,7 @@ def register_commands(app: typer.Typer) -> None:
         config, storage, _ = _get_context()
         imported = 0
         for item in snippets:
-            snippet = Snippet(
-                content=item.content,
-                metadata=SnippetMetadata(
-                    title=item.title,
-                    description="",
-                    language=item.language,
-                ),
-                tags=item.tags,
-            )
+            snippet = to_snippet(item)
             try:
                 existing = storage.find_by_content_hash(snippet.content_hash)
             except Exception:
