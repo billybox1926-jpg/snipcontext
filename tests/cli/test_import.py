@@ -254,8 +254,10 @@ def test_is_tar_gz_detects_gzip_magic() -> None:
 
 
 def test_safe_member_path_blocks_traversal() -> None:
-    with pytest.raises(ValueError, match="escapes temp dir"):
+    with pytest.raises(ValueError, match="Parent directory traversal is not allowed"):
         _safe_member_path("../../etc/passwd", "/tmp/snip_import_abc")
+    with pytest.raises(ValueError, match="Parent directory traversal is not allowed"):
+        _safe_member_path(r"..\..\etc\passwd", "/tmp/snip_import_abc")
 
 
 def test_safe_member_path_blocks_absolute() -> None:
