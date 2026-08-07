@@ -101,9 +101,7 @@ def register_commands(app: typer.Typer) -> None:
                     raise RuntimeError("Tar.gz source must be binary")
                 snippets = import_tar_gz(raw)
             elif (
-                normalized_format is None
-                and isinstance(raw, bytes)
-                and raw.startswith(b"\x1f\x8b")
+                normalized_format is None and isinstance(raw, bytes) and raw.startswith(b"\x1f\x8b")
             ):
                 snippets = import_tar_gz(raw)
             else:

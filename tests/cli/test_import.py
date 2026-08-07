@@ -279,7 +279,7 @@ def test_import_tar_gz_happy_path(tmp_path: Path) -> None:
     archive = tmp_path / "snippets.tar.gz"
     with tarfile.open(archive, "w:gz") as tar:
         info = tarfile.TarInfo(name="snippet.yaml")
-        payload = b"- title: Archive YAML\n  content: \"x=1\"\n  lang: python\n"
+        payload = b'- title: Archive YAML\n  content: "x=1"\n  lang: python\n'
         info.size = len(payload)
         tar.addfile(info, io.BytesIO(payload))
     snippets = import_tar_gz(archive.read_bytes())
@@ -339,7 +339,9 @@ def test_import_cli_accepts_local_tar_gz_file(tmp_path: Path) -> None:
     assert "Tar YAML" in result.output
 
 
-def test_import_tar_gz_layered_defense_rejects_traversal_even_without_data_filter(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_import_tar_gz_layered_defense_rejects_traversal_even_without_data_filter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     import warnings
 
     monkeypatch.delattr(tarfile, "data_filter", raising=False)
@@ -351,7 +353,9 @@ def test_import_tar_gz_layered_defense_rejects_traversal_even_without_data_filte
     assert snippets == []
 
 
-def test_import_tar_gz_incremental_cap_triggers_during_extraction(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_import_tar_gz_incremental_cap_triggers_during_extraction(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(importers, "MAX_ARCHIVE_EXTRACTED_BYTES", 512)
     archive = tmp_path / "bomb.tar.gz"
     with tarfile.open(archive, "w:gz") as tar:
@@ -363,7 +367,9 @@ def test_import_tar_gz_incremental_cap_triggers_during_extraction(tmp_path: Path
         import_tar_gz(archive.read_bytes())
 
 
-def _build_tar_gz(members: list[tuple[str, bytes]], compressed_size_cap: int | None = None) -> bytes:
+def _build_tar_gz(
+    members: list[tuple[str, bytes]], compressed_size_cap: int | None = None
+) -> bytes:
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         for name, payload in members:

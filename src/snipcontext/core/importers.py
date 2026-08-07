@@ -176,9 +176,7 @@ def import_tar_gz(raw: bytes) -> list[ImportedSnippet]:
     symlink/hardlink/special-file rejection.
     """
     if len(raw) > MAX_ARCHIVE_DOWNLOAD_BYTES:
-        raise ValueError(
-            f"Archive too large: {len(raw)} bytes > {MAX_ARCHIVE_DOWNLOAD_BYTES}"
-        )
+        raise ValueError(f"Archive too large: {len(raw)} bytes > {MAX_ARCHIVE_DOWNLOAD_BYTES}")
 
     tmp_dir = tempfile.mkdtemp(prefix="snip_import_")
     tmp_dir = os.path.realpath(tmp_dir)
