@@ -158,14 +158,22 @@ def _is_supported_member(member: tarfile.TarInfo) -> bool:
 def _safe_member_path(member_name: str, resolved_tmp_dir: str) -> str:
     if os.path.isabs(member_name):
         raise ValueError(f"Absolute paths are not allowed in archives: {member_name}")
-    if ".." in member_name.split(os.sep):
-        raise ValueError(f"Parent directory traversal is not allowed: {member_name}")
+    # Reject Windows-style absolute paths on non-Windows platforms too.
+    if len(member_name) >= 3 and member_name[1] == ":" and member_name[2] in ("/", "\\"):
+        raise ValueError(f"Absolute paths are not allowed in archives: {member_name}")
 
     member_path = os.path.normpath(os.path.join(resolved_tmp_dir, member_name))
     tmp_dir = os.path.normpath(resolved_tmp_dir)
 
     if not member_path.startswith(tmp_dir + os.sep) and member_path != tmp_dir:
         raise ValueError(f"Member path escapes temp dir: {member_name}")
+
+    # Defense-in-depth: also reject explicit traversal segments using both
+    # path separators so behavior is consistent across platforms.
+    parts = member_name.replace("\\", "/").split("/")
+    if ".." in parts:
+        raise ValueError(f"Parent directory traversal is not allowed: {member_name}")
+
     return member_path
 
 
