@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `sc import` command for importing snippet collections from YAML, JSON, Markdown, and `.tar.gz` sources.
+- Built-in collection support via `snipcontext:python-stdlib` for curated Python standard library patterns.
+- Preview mode for imports using `--dry-run` / `--list`.
+- `docs/import.md` with comprehensive import usage, formats, examples, and security guidance.
+
+### Changed
+- Imported snippets are automatically refreshed in the search index after import.
+- Import error messaging now includes built-in collection scheme guidance.
+
+### Fixed
+- Safe archive extraction rejects path traversal and unsupported members.
+- Import deduplication uses content hash checks to skip exact duplicates.
+
 ## [0.4.1] – 2026-06-23
 
 ### Added

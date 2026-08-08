@@ -307,6 +307,12 @@ snipcontext add "from fastapi import FastAPI" \
 # Search semantically
 snipcontext search "how to validate auth tokens"
 
+# Import curated collections
+snipcontext import snipcontext:python-stdlib
+snipcontext import https://raw.githubusercontent.com/org/snippets/main/python.yaml
+snipcontext import https://github.com/org/snippets/archive/main.tar.gz
+snipcontext import https://raw.githubusercontent.com/org/snippets/main/python.yaml --list
+
 # Search by tag
 snipcontext search "auth" --mode tag
 
@@ -784,6 +790,7 @@ pre-commit install
 
 - [Quick Start](#quick-start) — get started with semantic search
 - [`docs/search.md`](docs/search.md) — index types, auto-switch behavior, keyword fallback
+- [`docs/import.md`](docs/import.md) — importing snippets, archives, and built-in snippet collections
 - [`docs/configuration.md`](docs/configuration.md) — environment variables and YAML config
 - [`docs/security.md`](docs/security.md) — encryption at rest
 - [`docs/plugins.md`](docs/plugins.md) — plugin system and lifecycle hooks
