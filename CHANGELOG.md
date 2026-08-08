@@ -52,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Snapshot instability** – Tables now consistently use `+`, `-`, `|` borders. Environment variables and explicit ASCII box style are used to guarantee deterministic output.
 - **Mypy errors** – Fixed return type annotation in `SearchHistoryStore.toggle_favorite()` and silenced untyped decorator warning in A2A agent card router.
-- **Encryption skip in minimal install** – Tests that require `cryptography` now skip cleanly when the package is absent.
+- **Minimal install skip behavior** – Tests that require unavailable optional dependencies now skip cleanly when the package is absent.
 
 ### Deprecated
 - (None)
@@ -79,17 +79,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Interactive TUI mode (`tui/` module) — full terminal UI with commands, completer, and formatter
-- Optional dependency groups: `[semantic]`, `[encryption]`, `[tui]`, `[all]` — core CLI works without Rust toolchain (closes #62)
+- Optional dependency groups: `[semantic]`, `[tui]`, `[all]` — core CLI works without Rust toolchain (closes #62)
 
 ### Changed
-- `cryptography` moved from required to optional (`[encryption]` extra) — lazy-imported in `storage.py` with clear install message on missing dep
 - `sentence-transformers` and `faiss-cpu` moved to `[semantic]` extra — already lazy-imported in `search.py`
-- `sc encrypt`/`sc decrypt` commands gracefully skipped if cryptography not installed
+- `sentence-transformers` and `faiss-cpu` moved to `[semantic]` extra — already lazy-imported in `search.py`
+- `sc` commands gracefully skip unavailable optional features if extras are not installed
 - README updated with ARM/Termux install guidance and optional dep documentation
 - Sprint + Priority custom fields on project board with full issue tagging
 
 ### Fixed
-- **ARM/Termux compatibility** — Made Rust‑dependent packages (`pydantic-core`, `cryptography`) optional via dependency groups, resolving installation failures on ARM/Termux environments (closes #62).
+- **ARM/Termux compatibility** — Made Rust-dependent packages optional via dependency groups, resolving installation failures on ARM/Termux environments (closes #62).
 - Snippet content sanitization to prevent XSS in downstream rendering (closes #93)
   - New `core/sanitization.py` module: `sanitize_text()`, `sanitize_code()`, `sanitize_html()`, `sanitize_for_display()`
   - Applied to all export providers (generic, openai, cursor, claude) and CLI display
@@ -115,13 +115,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `sc stats` — collection analytics with bar charts
 - `sc providers` / `sc config-path` — utility commands
 - Auto-tagging via FAISS embeddings with similarity-based deduplication
-- Soft-delete support with encryption at rest (Fernet/AES-128)
+- Soft-delete support
 - Plugin system with entry points for providers and exporters
 - Stdin piping support for `sc add`
 - Multi-Python CI matrix (3.10–3.13)
 
 ### Changed
-- Optional dependency groups: `[semantic]`, `[encryption]`, `[tui]`, `[web]`, `[all]`
+- Optional dependency groups: `[semantic]`, `[tui]`, `[web]`, `[all]`
 - Core CLI works without Rust toolchain (closes #62)
 - Fixed conflicting short options across CLI commands
 
@@ -149,7 +149,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-tagging via FAISS embeddings (`sc add` suggests tags based on similarity)
 - Similarity-based deduplication on `sc add` (configurable threshold)
 - Soft-delete support (`StorageEngine.mark_deleted`, `sc delete`)
-- Encryption at rest (Fernet/AES-128, `--encrypt` and `--sensitive` flags)
 - `sc export` — export snippets for Claude, Cursor, OpenAI, or Generic Markdown
 - `sc edit` — edit existing snippets with field-level updates
 - `sc stats` — show collection statistics
