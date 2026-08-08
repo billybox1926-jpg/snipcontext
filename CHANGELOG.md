@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-08-09
+
+### Added
+- `sc import` command for importing snippet collections from YAML, JSON, Markdown, and `.tar.gz` sources.
+- Built-in collection support via `snipcontext:python-stdlib` for curated Python standard library patterns.
+- Preview mode for imports using `--dry-run` / `--list`.
+- `docs/import.md` with comprehensive import usage, formats, examples, and security guidance.
+- `docs/web.md` with `sc serve` usage, endpoints, and configuration.
+- `docs/tui.md` with `sc repl` usage, commands, and keyboard shortcuts.
+- **Ollama Provider**: Local-first export provider for Ollama
+  - Connects to local Ollama instance at `http://localhost:11434`
+  - Supports model selection via `--model` flag
+  - Graceful offline behavior with helpful error messages
+  - Optional dependency: `pip install snipcontext[ollama]`
+  - Configuration via `ollama` section in settings
+  - Documented in `docs/providers.md` and `docs/API.md`
+  - Health check support via `sc providers --health`
+- Configurable hybrid search weighting via `--semantic-weight` and `--keyword-weight` CLI flags and `search.semantic_weight` / `search.keyword_weight` config.
+- Windows-friendly `snip` console script alias to avoid `sc.exe` collision.
+
+### Changed
+- Imported snippets are automatically refreshed in the search index after import.
+- Import error messaging now includes built-in collection scheme guidance.
+- Default hybrid search weighting remains 0.7/0.3 for backward compatibility.
+
+### Fixed
+- Safe archive extraction rejects path traversal and unsupported members.
+- Import deduplication uses content hash checks to skip exact duplicates.
+- Ruff docstring warnings in `HybridSearch.search()`.
+
 ## [Unreleased]
 
 ### Added
