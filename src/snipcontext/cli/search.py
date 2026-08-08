@@ -50,6 +50,16 @@ def search(
     no_semantic: bool = typer.Option(
         False, "--no-semantic", help="Skip semantic search; use keyword-only mode"
     ),
+    semantic_weight: float | None = typer.Option(
+        None,
+        "--semantic-weight",
+        help="Semantic fusion weight for hybrid search (0.0-1.0). Defaults to config or 0.7.",
+    ),
+    keyword_weight: float | None = typer.Option(
+        None,
+        "--keyword-weight",
+        help="Keyword fusion weight for hybrid search (0.0-1.0). Defaults to 1 - semantic_weight.",
+    ),
     lang: str = typer.Option(
         None, "--lang", "-l", help="Filter by language (comma-separated, e.g. python,typescript)"
     ),
@@ -99,6 +109,8 @@ def search(
             min_score=threshold,
             fuzzy=fuzzy,
             no_semantic=no_semantic,
+            semantic_weight=semantic_weight,
+            keyword_weight=keyword_weight,
             lang_filter=lang_list,
             tag_filter=tag_list,
             boost_recent=boost_recent,
@@ -113,6 +125,8 @@ def search(
             min_score=threshold,
             fuzzy=fuzzy,
             no_semantic=no_semantic,
+            semantic_weight=semantic_weight,
+            keyword_weight=keyword_weight,
             lang_filter=lang_list,
             tag_filter=tag_list,
             boost_recent=boost_recent,
