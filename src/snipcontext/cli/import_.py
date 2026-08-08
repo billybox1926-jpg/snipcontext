@@ -17,6 +17,7 @@ from snipcontext.core.builtin_collections import (
     load_builtin_collection,
 )
 from snipcontext.core.importers import import_tar_gz, parse_import, to_snippet
+from snipcontext.core.models import Snippet
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -123,7 +124,12 @@ def register_commands(app: typer.Typer) -> None:
             ):
                 snippets = import_tar_gz(raw)
             else:
-                text = raw if isinstance(raw, str) else raw.decode("utf-8", errors="replace")
+                if isinstance(raw, str):
+                    text = raw
+                elif isinstance(raw, bytes):
+                    text = raw.decode("utf-8", errors="replace")
+                else:
+                    raise RuntimeError("Invalid import payload")
                 snippets = parse_import(text, format=normalized_format)
         except ValueError as exc:
             console.print(f"[red]Invalid import format:[/red] {exc}")
@@ -149,7 +155,7 @@ def register_commands(app: typer.Typer) -> None:
             return
 
         config, storage, search = _get_context()
-        imported_snippets: list[object] = []
+        imported_snippets: list[Snippet] = []
         imported = 0
         for item in snippets:
             snippet = to_snippet(item)
