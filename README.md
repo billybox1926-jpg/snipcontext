@@ -740,6 +740,8 @@ pre-commit install
 - [`docs/search.md`](docs/search.md) — index types, auto-switch behavior, keyword fallback
 - [`docs/import.md`](docs/import.md) — importing snippets, archives, and built-in snippet collections
 - [`docs/configuration.md`](docs/configuration.md) — environment variables and YAML config
+- [`docs/web.md`](docs/web.md) — local web API server (`sc serve`)
+- [`docs/tui.md`](docs/tui.md) — interactive terminal shell (`sc repl`)
 - [`docs/plugin-examples.md`](docs/plugin-examples.md) — example plugin implementations
 - [`docs/plugin-testing.md`](docs/plugin-testing.md) — testing plugin integrations
 - [`docs/providers.md`](docs/providers.md) — provider contract and custom provider guide
