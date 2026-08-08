@@ -20,7 +20,7 @@ pip install snipcontext[tui]
 - Search with hybrid/keyword/semantic modes
 - Add, edit, and delete snippets interactively
 - Tab completion for commands, flags, and snippet IDs
-- Command history navigation
+- Command history navigation with up/down arrows
 - Export snippets via REPL commands
 
 ## Commands

@@ -16,7 +16,7 @@ If neither an env var nor an explicit flag is provided, SnipContext walks up fro
 
 - **Windows:** `%LOCALAPPDATA%\SnipContext`
 - **macOS:** `~/Library/Application Support/SnipContext`
-- **Linux:** `~/.local/share/snapshot` (via `platformdirs`)
+- **Linux:** `~/.local/share/snipcontext` (via `platformdirs`)
 
 ## Project-Local Mode
 

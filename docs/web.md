@@ -28,15 +28,17 @@ pip install snipcontext[web]
 
 ## API Endpoints
 
+- `GET /` — API metadata and docs pointer
 - `GET /health` — health check
 - `GET /snippets` — list snippets
 - `POST /snippets` — create snippet
 - `GET /snippets/{id}` — get snippet
 - `PUT /snippets/{id}` — update snippet
 - `DELETE /snippets/{id}` — delete snippet
-- `GET /` — API metadata
+- Agent/router endpoints from `agent_card`, including the A2A Agent Card discovery route
 
 ## Notes
 
 - The web server reads from the active SnipContext storage/config.
 - For remote access, bind to a trusted interface and use transport-level security as needed.
+- Start the server from the CLI with `sc serve`, not `sc web`.
