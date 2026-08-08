@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from typing import Final
 
-import yaml
-
 from snipcontext.core.importers import ImportedSnippet, parse_yaml_import
 
 BUILTIN_COLLECTION_SCHEME: Final[str] = "snipcontext"

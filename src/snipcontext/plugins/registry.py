@@ -119,8 +119,8 @@ class _PluginRegistryImpl:
         from snipcontext.providers.claude import ClaudeProvider
         from snipcontext.providers.cursor import CursorProvider
         from snipcontext.providers.generic import GenericProvider
-        from snipcontext.providers.openai import OpenAIProvider
         from snipcontext.providers.ollama import OllamaProvider
+        from snipcontext.providers.openai import OpenAIProvider
 
         self._plugins.update(
             {

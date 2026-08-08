@@ -350,9 +350,9 @@ def test_import_cli_builtin_collection_preview() -> None:
 
 def test_import_cli_builtin_collection_import(tmp_path: Path) -> None:
     # Use a temp project-local directory so storage and index are isolated.
+    from snipcontext.cli.context import reset_context
     from snipcontext.config.settings import Config, StorageConfig
     from snipcontext.core.storage import StorageEngine
-    from snipcontext.cli.context import reset_context
 
     storage_root = tmp_path / "collection"
     config = Config(
@@ -383,8 +383,6 @@ def test_import_cli_builtin_collection_import(tmp_path: Path) -> None:
 
 
 def test_import_cli_refreshes_search_index(tmp_path: Path) -> None:
-    import yaml
-    from snipcontext.cli.import_ import _get_context
 
     target = tmp_path / "snippets.yaml"
     target.write_text(
@@ -397,7 +395,7 @@ def test_import_cli_refreshes_search_index(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    from snipcontext.core.models import Snippet, SnippetMetadata, Language
+    from snipcontext.core.models import Language, Snippet, SnippetMetadata
 
     snippet = Snippet(
         content="print(1)",

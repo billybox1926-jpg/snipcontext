@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from snipcontext.core.sanitization import sanitize_code, sanitize_text
 from snipcontext.plugins.base import PluginManifest
-from snipcontext.providers.base import BaseProvider, ExportFormat, EXPORT_VERSION, ProviderError
+from snipcontext.providers.base import EXPORT_VERSION, BaseProvider, ExportFormat, ProviderError
 
 if TYPE_CHECKING:
     from snipcontext.core.models import Snippet
@@ -40,7 +40,9 @@ class OllamaProvider(BaseProvider):
         config = get_config()
         self.endpoint = endpoint or config.ollama.endpoint or self.DEFAULT_ENDPOINT
         self.model_name = model_name or config.ollama.model_name or self.DEFAULT_MODEL
-        self.timeout_seconds = timeout_seconds or config.ollama.timeout_seconds or self.DEFAULT_TIMEOUT
+        self.timeout_seconds = (
+            timeout_seconds or config.ollama.timeout_seconds or self.DEFAULT_TIMEOUT
+        )
         self._models_discovered = False
         self._available_models: list[str] = []
 
@@ -62,9 +64,7 @@ class OllamaProvider(BaseProvider):
             with self._get_client() as client:
                 response = client.get(self._model_endpoint())
         except Exception as exc:
-            raise ProviderError(
-                f"Unable to connect to Ollama at {self.endpoint}: {exc}"
-            ) from exc
+            raise ProviderError(f"Unable to connect to Ollama at {self.endpoint}: {exc}") from exc
 
         if response.status_code != 200:
             raise ProviderError(
@@ -102,7 +102,7 @@ class OllamaProvider(BaseProvider):
                 self._models_discovered = True
         return self._available_models
 
-    def export_single(self, snippet: "Snippet") -> str:
+    def export_single(self, snippet: Snippet) -> str:
         safe_title = sanitize_text(snippet.metadata.title or "Untitled")
         lines = [
             f"### Ollama snippet: {safe_title}",
@@ -136,7 +136,7 @@ class OllamaProvider(BaseProvider):
         )
         return "\n".join(lines)
 
-    def export_batch(self, snippets: list["Snippet"], title: str = "Code Context") -> str:
+    def export_batch(self, snippets: list[Snippet], title: str = "Code Context") -> str:
         safe_title = sanitize_text(title)
         lines = [
             f"### Ollama export: {safe_title}",

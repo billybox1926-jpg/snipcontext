@@ -292,6 +292,7 @@ class TestOllamaProvider:
 
     def test_health_check_with_model_discovery(self, monkeypatch):
         from types import SimpleNamespace
+
         from snipcontext.providers.ollama import OllamaProvider
 
         class FakeResponse:

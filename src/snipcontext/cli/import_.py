@@ -50,8 +50,14 @@ def register_commands(app: typer.Typer) -> None:
     ) -> None:
         """Import snippets from a remote or local file."""
         parsed = urllib.parse.urlparse(url)
-        if parsed.scheme not in {"", "https", BUILTIN_COLLECTION_SCHEME} and not _is_windows_abs_path(url):
-            console.print("[red]Only https:// URLs or built-in collections are supported for remote imports.[/red]")
+        if parsed.scheme not in {
+            "",
+            "https",
+            BUILTIN_COLLECTION_SCHEME,
+        } and not _is_windows_abs_path(url):
+            console.print(
+                "[red]Only https:// URLs or built-in collections are supported for remote imports.[/red]"
+            )
             raise typer.Exit(1)
 
         normalized_format = None
@@ -65,9 +71,7 @@ def register_commands(app: typer.Typer) -> None:
 
         console.print(f"[bold]Importing from:[/bold] {url}")
         if preview:
-            console.print(
-                "[yellow]Dry run/preview enabled; no snippets will be written.[/yellow]"
-            )
+            console.print("[yellow]Dry run/preview enabled; no snippets will be written.[/yellow]")
 
         try:
             raw: bytes | str | None = None
