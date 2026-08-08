@@ -133,19 +133,19 @@ pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 >
 > **ARM / Android / Termux:** The `semantic` extra requires Rust to build native wheels. On platforms without pre-built wheels (ARM64, Android/Termux), install the core package only and use keyword search + export features. Semantic search gracefully degrades with clear error messages when its dependencies are missing.
 
-> **Windows Users:** The short alias `sc` is shadowed by the Windows built-in `sc.exe` (Service Control). Three workarounds are available:
+> **Windows Users:** The short alias `sc` is shadowed by the Windows built-in `sc.exe` (Service Control). Use the new `snip` command for a collision-free experience:
 >
-> 1. **Full command name** — always works after installation:
+> 1. **Preferred alias** — available after install/upgrade:
+>    ```powershell
+>    snip add "print('hello')" --title "Hello" --tag python
+>    ```
+> 2. **Full command name** — always works:
 >    ```powershell
 >    snipcontext add "print('hello')" --title "Hello" --tag python
 >    ```
-> 2. **Wrapper script** — shipped automatically with `pip install`; adds `snipcontext.cmd` to your Scripts directory:
+> 3. **Wrapper script** — shipped automatically with `pip install`; adds `snipcontext.cmd` to your Scripts directory:
 >    ```powershell
 >    snipcontext.cmd search "hello world"
->    ```
-> 3. **Shell alias** — for quick access in the current session:
->    ```cmd
->    doskey snip=python -m snipcontext $*
 >    ```
 >
 > ## Works with Hermes Agent
