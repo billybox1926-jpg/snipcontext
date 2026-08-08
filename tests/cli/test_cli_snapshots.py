@@ -101,7 +101,6 @@ def _normalize(output: str, temp_dir: Path) -> str:
     if not output.endswith("\n"):
         output += "\n"
     return output
-    
 
 
 @pytest.fixture(autouse=True)

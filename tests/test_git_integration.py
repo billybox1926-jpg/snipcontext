@@ -374,16 +374,16 @@ class TestGitIntegrationConflictDetection:
             ),
             encoding="utf-8",
         )
-        subprocess.run(
-            ["git", "-C", str(repo), "add", "-A"], check=True, capture_output=True
-        )
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True, capture_output=True)
         _commit_all(repo, "remote: add s1")
         subprocess.run(
             ["git", "-C", str(repo), "push", "--force", "origin", "remote:main"],
             check=True,
             capture_output=True,
         )
-        subprocess.run(["git", "-C", str(repo), "checkout", "main"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "checkout", "main"], check=True, capture_output=True
+        )
 
         # Local: reset to base and independently add s1 with different content
         subprocess.run(
