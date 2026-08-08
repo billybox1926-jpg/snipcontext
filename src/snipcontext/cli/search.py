@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 
 import typer
@@ -63,6 +64,7 @@ def search(
     group_by: str = typer.Option(
         None, "--group-by", help="Group results: language, tag, or source"
     ),
+    json_output: bool = typer.Option(False, "--json", help="Output results as JSON"),
 ) -> None:
     """Search snippets with semantic + keyword hybrid search.
 
@@ -133,6 +135,21 @@ def search(
         if lang_list or tag_list:
             console.print("[dim]Try removing --lang or --tag filters to broaden results[/dim]")
         raise typer.Exit(0)
+
+    if json_output:
+        output = [
+            {
+                "id": result.snippet.id,
+                "title": result.snippet.metadata.title,
+                "content": result.snippet.content,
+                "language": result.snippet.metadata.language.value,
+                "tags": result.snippet.tags,
+                "score": result.score,
+            }
+            for result in results
+        ]
+        console.print(json.dumps(output, indent=2, default=str))
+        return
 
     # Grouped output
     if group_by:
