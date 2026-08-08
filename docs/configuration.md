@@ -78,16 +78,6 @@ SnipContext Configuration
 | `SNIPCONTEXT_STORAGE__SNIPPETS_DIR` | Override the snippets subdirectory |
 | `SNIPCONTEXT_STORAGE__INDEX_DIR` | Override the index subdirectory |
 
-### Encryption
-
-| Variable | Description |
-|----------|-------------|
-| `SNIPCONTEXT_ENCRYPT_ENABLED` | Enable global encryption at rest |
-| `SNIPCONTEXT_ENCRYPTION_PASSPHRASE` | **Required** — passphrase for PBKDF2 key derivation |
-| `SNIPCONTEXT_ENCRYPT_KEY_ITERATIONS` | PBKDF2 iteration count (default: `100000`, minimum `10000`) |
-| `SNIPCONTEXT_ENCRYPT_KEY_SALT` | Base64‑encoded 16‑byte salt (auto‑generated if omitted) |
-
-For usage and threat model details, see [`docs/security.md`](security.md).
 
 ## Auto-Tagging
 
@@ -110,6 +100,35 @@ auto_tag:
   min_frequency: 2
   auto_accept: false
 ```
+
+## Search Weighting
+
+The hybrid search mode fuses semantic and keyword scores. You can tune the balance globally or per query.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SNIPCONTEXT_SEARCH_SEMANTIC_WEIGHT` | `0.7` | Semantic fusion weight in hybrid mode |
+| `SNIPCONTEXT_SEARCH_KEYWORD_WEIGHT` | `0.3` | Keyword fusion weight in hybrid mode |
+
+Or via YAML config:
+
+```yaml
+search:
+  default_mode: hybrid
+  semantic_weight: 0.7
+  keyword_weight: 0.3
+  top_k: 10
+  min_score: 0.1
+```
+
+Per-query overrides are available on the CLI:
+
+```bash
+snipcontext search "auth token" --semantic-weight 0.9
+snipcontext search "jwt" --keyword-weight 0.8
+```
+
+If only one weight is provided, the other is derived as `1 - provided_weight`.
 
 > **Requirement:** Install the `[semantic]` extra: `pip install snipcontext[semantic]`.
 

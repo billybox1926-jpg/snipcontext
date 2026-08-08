@@ -254,6 +254,8 @@ class HybridSearch:
         min_score: float | None = None,
         fuzzy: bool = False,
         no_semantic: bool = False,
+        semantic_weight: float | None = None,
+        keyword_weight: float | None = None,
         lang_filter: list[str] | None = None,
         tag_filter: list[str] | None = None,
         boost_recent: bool = False,
@@ -269,6 +271,10 @@ class HybridSearch:
             fuzzy: Enable fuzzy matching for keyword search.
             no_semantic: If True, force keyword-only mode even when semantic deps
                 are available.
+            semantic_weight: Override semantic fusion weight in hybrid mode.
+                Must be in [0, 1]. Defaults to config value.
+            keyword_weight: Override keyword fusion weight in hybrid mode.
+                Must be in [0, 1]. Defaults to `1 - semantic_weight`.
             lang_filter: Only return snippets whose language is in this list.
             tag_filter: Only return snippets whose tags include ALL of these (AND).
             boost_recent: Add a recency bonus so newer snippets rank higher.
@@ -283,6 +289,15 @@ class HybridSearch:
         mode = SearchMode(mode or self._config.search.default_mode)
         min_score = min_score if min_score is not None else self._config.search.min_score
         storage = StorageEngine(self._config)
+
+        if semantic_weight is not None:
+            semantic_weight = max(0.0, min(1.0, semantic_weight))
+        if keyword_weight is not None:
+            keyword_weight = max(0.0, min(1.0, keyword_weight))
+        if semantic_weight is not None and keyword_weight is None:
+            keyword_weight = max(0.0, min(1.0, 1.0 - semantic_weight))
+        elif keyword_weight is not None and semantic_weight is None:
+            semantic_weight = max(0.0, min(1.0, 1.0 - keyword_weight))
 
         # Normalise filters
         lang_set: set[str] | None = None
@@ -311,7 +326,15 @@ class HybridSearch:
         elif mode == SearchMode.SEMANTIC:
             results = self._semantic_search(query, top_k, min_score, storage)
         else:
-            results = self._hybrid_search(query, top_k, min_score, fuzzy, storage)
+            results = self._hybrid_search(
+                query,
+                top_k,
+                min_score,
+                fuzzy,
+                storage,
+                semantic_weight=semantic_weight,
+                keyword_weight=keyword_weight,
+            )
 
         # Apply post-search filters
         if lang_set or tag_set:
@@ -356,10 +379,12 @@ class HybridSearch:
         min_score: float,
         fuzzy: bool,
         storage: StorageEngine,
+        semantic_weight: float | None = None,
+        keyword_weight: float | None = None,
     ) -> list[SearchResult]:
         """Weighted fusion of semantic and keyword scores."""
-        w_sem = self._config.search.semantic_weight
-        w_kw = self._config.search.keyword_weight
+        w_sem = semantic_weight if semantic_weight is not None else self._config.search.semantic_weight
+        w_kw = keyword_weight if keyword_weight is not None else self._config.search.keyword_weight
 
         # Semantic results (if index available)
         sem_scores: dict[str, float] = {}
@@ -564,6 +589,8 @@ class HybridSearch:
         min_score: float | None = None,
         fuzzy: bool = False,
         no_semantic: bool = False,
+        semantic_weight: float | None = None,
+        keyword_weight: float | None = None,
         lang_filter: list[str] | None = None,
         tag_filter: list[str] | None = None,
         boost_recent: bool = False,
@@ -583,13 +610,15 @@ class HybridSearch:
             min_score: Minimum relevance score.
             fuzzy: Enable fuzzy matching.
             no_semantic: Force keyword-only mode.
+            semantic_weight: Override semantic fusion weight for underlying searches.
+            keyword_weight: Override keyword fusion weight for underlying searches.
             lang_filter: Filter by language.
             tag_filter: Filter by tags (AND).
             boost_recent: Weight newer snippets higher.
             explain: Attach scoring breakdown.
 
         Returns:
-            Merged, deduplicated, ranked list of SearchResults.
+            Merged, deduped, ranked list of SearchResults.
         """
         if not queries:
             return []
@@ -608,6 +637,8 @@ class HybridSearch:
                 min_score=min_score,
                 fuzzy=fuzzy,
                 no_semantic=no_semantic,
+                semantic_weight=semantic_weight,
+                keyword_weight=keyword_weight,
                 explain=False,  # explanation added after merge
             )
             per_query.append(results)

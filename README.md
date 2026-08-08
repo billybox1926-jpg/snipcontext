@@ -42,13 +42,13 @@ Save, search, tag, and instantly inject your best boilerplate, patterns, and con
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| Rich snippet saving with tags, metadata, and versioning | ✅ | Full CRUD with soft-delete and encryption |
+| Rich snippet saving with tags, metadata, and versioning | ✅ | Full CRUD with soft-delete |
 | **Semantic search** with local embeddings | ✅ | sentence-transformers + FAISS, runs offline |
 | **Hybrid search** — semantic + keyword fusion | ✅ | Configurable weights, TF-IDF + embeddings |
 | LLM-optimized export providers | ✅ | Claude XML, Cursor, OpenAI, Generic Markdown |
 | Auto-tagging via embeddings | ✅ | Suggests tags based on similar snippets |
 | Similarity-based deduplication | ✅ | Warns when adding near-duplicate snippets |
-| Encryption at rest | ✅ | Fernet (AES-128) with PBKDF2 key derivation |
+| Semantic search | ✅ | Local embeddings with FAISS |
 | File watchdog / real-time indexing | ✅ | Auto-reindex on file changes |
 | Plugin system | ✅ | Entry points for providers and exporters |
 | CLI + Python library | ✅ | Use from terminal or import as a module |
@@ -121,7 +121,6 @@ pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 
 > **📦 Dependency Footprint:** SnipContext's core (add, list, edit, delete, keyword search, export) has no heavy dependencies. Optional features are split into extras:
 > - `pip install snipcontext[semantic]` — semantic search with sentence-transformers + FAISS (~500MB, requires Rust toolchain on ARM)
-> - `pip install snipcontext[encryption]` — encryption at rest with Fernet/AES-128 (requires Rust toolchain on ARM)
 > - `pip install snipcontext[tui]` — interactive terminal UI
 > - `pip install snipcontext[all]` — all optional features
 >
@@ -132,21 +131,21 @@ pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 > snipcontext search "hello world" --no-semantic
 > ```
 >
-> **ARM / Android / Termux:** The `semantic` and `encryption` extras require Rust to build native wheels. On platforms without pre-built wheels (ARM64, Android/Termux), install the core package only and use keyword search + export features. Semantic search and encryption gracefully degrade with clear error messages when their dependencies are missing.
+> **ARM / Android / Termux:** The `semantic` extra requires Rust to build native wheels. On platforms without pre-built wheels (ARM64, Android/Termux), install the core package only and use keyword search + export features. Semantic search gracefully degrades with clear error messages when its dependencies are missing.
 
-> **Windows Users:** The short alias `sc` is shadowed by the Windows built-in `sc.exe` (Service Control). Three workarounds are available:
+> **Windows Users:** The short alias `sc` is shadowed by the Windows built-in `sc.exe` (Service Control). Use the new `snip` command for a collision-free experience:
 >
-> 1. **Full command name** — always works after installation:
+> 1. **Preferred alias** — available after install/upgrade:
+>    ```powershell
+>    snip add "print('hello')" --title "Hello" --tag python
+>    ```
+> 2. **Full command name** — always works:
 >    ```powershell
 >    snipcontext add "print('hello')" --title "Hello" --tag python
 >    ```
-> 2. **Wrapper script** — shipped automatically with `pip install`; adds `snipcontext.cmd` to your Scripts directory:
+> 3. **Wrapper script** — shipped automatically with `pip install`; adds `snipcontext.cmd` to your Scripts directory:
 >    ```powershell
 >    snipcontext.cmd search "hello world"
->    ```
-> 3. **Shell alias** — for quick access in the current session:
->    ```cmd
->    doskey snip=python -m snipcontext $*
 >    ```
 >
 > ## Works with Hermes Agent
@@ -169,7 +168,7 @@ Two options for running without a Python environment:
 # Core features only (keyword search, export)
 uv tool install snipcontext
 
-# All features (semantic search, encryption, TUI, web)
+# All features (semantic search, TUI, web)
 uv tool install "snipcontext[all]"
 
 # Use directly — uv manages the venv invisibly
@@ -182,7 +181,7 @@ Download from the [latest GitHub Release](https://github.com/billybox1926-jpg/sn
 
 | Variant | Includes | Size (approx.) |
 |---------|----------|---------------|
-| `snipcontext-<platform>` | Everything (semantic, encryption, TUI, web) | ~200MB |
+| `snipcontext-<platform>` | Everything (semantic, TUI, web) | ~200MB |
 | `snipcontext-<platform>-minimal` | Core only (keyword search, export) | ~80MB |
 
 ```bash
@@ -209,10 +208,7 @@ pyinstaller snipcontext.spec
 
 ### Security Considerations
 
-- **Encryption at rest:** Uses Fernet (AES-128-CBC with HMAC) with PBKDF2 key derivation (100k iterations). Passphrase is read from `SNIPCONTEXT_ENCRYPTION_PASSPHRASE` env var — **never pass it on the command line** (shell history leak).
-- **No default passphrase:** If encryption is enabled but `SNIPCONTEXT_ENCRYPTION_PASSPHRASE` is not set, the tool raises an error rather than falling back to a known default. This prevents a false sense of security.
-- **stdin for sensitive content:** Use `sc add --file secret.py` or pipe via stdin (`cat secret.py | sc add --file`) to avoid shell history leaks with `--encrypt`.
-- **Salt:** Auto-generated on first use and persisted to the config file. Back up your config file to avoid losing access to encrypted snippets.
+- **stdin for sensitive content:** Use `sc add --file secret.py` or pipe via stdin (`cat secret.py | sc add --file`) to avoid shell history leaks.
 - **No network calls:** All processing is local. No data leaves your machine.
 
 ```bash
@@ -413,7 +409,7 @@ snipcontext stats --detailed
 snipcontext stats --json
 ```
 
-Shows: total snippets, tags, languages, encrypted count, size, dates, language distribution, top tags, access stats, and size metrics (detailed).
+Shows: total snippets, tags, languages, size, dates, language distribution, top tags, access stats, and size metrics (detailed).
 
 #### `sc providers`
 
@@ -476,7 +472,7 @@ for r in results:
 SnipContext is tested on the following platforms. Features marked with `⚠️` are
 conditionally available; see the notes below.
 
-| Platform | Core CLI | Semantic Search | Encryption | TUI |
+| Platform | Core CLI | Semantic Search | TUI | Web |
 |----------|----------|-----------------|------------|-----|
 | **Linux x86_64** | ✅ | ✅ | ✅ | ✅ |
 | **macOS x86_64** | ✅ | ✅ | ✅ | ✅ |
@@ -485,9 +481,9 @@ conditionally available; see the notes below.
 | **Linux ARM (Raspberry Pi, etc.)** | ✅ | ⚠️* | ⚠️* | ✅ |
 | **Android / Termux** | ⚠️** | ❌ | ❌ | ✅ |
 
-*\* `semantic` and `encryption` extras require a Rust toolchain to compile native
+*\* `semantic` extra requires a Rust toolchain to compile native
 wheels on ARM. Install Rust (`rustup` or distro packages) before running
-`pip install snipcontext[semantic]` or `pip install snipcontext[encryption]`.*
+`pip install snipcontext[semantic]`.*
 *\*\* The core CLI may work on Termux, but `pydantic-core` currently requires a
 Rust toolchain with stdlib support, which is not available there by default.
 See [#105](https://github.com/billybox1926-jpg/snipcontext/issues/105).*
@@ -504,10 +500,9 @@ pip install snipcontext
 
 Optional extras unlock additional features:
 
-| Extra | Description | Required for |
+|| Extra | Description | Required for |
 |-------|-------------|--------------|
 | `[semantic]` | sentence-transformers + FAISS | Semantic search, auto-tagging, deduplication |
-| `[encryption]` | `cryptography` (PBKDF2 + Fernet) | `sc add --encrypt`, `sc encrypt`, `sc decrypt` |
 | `[tui]` | `textual` + `prompt-toolkit` | `sc tui` |
 | `[all]` | Every extra | Full feature set |
 
@@ -533,54 +528,6 @@ pip install "snipcontext[all]"
 - [#105](https://github.com/billybox1926-jpg/snipcontext/issues/105) — ARM/Termux install blocker (`pydantic-core` / Rust toolchain)
 - [#91](https://github.com/billybox1926-jpg/snipcontext/issues/91) — Optional dependency groups (extras)
 - [#106](https://github.com/billybox1926-jpg/snipcontext/issues/106) — ARM CI test matrix
-
----
-
-## 🔐 Encryption at Rest
-
-SnipContext supports **Fernet (AES-128)** encryption for sensitive snippets. When enabled, snippet content is encrypted at rest using a key derived from a passphrase via PBKDF2 (100k iterations).
-
-### Enable Encryption
-
-```bash
-# Enable encryption (required)
-export SNIPCONTEXT_ENCRYPT_ENABLED=true
-
-# Set passphrase (used for key derivation)
-export SNIPCONTEXT_ENCRYPTION_PASSPHRASE="your-secure-passphrase"
-
-# Optional: persist salt to config (auto-generated if omitted)
-export SNIPCONTEXT_ENCRYPT_KEY_SALT="base64-encoded-salt"
-```
-
-### Encrypt Snippets
-
-```bash
-# Encrypt a new snippet
-snipcontext add "api_key = 'sk-12345'" \
-  --title "API Key" \
-  --tag secret \
-  --encrypt
-
-# Mark as sensitive (auto-enables encryption)
-snipcontext add "password = 'secret123'" \
-  --title "DB Password" \
-  --sensitive
-```
-
-### Decrypt for Viewing/Editing
-
-```bash
-# Decrypt for viewing
-snipcontext decrypt <snippet-id>
-
-# Encrypt an existing snippet
-snipcontext encrypt <snippet-id>
-```
-
-> **Note:** When encrypted, the plaintext `content` is cleared from storage. The `encrypted_content` field stores the encrypted data. Use `snipcontext decrypt <id>` to restore plaintext for editing.
->
-> For the full security guide, see [`docs/security.md`](docs/security.md).
 
 ---
 
@@ -668,7 +615,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed design documenta
 - [x] Plugin system with entry points
 - [x] Python library distribution (PyPI)
 - [x] Auto-tagging and deduplication
-- [x] Encryption at rest
+- [x] Soft-delete support
 - [x] File watchdog / real-time indexing
 - [ ] Import from GitHub Gists
 - [ ] Import from Git repositories
@@ -793,8 +740,8 @@ pre-commit install
 - [`docs/search.md`](docs/search.md) — index types, auto-switch behavior, keyword fallback
 - [`docs/import.md`](docs/import.md) — importing snippets, archives, and built-in snippet collections
 - [`docs/configuration.md`](docs/configuration.md) — environment variables and YAML config
-- [`docs/security.md`](docs/security.md) — encryption at rest
-- [`docs/plugins.md`](docs/plugins.md) — plugin system and lifecycle hooks
+- [`docs/web.md`](docs/web.md) — local web API server (`sc serve`)
+- [`docs/tui.md`](docs/tui.md) — interactive terminal shell (`sc repl`)
 - [`docs/plugin-examples.md`](docs/plugin-examples.md) — example plugin implementations
 - [`docs/plugin-testing.md`](docs/plugin-testing.md) — testing plugin integrations
 - [`docs/providers.md`](docs/providers.md) — provider contract and custom provider guide
