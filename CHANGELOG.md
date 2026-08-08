@@ -5,10 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.1] - 2026-08-08
+## [0.6.2] - 2026-08-09
 
 ### Changed
-- Patch release to ensure clean PyPI publish pipeline.
+- Workflow: publish job now skips build/publish if version already exists on PyPI.
+- Docs: corrected Linux fallback path in `configuration.md`.
+- Docs: added `help <command>` note to TUI guide.
+- Docs: noted A2A Agent Card route in `web.md`.
 
 ## [0.6.0] - 2026-08-09
 
@@ -39,32 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Safe archive extraction rejects path traversal and unsupported members.
 - Import deduplication uses content hash checks to skip exact duplicates.
 - Ruff docstring warnings in `HybridSearch.search()`.
-
-## [Unreleased]
-
-### Added
-- `sc import` command for importing snippet collections from YAML, JSON, Markdown, and `.tar.gz` sources.
-- Built-in collection support via `snipcontext:python-stdlib` for curated Python standard library patterns.
-- Preview mode for imports using `--dry-run` / `--list`.
-- `docs/import.md` with comprehensive import usage, formats, examples, and security guidance.
-- `docs/web.md` with `sc serve` usage, endpoints, and configuration.
-- `docs/tui.md` with `sc repl` usage, commands, and keyboard shortcuts.
-- **Ollama Provider**: Local-first export provider for Ollama
-  - Connects to local Ollama instance at `http://localhost:11434`
-  - Supports model selection via `--model` flag
-  - Graceful offline behavior with helpful error messages
-  - Optional dependency: `pip install snipcontext[ollama]`
-  - Configuration via `ollama` section in settings
-  - Documented in `docs/providers.md` and `docs/API.md`
-  - Health check support via `sc providers --health`
-
-### Changed
-- Imported snippets are automatically refreshed in the search index after import.
-- Import error messaging now includes built-in collection scheme guidance.
-
-### Fixed
-- Safe archive extraction rejects path traversal and unsupported members.
-- Import deduplication uses content hash checks to skip exact duplicates.
 
 ## [0.4.1] – 2026-06-23
 
@@ -286,3 +263,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rich CLI with Typer
 - Plugin system with entry points
 - Python library distribution (PyPI)
+
+[0.6.2]: https://github.com/billybox1926-jpg/snipcontext/compare/v0.6.1...v0.6.2
+[0.6.1]: https://github.com/billybox1926-jpg/snipcontext/compare/v0.6.0...v0.6.1
