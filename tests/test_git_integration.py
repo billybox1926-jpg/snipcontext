@@ -323,6 +323,93 @@ class TestGitIntegrationConflictDetection:
         assert not report.has_conflicts
         assert report.summary() == "No conflicting snippets found."
 
+    def test_both_sides_added_same_id_is_conflict(self, tmp_path: Path) -> None:
+        """If the same snippet ID is added independently on both sides, it's a conflict."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        snippets_dir = repo / "snippets"
+        snippets_dir.mkdir()
+
+        config = Config(
+            storage=StorageConfig(
+                data_dir=repo,
+                snippets_dir="snippets",
+                index_dir="index",
+            )
+        )
+        storage = StorageEngine(config)
+
+        remote = _make_bare_remote(tmp_path)
+        _init_git_repo(repo)
+        subprocess.run(
+            ["git", "-C", str(repo), "remote", "add", "origin", str(remote)],
+            check=True,
+            capture_output=True,
+        )
+
+        # Base commit (no s1)
+        base_sha = _commit_all(repo, "base: empty")
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "origin", "main"],
+            check=True,
+            capture_output=True,
+        )
+
+        # Remote branch: add s1
+        subprocess.run(
+            ["git", "-C", str(repo), "checkout", "-b", "remote"],
+            check=True,
+            capture_output=True,
+        )
+        (repo / "snippets").mkdir(parents=True, exist_ok=True)
+        (repo / "snippets" / "s1.json").write_text(
+            json.dumps(
+                {
+                    "id": "s1",
+                    "content": "print('remote-added')",
+                    "tags": [],
+                    "updated_at": _now_iso(),
+                    "deleted": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        subprocess.run(
+            ["git", "-C", str(repo), "add", "-A"], check=True, capture_output=True
+        )
+        _commit_all(repo, "remote: add s1")
+        subprocess.run(
+            ["git", "-C", str(repo), "push", "--force", "origin", "remote:main"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(["git", "-C", str(repo), "checkout", "main"], check=True, capture_output=True)
+
+        # Local: reset to base and independently add s1 with different content
+        subprocess.run(
+            ["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True
+        )
+        (repo / "snippets").mkdir(parents=True, exist_ok=True)
+        (repo / "snippets" / "s1.json").write_text(
+            json.dumps(
+                {
+                    "id": "s1",
+                    "content": "print('local-added')",
+                    "tags": [],
+                    "updated_at": _now_iso(),
+                    "deleted": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        _commit_all(repo, "local: add s1")
+
+        git = GitIntegration(repo)
+        report = git.detect_conflicts(storage, remote_name="origin")
+
+        assert report.has_conflicts
+        assert any(c.snippet_id == "s1" for c in report.conflicts)
+
 
 class TestGitCli:
     """End-to-end CLI tests for `sc git pull`/`push` against real repos."""

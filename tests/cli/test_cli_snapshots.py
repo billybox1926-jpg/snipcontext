@@ -82,6 +82,9 @@ def _normalize(output: str, temp_dir: Path) -> str:
     # Normalize dynamic dates so snapshots do not drift with calendar time.
     output = re.sub(r"\d{4}-\d{2}-\d{2}", "<date>", output)
 
+    # Strip ANSI escape sequences (colors/styles) for stable snapshots
+    output = re.sub(r"\x1b\[[0-9;]*m", "", output)
+
     # Blast the entire Storage section with a fixed template so terminal
     # width differences between environments cannot affect snapshots.
     pattern = r"(Storage:)(.*?)(\n\n|\n[+\-].*$|\Z)"
@@ -94,7 +97,11 @@ def _normalize(output: str, temp_dir: Path) -> str:
     # Normalize padding/whitespace for snapshot stability.
     output = "\n".join(line.rstrip() for line in output.splitlines())
     # Force ASCII table borders in case RICH_TERMINAL injection is late.
-    return output.translate(BOX_TRANSLATION)
+    output = output.translate(BOX_TRANSLATION)
+    if not output.endswith("\n"):
+        output += "\n"
+    return output
+    
 
 
 @pytest.fixture(autouse=True)
@@ -182,7 +189,7 @@ def test_sc_export_claude(snapshot, tmp_path: Path, mock_embeddings):
 
     result = _invoke(tmp_path, ["export", "--provider", "claude", "--output", "-"])
     assert result.exit_code == 0, result.output
-    snapshot.assert_match(result.output, "test_sc_export_claude")
+    snapshot.assert_match(_normalize(result.output, tmp_path), "test_sc_export_claude")
 
 
 def test_sc_export_openai(snapshot, tmp_path: Path, mock_embeddings):
@@ -200,7 +207,7 @@ def test_sc_export_openai(snapshot, tmp_path: Path, mock_embeddings):
 
     result = _invoke(tmp_path, ["export", "--provider", "openai", "--output", "-"])
     assert result.exit_code == 0, result.output
-    snapshot.assert_match(result.output, "test_sc_export_openai")
+    snapshot.assert_match(_normalize(result.output, tmp_path), "test_sc_export_openai")
 
 
 def test_sc_export_generic(snapshot, tmp_path: Path, mock_embeddings):
@@ -218,7 +225,7 @@ def test_sc_export_generic(snapshot, tmp_path: Path, mock_embeddings):
 
     result = _invoke(tmp_path, ["export", "--provider", "generic", "--output", "-"])
     assert result.exit_code == 0, result.output
-    snapshot.assert_match(result.output, "test_sc_export_generic")
+    snapshot.assert_match(_normalize(result.output, tmp_path), "test_sc_export_generic")
 
 
 def test_sc_stats(snapshot, tmp_path: Path, mock_embeddings):
