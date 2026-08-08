@@ -35,7 +35,7 @@ pip install snipcontext[web]
 - `GET /snippets/{id}` — get snippet
 - `PUT /snippets/{id}` — update snippet
 - `DELETE /snippets/{id}` — delete snippet
-- Agent/router endpoints from `agent_card`
+- Agent/router endpoints from `agent_card`, including the A2A Agent Card discovery route
 
 ## Notes
 
