@@ -62,6 +62,7 @@ Save, search, tag, and instantly inject your best boilerplate, patterns, and con
 | **Claude** | XML documents | Anthropic Claude |
 | **Cursor** | File-style headers | Cursor IDE |
 | **OpenAI** | Delineated sections | ChatGPT / GPT-4 |
+| **Ollama** | Local prompt format | Local Ollama models |
 
 ---
 

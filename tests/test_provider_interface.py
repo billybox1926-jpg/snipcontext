@@ -12,6 +12,7 @@ from snipcontext.providers.base import BaseProvider
 from snipcontext.providers.claude import ClaudeProvider
 from snipcontext.providers.cursor import CursorProvider
 from snipcontext.providers.generic import GenericProvider
+from snipcontext.providers.ollama import OllamaProvider
 from snipcontext.providers.openai import OpenAIProvider
 
 CONCRETE_PROVIDERS = [
@@ -19,6 +20,7 @@ CONCRETE_PROVIDERS = [
     CursorProvider,
     OpenAIProvider,
     GenericProvider,
+    OllamaProvider,
 ]
 
 

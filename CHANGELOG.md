@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Built-in collection support via `snipcontext:python-stdlib` for curated Python standard library patterns.
 - Preview mode for imports using `--dry-run` / `--list`.
 - `docs/import.md` with comprehensive import usage, formats, examples, and security guidance.
+- **Ollama Provider**: Local-first export provider for Ollama
+  - Connects to local Ollama instance at `http://localhost:11434`
+  - Supports model selection via `--model` flag
+  - Graceful offline behavior with helpful error messages
+  - Optional dependency: `pip install snipcontext[ollama]`
+  - Configuration via `ollama` section in settings
+  - Documented in `docs/providers.md` and `docs/API.md`
+  - Health check support via `sc providers --health`
 
 ### Changed
 - Imported snippets are automatically refreshed in the search index after import.

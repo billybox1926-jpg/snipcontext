@@ -9,6 +9,7 @@ from snipcontext.providers.base import ExportFormat
 from snipcontext.providers.claude import ClaudeProvider
 from snipcontext.providers.cursor import CursorProvider
 from snipcontext.providers.generic import GenericProvider
+from snipcontext.providers.ollama import OllamaProvider
 from snipcontext.providers.openai import OpenAIProvider
 
 
@@ -258,6 +259,70 @@ class TestOpenAIProvider:
         assert "Export schema version: 1.0.0" in result
 
 
+class TestOllamaProvider:
+    """Tests for the Ollama provider."""
+
+    def test_export_single(self):
+        provider = OllamaProvider()
+        snippet = create_test_snippets()[0]
+        result = provider.export_single(snippet)
+
+        assert "Ollama snippet" in result
+        assert "Model: llama3.2" in result
+        assert "```python" in result
+        assert "Hello World" in result
+
+    def test_export_batch(self):
+        provider = OllamaProvider()
+        snippets = create_test_snippets()
+        result = provider.export_batch(snippets, title="Ollama Context")
+
+        assert "Ollama export" in result
+        assert "Model: llama3.2" in result
+        assert "Use with: ollama generate --model llama3.2" in result
+        assert "Export schema version: 1.0.0" in result
+
+    def test_set_model_updates_export(self):
+        provider = OllamaProvider()
+        provider.set_model("llama3.3")
+        snippet = create_test_snippets()[0]
+        result = provider.export_single(snippet)
+
+        assert "Model: llama3.3" in result
+
+    def test_health_check_with_model_discovery(self, monkeypatch):
+        from types import SimpleNamespace
+        from snipcontext.providers.ollama import OllamaProvider
+
+        class FakeResponse:
+            status_code = 200
+
+            def json(self):
+                return [{"name": "llama3.2"}, {"name": "llama3.3"}]
+
+        class FakeClient:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def get(self, url):
+                return FakeResponse()
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        fake_httpx = SimpleNamespace(Client=FakeClient)
+        monkeypatch.setitem(__import__("sys").modules, "httpx", fake_httpx)
+
+        provider = OllamaProvider()
+        status = provider.health_check()
+
+        assert "ok (" in status
+        assert "models available" in status
+
+
 class TestProviderRegistry:
     """Tests for the plugin manager provider registry."""
 
@@ -272,6 +337,7 @@ class TestProviderRegistry:
         assert "cursor" in providers
         assert "generic" in providers
         assert "openai" in providers
+        assert "ollama" in providers
 
     def test_get_provider(self):
         from snipcontext.plugins.registry import PluginRegistry
