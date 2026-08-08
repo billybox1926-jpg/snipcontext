@@ -1,0 +1,92 @@
+{
+  "name": "snipcontext-vscode",
+  "displayName": "SnipContext",
+  "description": "VS Code extension for searching, inserting, and saving SnipContext snippets.",
+  "version": "0.1.0",
+  "publisher": "billybox1926-jpg",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "main": "./out/extension.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/billybox1926-jpg/snipcontext.git"
+  },
+  "bugs": {
+    "url": "https://github.com/billybox1926-jpg/snipcontext/issues"
+  },
+  "homepage": "https://github.com/billybox1926-jpg/snipcontext#readme",
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.6.0"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "snipcontext.search",
+        "title": "SnipContext: Search Snippets"
+      },
+      {
+        "command": "snipcontext.insert",
+        "title": "SnipContext: Insert Snippet"
+      },
+      {
+        "command": "snipcontext.saveSelection",
+        "title": "SnipContext: Save Selection as Snippet"
+      },
+      {
+        "command": "snipcontext.refresh",
+        "title": "SnipContext: Refresh Snippet List"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "snipcontext",
+          "title": "SnipContext",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "snipcontext": [
+        {
+          "id": "snipcontextSnippets",
+          "name": "Snippets"
+        }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "SnipContext",
+      "properties": {
+        "snipcontext.cliPath": {
+          "type": "string",
+          "default": "snipcontext",
+          "description": "Path to the SnipContext CLI executable."
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "snipcontext.search",
+        "key": "ctrl+shift+s",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "snipcontext.saveSelection",
+        "key": "ctrl+shift+alt+s",
+        "when": "editorHasSelection"
+      }
+    ]
+  }
+}
