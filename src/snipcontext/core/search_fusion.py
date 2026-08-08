@@ -383,7 +383,9 @@ class HybridSearch:
         keyword_weight: float | None = None,
     ) -> list[SearchResult]:
         """Weighted fusion of semantic and keyword scores."""
-        w_sem = semantic_weight if semantic_weight is not None else self._config.search.semantic_weight
+        w_sem = (
+            semantic_weight if semantic_weight is not None else self._config.search.semantic_weight
+        )
         w_kw = keyword_weight if keyword_weight is not None else self._config.search.keyword_weight
 
         # Semantic results (if index available)
