@@ -24,45 +24,53 @@ jobs:
           pip install build requests
 
       - name: Check version is new
-        run: |
+        id: check_version
+        run: |-
           python - <<'EOF'
+          import json
+          import os
           import requests
-          import sys
           import re
 
-          # Extract version from __init__.py
           with open("src/snipcontext/__init__.py") as f:
               content = f.read()
           match = re.search(r'__version__\s*=\s*"([^"]+)"', content)
           if not match:
-              print("ERROR: Could not find __version__ in __init__.py")
-              sys.exit(1)
+              print("::error::Could not find __version__ in __init__.py")
+              raise SystemExit(1)
           version = match.group(1)
 
-          # Check if version already exists on PyPI
           pkg = "snipcontext"
           url = f"https://pypi.org/pypi/{pkg}/json"
           r = requests.get(url, timeout=10)
 
+          already_published = False
           if r.status_code == 200:
               releases = r.json().get("releases", {})
-              if version in releases:
-                  print(f"ERROR: Version {version} already exists on PyPI")
-                  sys.exit(1)
+              already_published = version in releases
 
-          print(f"OK: Version {version} is new, proceeding with publish")
+          if already_published:
+              print(f"::warning::Version {version} already exists on PyPI; skipping publish.")
+          else:
+              print(f"OK: Version {version} is new, proceeding with publish")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"already_published={str(already_published).lower()}\n")
           EOF
 
       - name: Build package
+        if: ${{ !startsWith(steps.check_version.outputs.already_published, 'true') }}
         run: python -m build
 
       - name: Publish to PyPI
+        if: ${{ !startsWith(steps.check_version.outputs.already_published, 'true') }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Verify install
-        run: |
+        if: ${{ !startsWith(steps.check_version.outputs.already_published, 'true') }}
+        run: |-
           pip install snipcontext --no-cache-dir
           python -c "import snipcontext; print(f'snipcontext {snipcontext.__version__} installed successfully')"
           snipcontext --help
