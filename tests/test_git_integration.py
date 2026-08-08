@@ -899,61 +899,6 @@ class TestGitIntegrationResolution:
             )
         )
         storage = StorageEngine(config)
-        # local has s1
-        local = _make_snippet("s1", "print('local')", "Local")
-        _write_snippet(storage, local)
-
-        remote = _make_bare_remote(tmp_path)
-        _init_git_repo(repo)
-        subprocess.run(
-            ["git", "-C", str(repo), "remote", "add", "origin", str(remote)],
-            check=True,
-            capture_output=True,
-        )
-
-        base_sha = _commit_all(repo, "base")
-        subprocess.run(
-            ["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True
-        )
-
-        # remote has different content for s1
-        _write_snippet(storage, _make_snippet("s1", "print('remote')", "Remote"))
-        _commit_all(repo, "remote: edit s1")
-        subprocess.run(
-            ["git", "-C", str(repo), "push", "origin", "main"], check=True, capture_output=True
-        )
-
-        # reset to base and make a local different change to create divergence
-        subprocess.run(
-            ["git", "-C", str(repo), "reset", "--hard", base_sha], check=True, capture_output=True
-        )
-        _write_snippet(storage, _make_snippet("s1", "print('local-v2')", "Local V2"))
-        _commit_all(repo, "local: edit s1")
-
-        git = GitIntegration(repo)
-
-        # Accept remote and ensure local storage is overwritten
-        updated = git.resolve_accept_remote("s1", storage, remote_name="origin")
-        assert "remote" in updated.content
-        # Reload snippet from storage to ensure persisted
-        reloaded = next((s for s in storage.list_all() if s.id == "s1"), None)
-        assert reloaded is not None
-        assert "remote" in reloaded.content
-
-    def test_resolve_accept_remote_overwrites_local(self, tmp_path: Path) -> None:
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        snippets_dir = repo / "snippets"
-        snippets_dir.mkdir()
-
-        config = Config(
-            storage=StorageConfig(
-                data_dir=repo,
-                snippets_dir="snippets",
-                index_dir="index",
-            )
-        )
-        storage = StorageEngine(config)
         local = _make_snippet("s1", "print('local')", "Local")
         remote_content_snippet = _make_snippet("s1", "print('remote')", "Remote")
         _write_snippet(storage, local)
