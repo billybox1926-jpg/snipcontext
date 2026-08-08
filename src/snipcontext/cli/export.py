@@ -24,6 +24,11 @@ def register_commands(app: typer.Typer) -> None:
         query: str | None = typer.Option(None, "--query", "-q", help="Export search results"),
         ids: list[str] = typer.Option([], "--id", help="Export specific snippet IDs"),
         provider: str = typer.Option("generic", "--provider", "-p", help="Export format provider"),
+        model: str | None = typer.Option(
+            None,
+            "--model",
+            help="Ollama model name to use for the ollama provider",
+        ),
         output: str | None = typer.Option(
             None, "--output", "-o", help="Output file (default: stdout)"
         ),
@@ -39,6 +44,14 @@ def register_commands(app: typer.Typer) -> None:
             console.print(f"[red]Unknown provider: {provider}[/red]")
             console.print(f"Available: {', '.join(registry.list_provider_names())}")
             raise typer.Exit(1) from err
+        if provider == "ollama" and model:
+            if hasattr(prov, "set_model"):
+                prov.set_model(model)
+            else:
+                console.print(
+                    "[red]Ollama model override is not supported for this provider.[/red]"
+                )
+                raise typer.Exit(1)
         snippets: list[Snippet] = []
         if ids:
             for sid in ids:

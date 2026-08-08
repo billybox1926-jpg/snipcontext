@@ -254,6 +254,7 @@ batch = generic.export_batch(
 | `claude` | XML | Anthropic Claude |
 | `cursor` | Markdown with file headers | Cursor IDE |
 | `openai` | Markdown with dividers | ChatGPT / OpenAI |
+| `ollama` | Prompt-style Markdown | Local Ollama models |
 
 All providers include snippet metadata by default (`include_metadata=True`):
 `title`, `description`, `language`, `tags`, `framework`, `version`, `source_url`, `author`, `confidence`, and `llm_optimized`.

@@ -6,6 +6,7 @@ import io
 import json
 import tarfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
@@ -177,7 +178,7 @@ def test_import_cli_accepts_local_yaml_file(tmp_path) -> None:
 """,
         encoding="utf-8",
     )
-    result = runner.invoke(app, ["import-", str(target)])
+    result = runner.invoke(app, ["import", str(target)])
     assert result.exit_code == 0, result.output
     assert "Local YAML" in result.output
 
@@ -188,7 +189,7 @@ def test_import_cli_accepts_local_json_file(tmp_path) -> None:
         json.dumps([{"title": "Local JSON", "content": "console.log(1)", "lang": "javascript"}]),
         encoding="utf-8",
     )
-    result = runner.invoke(app, ["import-", str(target)])
+    result = runner.invoke(app, ["import", str(target)])
     assert result.exit_code == 0, result.output
     assert "Local JSON" in result.output
 
@@ -199,30 +200,30 @@ def test_import_cli_dry_run_json(tmp_path) -> None:
         json.dumps({"title": "Preview JSON", "content": "x"}),
         encoding="utf-8",
     )
-    result = runner.invoke(app, ["import-", str(target), "--dry-run"])
+    result = runner.invoke(app, ["import", str(target), "--dry-run"])
     assert result.exit_code == 0, result.output
     assert "Preview JSON" in result.output
-    assert "Dry run enabled" in result.output
+    assert "Dry run/preview enabled" in result.output
 
 
 def test_import_cli_invalid_format_option(tmp_path) -> None:
     target = tmp_path / "snippets.yaml"
     target.write_text("- title: x\n  content: y\n", encoding="utf-8")
-    result = runner.invoke(app, ["import-", str(target), "--format", "xml"])
+    result = runner.invoke(app, ["import", str(target), "--format", "xml"])
     assert result.exit_code != 0
     assert "Unsupported format" in result.output
 
 
 def test_import_cli_missing_file() -> None:
-    result = runner.invoke(app, ["import-", "C:/missing/snippets.yaml"])
+    result = runner.invoke(app, ["import", "C:/missing/snippets.yaml"])
     assert result.exit_code != 0
     assert "File not found" in result.output
 
 
 def test_import_cli_rejects_file_scheme() -> None:
-    result = runner.invoke(app, ["import-", "file:///C:/tmp/snippets.yaml"])
+    result = runner.invoke(app, ["import", "file:///C:/tmp/snippets.yaml"])
     assert result.exit_code != 0
-    assert "Only https:// URLs are supported" in result.output
+    assert "Only https:// URLs or built-in collections are supported" in result.output
 
 
 def test_parse_import_yaml_preferred_over_json_like_fragment() -> None:
@@ -336,9 +337,92 @@ def test_import_cli_accepts_local_tar_gz_file(tmp_path: Path) -> None:
         payload = b"- title: Tar YAML\n  content: hi\n"
         info.size = len(payload)
         tar.addfile(info, io.BytesIO(payload))
-    result = runner.invoke(app, ["import-", str(target), "--format", "tar.gz"])
+    result = runner.invoke(app, ["import", str(target), "--format", "tar.gz"])
     assert result.exit_code == 0, result.output
-    assert "Tar YAML" in result.output
+
+
+def test_import_cli_builtin_collection_preview() -> None:
+    result = runner.invoke(app, ["import", "snipcontext:python-stdlib", "--list"])
+    assert result.exit_code == 0, result.output
+    assert "JSON Load" in result.output
+    assert "Pathlib Read File" in result.output
+
+
+def test_import_cli_builtin_collection_import(tmp_path: Path) -> None:
+    # Use a temp project-local directory so storage and index are isolated.
+    from snipcontext.config.settings import Config, StorageConfig
+    from snipcontext.core.storage import StorageEngine
+    from snipcontext.cli.context import reset_context
+
+    storage_root = tmp_path / "collection"
+    config = Config(
+        storage=StorageConfig(
+            data_dir=storage_root,
+            snippets_dir="snippets",
+            index_dir="index",
+        )
+    )
+    reset_context()
+    from snipcontext.config.settings import get_config
+
+    # Monkey-patch get_config to return the temp config for the CLI run.
+    original_get_config = get_config
+    try:
+        import snipcontext.config.settings as settings_module
+
+        settings_module.get_config = lambda: config  # type: ignore[assignment]
+        reset_context()
+        storage = StorageEngine(config)
+        result = runner.invoke(app, ["import", "snipcontext:python-stdlib"])
+        assert result.exit_code == 0, result.output
+        assert "Imported: JSON Load" in result.output
+        assert "Imported: Temporary File" in result.output
+        assert storage.count() == 4
+    finally:
+        settings_module.get_config = original_get_config  # type: ignore[assignment]
+
+
+def test_import_cli_refreshes_search_index(tmp_path: Path) -> None:
+    import yaml
+    from snipcontext.cli.import_ import _get_context
+
+    target = tmp_path / "snippets.yaml"
+    target.write_text(
+        """
+- title: "Search Refresh"
+  content: "print(1)"
+  lang: python
+  tags: [test]
+""",
+        encoding="utf-8",
+    )
+
+    from snipcontext.core.models import Snippet, SnippetMetadata, Language
+
+    snippet = Snippet(
+        content="print(1)",
+        metadata=SnippetMetadata(title="Search Refresh", description="", language=Language.PYTHON),
+        tags=["test"],
+    )
+
+    mock_config = MagicMock()
+    storage = MagicMock()
+    storage.find_by_content_hash.return_value = None
+    storage.save.return_value = None
+    storage.list_all.return_value = [snippet]
+
+    search = MagicMock()
+    search.indices_ready = True
+    search.add_snippet = MagicMock()
+    search.rebuild_keyword_index = MagicMock()
+    search.index_snippets = MagicMock()
+
+    with patch("snipcontext.cli.import_._get_context", return_value=(mock_config, storage, search)):
+        result = runner.invoke(app, ["import", str(target)])
+
+    assert result.exit_code == 0, result.output
+    search.add_snippet.assert_called_once()
+    search.rebuild_keyword_index.assert_called_once_with([snippet])
 
 
 def test_import_tar_gz_layered_defense_rejects_traversal_even_without_data_filter(

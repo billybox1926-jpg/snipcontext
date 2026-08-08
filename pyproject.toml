@@ -66,6 +66,10 @@ web = [
     "uvicorn[standard]>=0.32.0,<1.0",
     "httpx>=0.27.0,<1.0",
 ]
+# Optional Ollama integration
+ollama = [
+    "httpx>=0.27.0,<1.0",
+]
 # All optional features
 all = [
     "sentence-transformers>=3.0,<4.0",
@@ -100,6 +104,7 @@ claude = "snipcontext.providers.claude:ClaudeProvider"
 cursor = "snipcontext.providers.cursor:CursorProvider"
 openai = "snipcontext.providers.openai:OpenAIProvider"
 generic = "snipcontext.providers.generic:GenericProvider"
+ollama = "snipcontext.providers.ollama:OllamaProvider"
 [project.urls]
 Homepage = "https://github.com/billybox1926-jpg/snipcontext"
 Documentation = "https://github.com/billybox1926-jpg/snipcontext/blob/main/docs"

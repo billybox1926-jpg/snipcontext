@@ -81,3 +81,4 @@ conform so built-in and third-party providers are interchangeable.
 | `claude` | XML | Anthropic Claude |
 | `cursor` | Markdown with file headers | Cursor IDE |
 | `openai` | Markdown with dividers | ChatGPT / OpenAI |
+| `ollama` | Prompt-style Markdown | Local Ollama models |

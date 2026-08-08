@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.metadata
+import inspect
 import logging
 import re
 from typing import TYPE_CHECKING, Any
@@ -119,6 +120,7 @@ class _PluginRegistryImpl:
         from snipcontext.providers.cursor import CursorProvider
         from snipcontext.providers.generic import GenericProvider
         from snipcontext.providers.openai import OpenAIProvider
+        from snipcontext.providers.ollama import OllamaProvider
 
         self._plugins.update(
             {
@@ -126,6 +128,7 @@ class _PluginRegistryImpl:
                 "cursor": CursorProvider,
                 "generic": GenericProvider,
                 "openai": OpenAIProvider,
+                "ollama": OllamaProvider,
             }
         )
         for name, cls in list(self._plugins.items()):
@@ -147,7 +150,13 @@ class _PluginRegistryImpl:
         if self._loaded.get(name, False):
             return self._instances[name]
         plugin_cls = self._plugins[name]
-        plugin = plugin_cls()
+        kwargs: dict[str, Any] = {}
+        if config is not None:
+            init_sig = inspect.signature(plugin_cls.__init__)
+            for key, value in config.items():
+                if key != "self" and key in init_sig.parameters:
+                    kwargs[key] = value
+        plugin = plugin_cls(**kwargs)
         if hasattr(plugin, "on_load"):
             plugin.on_load()
         self._instances[name] = plugin

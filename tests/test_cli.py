@@ -202,11 +202,14 @@ class TestProvidersCommand:
         assert "claude" in result.output
         assert "generic" in result.output
         assert "openai" in result.output
+        assert "ollama" in result.output
 
     def test_providers_health(self):
         result, tmp = invoke("providers", "--health")
         assert result.exit_code == 0
         assert "Provider Health" in result.output
+        assert "ollama" in result.output
+        assert "unavailable" in result.output or "ok" in result.output
 
 
 class TestPluginsCommand:

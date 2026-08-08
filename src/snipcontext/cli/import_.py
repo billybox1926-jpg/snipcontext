@@ -11,7 +11,13 @@ from rich.console import Console
 from rich.panel import Panel
 
 from snipcontext.cli.context import get_context as _get_context
+from snipcontext.core.builtin_collections import (
+    BUILTIN_COLLECTION_SCHEME,
+    is_builtin_collection_source,
+    load_builtin_collection,
+)
 from snipcontext.core.importers import import_tar_gz, parse_import, to_snippet
+from snipcontext.core.models import Snippet
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -26,7 +32,7 @@ def _is_windows_abs_path(url: str) -> bool:
 
 
 def register_commands(app: typer.Typer) -> None:
-    @app.command()  # type: ignore[untyped-decorator]
+    @app.command("import")  # type: ignore[untyped-decorator]
     def import_(
         url: str = typer.Argument(..., help="URL or path to a snippet collection"),
         format: str | None = typer.Option(
@@ -35,12 +41,17 @@ def register_commands(app: typer.Typer) -> None:
             "-f",
             help="Import format: yaml, json, markdown, tar.gz. Default: auto-detect",
         ),
-        dry_run: bool = typer.Option(False, "--dry-run", help="Preview snippets without importing"),
+        preview: bool = typer.Option(
+            False,
+            "--dry-run",
+            "--list",
+            help="Preview snippets without importing",
+        ),
     ) -> None:
         """Import snippets from a remote or local file."""
         parsed = urllib.parse.urlparse(url)
-        if parsed.scheme not in {"", "https"} and not _is_windows_abs_path(url):
-            console.print("[red]Only https:// URLs are supported for remote imports.[/red]")
+        if parsed.scheme not in {"", "https", BUILTIN_COLLECTION_SCHEME} and not _is_windows_abs_path(url):
+            console.print("[red]Only https:// URLs or built-in collections are supported for remote imports.[/red]")
             raise typer.Exit(1)
 
         normalized_format = None
@@ -53,12 +64,17 @@ def register_commands(app: typer.Typer) -> None:
                 raise typer.Exit(1)
 
         console.print(f"[bold]Importing from:[/bold] {url}")
-        if dry_run:
-            console.print("[yellow]Dry run enabled; no snippets will be written.[/yellow]")
+        if preview:
+            console.print(
+                "[yellow]Dry run/preview enabled; no snippets will be written.[/yellow]"
+            )
 
         try:
             raw: bytes | str | None = None
-            if parsed.scheme == "https":
+            if is_builtin_collection_source(url):
+                # Built-in collections are handled separately below.
+                raw = None
+            elif parsed.scheme == "https":
                 try:
                     import httpx  # noqa: F401
                 except ModuleNotFoundError as exc:
@@ -92,11 +108,14 @@ def register_commands(app: typer.Typer) -> None:
             console.print(f"[red]Failed to read source:[/red] {exc}")
             raise typer.Exit(1) from exc
 
-        if raw is None:
+        if raw is None and not is_builtin_collection_source(url):
             raise RuntimeError("Failed to load source payload")
 
         try:
-            if normalized_format == "tar.gz":
+            if is_builtin_collection_source(url):
+                collection_name = url.split(":", 1)[1]
+                snippets = load_builtin_collection(collection_name)
+            elif normalized_format == "tar.gz":
                 if not isinstance(raw, bytes):
                     raise RuntimeError("Tar.gz source must be binary")
                 snippets = import_tar_gz(raw)
@@ -105,7 +124,12 @@ def register_commands(app: typer.Typer) -> None:
             ):
                 snippets = import_tar_gz(raw)
             else:
-                text = raw if isinstance(raw, str) else raw.decode("utf-8", errors="replace")
+                if isinstance(raw, str):
+                    text = raw
+                elif isinstance(raw, bytes):
+                    text = raw.decode("utf-8", errors="replace")
+                else:
+                    raise RuntimeError("Invalid import payload")
                 snippets = parse_import(text, format=normalized_format)
         except ValueError as exc:
             console.print(f"[red]Invalid import format:[/red] {exc}")
@@ -120,7 +144,7 @@ def register_commands(app: typer.Typer) -> None:
 
         console.print(f"[green]Found {len(snippets)} snippet(s) to import.[/green]")
 
-        if dry_run:
+        if preview:
             for item in snippets:
                 console.print(
                     Panel(
@@ -130,7 +154,8 @@ def register_commands(app: typer.Typer) -> None:
                 )
             return
 
-        config, storage, _ = _get_context()
+        config, storage, search = _get_context()
+        imported_snippets: list[Snippet] = []
         imported = 0
         for item in snippets:
             snippet = to_snippet(item)
@@ -144,7 +169,25 @@ def register_commands(app: typer.Typer) -> None:
                 )
                 continue
             storage.save(snippet)
+            imported_snippets.append(snippet)
             imported += 1
             console.print(f"[green]Imported:[/green] {item.title}")
+
+        if imported_snippets:
+            try:
+                if search.indices_ready:
+                    for snippet in imported_snippets:
+                        try:
+                            search.add_snippet(snippet)
+                        except Exception:
+                            pass
+                    try:
+                        search.rebuild_keyword_index(storage.list_all())
+                    except Exception:
+                        pass
+                else:
+                    search.index_snippets(storage.list_all())
+            except Exception:
+                pass
 
         console.print(f"[bold]Done.[/bold] Imported {imported} snippet(s).")

@@ -119,6 +119,26 @@ class ExportConfig(BaseSettings):
     include_line_numbers: bool = Field(default=False)
 
 
+class OllamaConfig(BaseSettings):
+    """Configuration for the local Ollama provider."""
+
+    model_config = SettingsConfigDict(env_prefix="SNIPCONTEXT_OLLAMA_", extra="ignore")
+
+    endpoint: str = Field(
+        default="http://localhost:11434",
+        description="Local Ollama HTTP API endpoint",
+    )
+    model_name: str = Field(
+        default="llama3.2",
+        description="Default Ollama model name",
+    )
+    timeout_seconds: float = Field(
+        default=10.0,
+        ge=0.1,
+        description="HTTP request timeout in seconds for Ollama calls",
+    )
+
+
 class AutoTagConfig(BaseSettings):
     """Configuration for auto-tag suggestions."""
 
@@ -178,6 +198,7 @@ class Config(BaseSettings):
     search: SearchConfig = Field(default_factory=SearchConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
     export: ExportConfig = Field(default_factory=ExportConfig)
+    ollama: OllamaConfig = Field(default_factory=OllamaConfig)
     auto_tag: AutoTagConfig = Field(default_factory=AutoTagConfig)
     dedup: DedupConfig = Field(default_factory=DedupConfig)
 
