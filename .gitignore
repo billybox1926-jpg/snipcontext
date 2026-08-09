@@ -50,3 +50,15 @@ target/
 # yarn.lock
 # pnpm-lock.yaml
 pypi_secret.txt
+
+# SnipContext local data/index artifacts
+index.faiss
+index.faiss.meta
+keyword_index.json
+keyword_index.pkl
+search_history.db
+*.db
+
+# Audio/media bloat
+*.m4a
+*.mp3
