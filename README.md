@@ -110,7 +110,17 @@ sc search "create a web API"
 # → Finds "FastAPI App"
 ```
 
-> **Note:** Semantic search requires the `[semantic]` extra (sentence-transformers + FAISS). If you installed the core package without it, upgrade with `pip install "snipcontext[semantic]"`.
+> **Note:** Semantic search requires the `[semantic]` extra (`sentence-transformers` + `faiss-cpu`). If you installed the core package without it, upgrade with:
+>
+> ```bash
+> pip install "snipcontext[semantic]"
+> ```
+>
+> Or install directly from GitHub:
+>
+> ```bash
+> pip install git+https://github.com/billybox1926-jpg/snipcontext.git
+> ```
 
 ![Demo of semantic search](docs/demo.gif)
 
