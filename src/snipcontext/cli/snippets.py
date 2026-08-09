@@ -407,13 +407,17 @@ def register_commands(app: typer.Typer) -> None:
             import tempfile
 
             editor = os.environ.get("EDITOR", "vi")
+            import shlex
+            import subprocess
+
             with tempfile.NamedTemporaryFile(
                 mode="w", suffix=".snippet", prefix="sc-edit-", delete=False
             ) as tmp:
                 tmp.write(snippet.content)
                 tmp_path = tmp.name
             try:
-                os.system(f'{editor} "{tmp_path}"')
+                argv = [*shlex.split(editor), tmp_path]
+                subprocess.run(argv, check=False)
                 edit_content = Path(tmp_path).read_text()
             finally:
                 Path(tmp_path).unlink(missing_ok=True)

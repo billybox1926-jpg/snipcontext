@@ -68,6 +68,13 @@ class SnippetVersion(BaseModel):  # type: ignore[misc]
 
     id: str = Field(default_factory=_generate_id)
     content: str = Field(..., min_length=1, description="The code content of this version")
+
+    @field_validator("id", mode="before")  # type: ignore[untyped-decorator]
+    @classmethod
+    def _validate_id(cls, v: str) -> str:
+        if not v or not all(c.isalnum() or c in {"_", "-"} for c in v):
+            raise ValueError("SnippetVersion id must be non-empty and match [A-Za-z0-9_-]+")
+        return v
     created_at: datetime = Field(default_factory=_utc_now)
     change_message: str = Field(default="", description="Description of what changed")
     change_hash: str = Field(
@@ -129,6 +136,13 @@ class Snippet(BaseModel):  # type: ignore[misc]
     model_config = ConfigDict(validate_assignment=True, extra="allow")
 
     id: str = Field(default_factory=_generate_id, description="Unique snippet identifier")
+
+    @field_validator("id", mode="before")  # type: ignore[untyped-decorator]
+    @classmethod
+    def _validate_id(cls, v: str) -> str:
+        if not v or not all(c.isalnum() or c in {"_", "-"} for c in v):
+            raise ValueError("Snippet id must be non-empty and match [A-Za-z0-9_-]+")
+        return v
     content: str = Field(default="", description="Current code content")
     metadata: SnippetMetadata = Field(default_factory=lambda: SnippetMetadata(title="Untitled"))
     tags: list[str] = Field(default_factory=list, description="Searchable tags")

@@ -38,9 +38,13 @@ def _init_git(target: Path, remote: str | None = None) -> None:
             "\n".join(
                 [
                     "index.faiss",
+                    "keyword_index.json",
+                    "keyword_index.pkl",
                     "*.tmp",
                     ".env",
                     ".snipcontext-env",
+                    "search_history.db",
+                    "*.db",
                 ]
             )
             + "\n",

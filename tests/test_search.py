@@ -355,7 +355,7 @@ class TestSemanticAvailabilityFlag:
         assert results[0][1] == 1.0
 
     def test_bm25_save_load_roundtrip(self, temp_config):
-        """BM25 index survives pickle save/load roundtrip."""
+        """BM25 index survives save/load roundtrip."""
         import tempfile
         from pathlib import Path
 

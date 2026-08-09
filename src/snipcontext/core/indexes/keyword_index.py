@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
-import pickle
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -169,50 +170,53 @@ class KeywordIndex:
             return []
 
     def save(self, path: Path) -> None:
-        """Save the keyword index to disk."""
+        """Save the keyword index to disk as JSON."""
         if not self.is_trained:
             return
         path.mkdir(parents=True, exist_ok=True)
-        with open(path / "keyword_index.pkl", "wb") as f:
-            pickle.dump(
-                {
-                    "bm25": self._bm25,
-                    "corpus": self._corpus,
-                    "id_map": self._id_map,
-                    "texts": self._texts,
-                },
-                f,
-            )
+        payload = {
+            "id_map": self._id_map,
+            "corpus": self._corpus,
+            "texts": self._texts,
+        }
+        (path / "keyword_index.json").write_text(json.dumps(payload))
         logger.debug("Saved keyword index to %s", path)
 
     def load(self, path: Path) -> bool:
         """Load the keyword index from disk."""
-        index_file = path / "keyword_index.pkl"
+        index_file = path / "keyword_index.json"
+        legacy_file = path / "keyword_index.pkl"
+        if not index_file.exists() and legacy_file.exists():
+            try:
+                legacy_file.unlink()
+            except OSError:
+                pass
         if not index_file.exists():
             logger.debug("Keyword index file not found at %s", path)
             return False
         try:
-            with open(index_file, "rb") as f:
-                data = pickle.load(f)
-            self._bm25 = data["bm25"]
-            self._corpus = data["corpus"]
-            self._id_map = data["id_map"]
-            self._texts = data.get("texts", [])
-
-            # Validate index integrity
-            if self._corpus is not None and len(self._id_map) != len(self._corpus):
+            payload = json.loads(index_file.read_text(encoding="utf-8"))
+            self._id_map = [str(i) for i in payload.get("id_map", [])]
+            self._corpus = [list(map(str, doc)) for doc in payload.get("corpus", [])]
+            self._texts = [str(t) for t in payload.get("texts", [])]
+            if self._corpus and len(self._id_map) != len(self._corpus):
                 logger.warning(
                     "Keyword index ID map length mismatch: %d IDs vs %d docs",
                     len(self._id_map),
                     len(self._corpus),
                 )
                 return False
+            if self._corpus:
+                from rank_bm25 import BM25Okapi
 
+                self._bm25 = BM25Okapi(self._corpus)
+            else:
+                self._bm25 = None
+                self._corpus = None
             logger.debug("Loaded keyword index from %s", path)
             return True
         except Exception as exc:
             logger.warning("Failed to load keyword index from %s: %s", path, exc)
-            # Clean up potentially corrupted file
             try:
                 if index_file.exists():
                     index_file.unlink()

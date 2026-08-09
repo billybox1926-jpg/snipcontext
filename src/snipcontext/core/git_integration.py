@@ -64,8 +64,12 @@ DEFAULT_GITIGNORE = """\
 # Managed by SnipContext (sc init --git)
 index.faiss
 index.faiss.meta
+keyword_index.json
+keyword_index.pkl
 *.tmp
 .env
+search_history.db
+*.db
 """
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from unittest.mock import MagicMock
 
@@ -207,29 +208,26 @@ class TestKeywordIndexEdgeCases:
 
     def test_load_corrupted_index(self, tmp_path):
         idx = KeywordIndex(_config(tmp_path))
-        (tmp_path / "keyword_index.pkl").write_text("not-pickle")
-        loaded = idx.load(tmp_path / "keyword_index")
+        (tmp_path / "keyword_index.json").write_text("not-json")
+        loaded = idx.load(tmp_path / "keyword")
         assert loaded is False
 
     def test_load_id_map_mismatch(self, tmp_path):
-        import pickle
-
         idx = KeywordIndex(_config(tmp_path))
         idx.build([_snippet("a")])
         data = {
-            "bm25": idx._bm25,
-            "corpus": [["a"], ["b"], ["c"]],
             "id_map": ["a", "b"],
+            "corpus": [["a"], ["b"], ["c"]],
             "texts": idx._texts,
         }
-        (tmp_path / "keyword_index.pkl").write_bytes(pickle.dumps(data))
+        (tmp_path / "keyword_index.json").write_text(json.dumps(data))
         loaded = idx.load(tmp_path / "keyword")
         assert loaded is False
 
     def test_save_skips_untrained(self, tmp_path):
         idx = KeywordIndex(_config(tmp_path))
         idx.save(tmp_path / "index")
-        assert not (tmp_path / "index" / "keyword_index.pkl").exists()
+        assert not (tmp_path / "index" / "keyword_index.json").exists()
 
 
 class TestHybridSearchBranches:

@@ -216,7 +216,8 @@ pyinstaller snipcontext.spec
 ### Security Considerations
 
 - **stdin for sensitive content:** Use `sc add --file secret.py` or pipe via stdin (`cat secret.py | sc add --file`) to avoid shell history leaks.
-- **No network calls:** All processing is local. No data leaves your machine.
+- **Local-first storage:** Snippet storage and keyword search run entirely on your machine.
+- Snippet import (`sc import https://…`), `sc git push/pull`, and the Ollama provider make network calls only when those specific features are used.
 
 ```bash
 # Windows: use the full command name or the .cmd wrapper
