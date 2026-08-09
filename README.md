@@ -125,9 +125,6 @@ sc search "create a web API"
 ![Demo of semantic search](docs/demo.gif)
 
 > **💡 Why uv?** This project uses `uv` for dependency management (`uv.lock` pinned). `uv sync` guarantees reproducible installs. `pip install` works but may resolve dependencies differently.
-# Or install directly from GitHub
-pip install git+https://github.com/billybox1926-jpg/snipcontext.git
-```
 
 > **📦 Dependency Footprint:** SnipContext's core (add, list, edit, delete, keyword search, export) has no heavy dependencies. Optional features are split into extras:
 > - `pip install snipcontext[semantic]` — semantic search with sentence-transformers + FAISS (~500MB, requires Rust toolchain on ARM)
@@ -158,17 +155,17 @@ pip install git+https://github.com/billybox1926-jpg/snipcontext.git
 >    snipcontext.cmd search "hello world"
 >    ```
 >
-> ## Works with Hermes Agent
->
-> SnipContext is built CLI-first, so [Hermes Agent](https://hermes-agent.nousresearch.com) can use it directly when running in terminal mode. Common integrations:
->
-> - `export --provider generic/openai/cursor/claude` to pull snippets into a prompt
-> - `edit --framework --version --source` to keep metadata current
-> - `add --auto-title` for fast ingestion
->
-> No Hermes-specific config is required
->
-> ### Standalone Binary
+## Works with Hermes Agent
+
+SnipContext is built CLI-first, so [Hermes Agent](https://hermes-agent.nousresearch.com) can use it directly when running in terminal mode. Common integrations:
+
+- `export --provider generic/openai/cursor/claude` to pull snippets into a prompt
+- `edit --framework --version --source` to keep metadata current
+- `add --auto-title` for fast ingestion
+
+No Hermes-specific config is required.
+
+### Standalone Binary
 
 Two options for running without a Python environment:
 
