@@ -1,4 +1,4 @@
-.PHONY: lint test format mypy all build-binary build-wheel install-tool clean
+.PHONY: lint test format mypy all maintenance build-binary build-wheel install-tool clean
 
 lint:
 	uv run ruff check src/snipcontext tests
@@ -11,8 +11,13 @@ format:
 test:
 	uv run pytest tests -v
 
+test-maintenance:
+	uv run pytest -q -m "not slow" --cov=src/snipcontext --cov-report=term-missing --cov-fail-under=0
+
 mypy:
 	uv run mypy src/snipcontext --ignore-missing-imports --no-site-packages
+
+maintenance: lint test-maintenance
 
 all: lint mypy test
 
