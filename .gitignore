@@ -63,3 +63,4 @@ search_history.db
 *.m4a
 *.mp3
 .coverage
+.venv311/
