@@ -535,7 +535,7 @@ class HybridSearch:
 
             try:
                 snippet = storage.get(snippet_id)
-            except StorageError:
+            except (StorageError, RuntimeError):
                 continue
 
             snippet.record_access()
