@@ -10,6 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+import typer
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -235,12 +236,27 @@ class Config(BaseSettings):
 
     def save_to_file(self) -> None:
         """Persist current configuration to YAML file."""
-        import yaml
+        try:
+            self.config_file_path.parent.mkdir(parents=True, exist_ok=True)
+            payload = self.model_dump(mode="json", exclude_none=True)
+            with open(self.config_file_path, "w", encoding="utf-8") as f:
+                import yaml
 
-        self.config_file_path.parent.mkdir(parents=True, exist_ok=True)
-        payload = self.model_dump(mode="json", exclude_none=True)
-        with open(self.config_file_path, "w", encoding="utf-8") as f:
-            yaml.safe_dump(payload, f, default_flow_style=False, sort_keys=False)
+                yaml.safe_dump(payload, f, default_flow_style=False, sort_keys=False)
+        except PermissionError as exc:
+            raise typer.BadParameter(
+                f"Permission denied: cannot write to {self.config_file_path}. "
+                "Check file permissions or run with elevated privileges if needed."
+            ) from exc
+        except FileExistsError as exc:
+            raise typer.BadParameter(
+                f"Config file already exists at {self.config_file_path}. "
+                "Use --force to overwrite it."
+            ) from exc
+        except OSError as exc:
+            raise typer.BadParameter(
+                f"OS error while writing config to {self.config_file_path}: {exc}"
+            ) from exc
 
 
 @lru_cache(maxsize=1)
