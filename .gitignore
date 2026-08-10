@@ -62,3 +62,4 @@ search_history.db
 # Audio/media bloat
 *.m4a
 *.mp3
+.coverage
