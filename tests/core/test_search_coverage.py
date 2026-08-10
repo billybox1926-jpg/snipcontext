@@ -23,6 +23,7 @@ from snipcontext.core.search import (
     KeywordIndex,
     VectorIndex,
 )
+from snipcontext.core.storage import StorageError
 
 
 def _config(tmp_path):
@@ -313,7 +314,9 @@ class TestHybridSearchBranches:
     def test_hydrate_skips_missing_snippet(self, tmp_path, mocker):
         hs = HybridSearch(_config(tmp_path))
         fake_storage = MagicMock()
-        fake_storage.get.side_effect = lambda sid: (_ for _ in ()).throw(RuntimeError("missing"))
+        fake_storage.get.side_effect = lambda sid: (_ for _ in ()).throw(
+            StorageError("missing snippet", code="not_found", detail={"snippet_id": sid})
+        )
         mocker.patch("snipcontext.core.storage.StorageEngine", return_value=fake_storage)
 
         out = hs._hydrate([("missing", 0.9)], "keyword", top_k=3, storage=fake_storage)
