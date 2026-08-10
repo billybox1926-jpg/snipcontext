@@ -18,6 +18,7 @@ from snipcontext.core.builtin_collections import (
 )
 from snipcontext.core.importers import import_tar_gz, parse_import, to_snippet
 from snipcontext.core.models import Snippet
+from snipcontext.core.storage import StorageError
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -96,7 +97,7 @@ def register_commands(app: typer.Typer) -> None:
                             raw = response.content
                         else:
                             raw = response.text
-                except Exception as exc:
+                except (httpx.HTTPError, OSError) as exc:
                     console.print(f"[red]Failed to fetch remote file:[/red] {exc}")
                     raise typer.Exit(1) from exc
             else:
@@ -138,7 +139,7 @@ def register_commands(app: typer.Typer) -> None:
         except ValueError as exc:
             console.print(f"[red]Invalid import format:[/red] {exc}")
             raise typer.Exit(1) from exc
-        except Exception as exc:
+        except (RuntimeError, TypeError) as exc:
             console.print(f"[red]Failed to parse import:[/red] {exc}")
             raise typer.Exit(1) from exc
 
@@ -165,7 +166,7 @@ def register_commands(app: typer.Typer) -> None:
             snippet = to_snippet(item)
             try:
                 existing = storage.find_by_content_hash(snippet.content_hash)
-            except Exception:
+            except StorageError:
                 existing = None
             if existing:
                 console.print(
@@ -183,15 +184,15 @@ def register_commands(app: typer.Typer) -> None:
                     for snippet in imported_snippets:
                         try:
                             search.add_snippet(snippet)
-                        except Exception:
-                            pass
+                        except (StorageError, RuntimeError, OSError):
+                            logger.debug("Failed to add imported snippet to index", exc_info=True)
                     try:
                         search.rebuild_keyword_index(storage.list_all())
-                    except Exception:
-                        pass
+                    except (StorageError, RuntimeError, OSError):
+                        logger.debug("Failed to rebuild keyword index after import", exc_info=True)
                 else:
                     search.index_snippets(storage.list_all())
-            except Exception:
-                pass
+            except (StorageError, RuntimeError, OSError):
+                logger.debug("Import indexing failed", exc_info=True)
 
         console.print(f"[bold]Done.[/bold] Imported {imported} snippet(s).")

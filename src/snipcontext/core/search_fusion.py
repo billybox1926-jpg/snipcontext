@@ -76,7 +76,7 @@ class SemanticSearch:
 
             try:
                 snippet = storage.get(snippet_id)
-            except Exception:
+            except StorageError:
                 continue
 
             snippet.record_access()
@@ -397,7 +397,7 @@ class HybridSearch:
                     query_embedding, top_k=top_k * 3, min_score=min_score
                 )
                 sem_scores = dict(sem_raw)
-            except Exception:
+            except (ImportError, RuntimeError, OSError):
                 logger.debug("Semantic search failed, falling back to keyword-only")
 
         # Keyword results
@@ -535,7 +535,7 @@ class HybridSearch:
 
             try:
                 snippet = storage.get(snippet_id)
-            except Exception:
+            except StorageError:
                 continue
 
             snippet.record_access()

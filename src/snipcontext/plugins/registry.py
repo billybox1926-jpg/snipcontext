@@ -202,7 +202,7 @@ class _PluginRegistryImpl:
             try:
                 provider = self.get_provider(name)
                 result[name] = getattr(provider, "description", "") or name
-            except Exception:
+            except (AttributeError, ImportError, RuntimeError):
                 result[name] = name
         return result
 

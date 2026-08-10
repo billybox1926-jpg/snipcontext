@@ -23,6 +23,7 @@ from snipcontext.core.snippet_ops import (
     list_snippets,
     record_snippet_access,
 )
+from snipcontext.core.storage import StorageError
 from snipcontext.plugins.registry import PluginRegistry
 
 
@@ -144,7 +145,7 @@ class CommandRegistry:
         snippet_id = args[0]
         try:
             snippet = get_snippet(storage, snippet_id)
-        except Exception:
+        except StorageError:
             snippet = storage.get(snippet_id)
         record_snippet_access(storage, snippet)
         storage.save(snippet)
@@ -220,7 +221,7 @@ class CommandRegistry:
             for sid in ids:
                 try:
                     snippets.append(storage.get(sid))
-                except Exception:
+                except StorageError:
                     pass
         elif kwargs.get("query") or kwargs.get("q") or args:
             query = kwargs.get("query") or kwargs.get("q") or args[0]
@@ -296,7 +297,7 @@ class CommandRegistry:
                 p = registry._plugins.get(name)
                 desc = registry.list_providers().get(name, "")
                 fmt = getattr(p, "format", "?")
-            except Exception:
+            except (AttributeError, ImportError, RuntimeError):
                 desc = ""
                 fmt = "?"
             providers.append((name, desc, str(fmt)))

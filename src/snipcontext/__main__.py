@@ -17,10 +17,10 @@ def get_app() -> typer.Typer:
         from snipcontext.cli.app import app
 
         return app
-    except Exception:
+    except ImportError:
         try:
             import typer
-        except Exception as exc:  # pragma: no cover - defensive fallback
+        except ImportError as exc:  # pragma: no cover - defensive fallback
             print(f"SnipContext CLI unavailable: {exc}")
             raise SystemExit(1) from exc
 

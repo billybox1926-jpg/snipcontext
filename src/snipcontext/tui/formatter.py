@@ -64,7 +64,7 @@ def _snippet_panel(snippet) -> Panel:
             word_wrap=True,
         )
         return Panel(syntax, title=title, border_style="cyan", padding=(0, 1))
-    except Exception:
+    except (SyntaxError, ValueError, ImportError):
         return Panel(Text(text), title=title, border_style="cyan", padding=(0, 1))
 
 

@@ -92,7 +92,7 @@ class PreviewPane(Vertical):
                 word_wrap=True,
             )
             self._code.update(syntax)
-        except Exception:
+        except (SyntaxError, ValueError, ImportError):
             self._code.update(code)
 
         meta_text = "\n".join(
@@ -456,7 +456,7 @@ class SnippetBrowser(App[None]):
             try:
                 self.copy_to_clipboard(text)
                 self.notify(f"Copied snippet '{snippet.metadata.title}' to clipboard")
-            except Exception:
+            except (RuntimeError, ImportError):
                 self.notify("Clipboard unavailable", severity="warning")
 
     def action_toggle_select(self) -> None:
@@ -479,7 +479,7 @@ class SnippetBrowser(App[None]):
         try:
             self.copy_to_clipboard(joined)
             self.notify(f"Copied {len(selected)} snippets")
-        except Exception:
+        except (RuntimeError, ImportError):
             self.notify("Clipboard unavailable", severity="warning")
 
     def action_batch_export(self) -> None:
@@ -489,7 +489,7 @@ class SnippetBrowser(App[None]):
             return
         try:
             names = list(PluginRegistry().list_provider_names())
-        except Exception as exc:
+        except (RuntimeError, ImportError, AttributeError) as exc:
             self.notify(f"Failed to load providers: {exc}", severity="error")
             return
         if not names:

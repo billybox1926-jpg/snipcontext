@@ -206,7 +206,7 @@ def register_commands(app: typer.Typer) -> None:
         if auto_tag_enabled or dedup_enabled:
             try:
                 from snipcontext.core.auto_tag import AutoTagService
-            except Exception:
+            except ImportError:
                 pass
             else:
                 embedding = None
@@ -216,8 +216,8 @@ def register_commands(app: typer.Typer) -> None:
                     )
                     try:
                         embedding = search.embedder.encode_query(snippet.to_search_text()).flatten()
-                    except Exception:
-                        pass
+                    except (RuntimeError, ValueError, ImportError):
+                        logger.debug("Auto-tag embedding failed", exc_info=True)
                     else:
                         suggested = service.suggest(embedding.tolist())
                         if suggested:
@@ -231,8 +231,8 @@ def register_commands(app: typer.Typer) -> None:
                 if dedup_enabled and embedding is None:
                     try:
                         embedding = search.embedder.encode_query(snippet.to_search_text()).flatten()
-                    except Exception:
-                        pass
+                    except (RuntimeError, ValueError, ImportError):
+                        logger.debug("Dedup embedding failed", exc_info=True)
                 if dedup_enabled and embedding is not None:
                     try:
                         neighbors = (
@@ -240,7 +240,7 @@ def register_commands(app: typer.Typer) -> None:
                             if getattr(search.vector_index, "is_trained", False)
                             else []
                         )
-                    except Exception:
+                    except (ImportError, RuntimeError, OSError, ValueError):
                         neighbors = []
                     if neighbors:
                         neighbor_id, score = neighbors[0]
@@ -248,8 +248,15 @@ def register_commands(app: typer.Typer) -> None:
                             try:
                                 neighbor = storage.get(neighbor_id)
                                 nt = neighbor.metadata.title
-                            except Exception:
+                            except StorageError:
                                 nt = neighbor_id
+                            except (AttributeError, TypeError, ValueError):
+                                nt = neighbor_id
+                                logger.debug(
+                                    "Failed to load similar snippet %s for dedup display",
+                                    neighbor_id,
+                                    exc_info=True,
+                                )
                             console.print(
                                 f"[yellow]This looks similar to '{nt}' (id: {neighbor_id}). Add anyway?[/yellow]"
                             )

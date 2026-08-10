@@ -389,7 +389,7 @@ class IVFPQIndexBackend(IndexBackend):
         try:
             # faiss exposes trained flag; fall back to ntotal check when unavailable.
             return bool(self._index.is_trained)  # type: ignore[attr-defined]
-        except Exception:
+        except (AttributeError, ImportError, RuntimeError):
             return self._index.ntotal > 0
 
     @property

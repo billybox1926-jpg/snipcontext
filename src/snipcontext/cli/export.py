@@ -10,6 +10,7 @@ from rich.table import Table
 
 from snipcontext.cli.context import get_context as _get_context
 from snipcontext.core.models import Snippet
+from snipcontext.core.storage import StorageError
 from snipcontext.plugins.registry import PluginRegistry
 
 logger = logging.getLogger(__name__)
@@ -57,8 +58,8 @@ def register_commands(app: typer.Typer) -> None:
             for sid in ids:
                 try:
                     snippets.append(storage.get(sid))
-                except Exception:
-                    console.print(f"[yellow]Warning: snippet not found: {sid}[/yellow]")
+                except StorageError:
+                    pass
         elif query:
             if not searcher.indices_ready:
                 all_s = storage.list_all()
@@ -118,7 +119,7 @@ def register_commands(app: typer.Typer) -> None:
             try:
                 fmt = registry._plugins.get(name)
                 fmt_name = fmt.format if fmt and hasattr(fmt, "format") else "?"
-            except Exception:
+            except (AttributeError, ImportError, RuntimeError):
                 fmt_name = "?"
             table.add_row(name, desc, str(fmt_name))
         console.print(table)

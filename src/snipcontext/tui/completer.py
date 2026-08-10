@@ -79,7 +79,7 @@ class SnipContextCompleter(Completer):
                     if snippet.id.startswith(prefix):
                         yield Completion(snippet.id, start_position=-len(prefix))
                         yield Completion(snippet.id[:6], start_position=-len(prefix))
-            except Exception:
+            except (RuntimeError, ImportError, AttributeError):
                 pass
             return
         if command in ("list", "ls") and len(words) >= 2 and words[1].startswith("--"):
@@ -91,5 +91,5 @@ class SnipContextCompleter(Completer):
                 for tag in storage.get_all_tags():
                     if tag.startswith(prefix.lower()):
                         yield Completion(tag, start_position=-len(prefix))
-            except Exception:
+            except (RuntimeError, ImportError, AttributeError):
                 pass

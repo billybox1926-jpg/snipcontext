@@ -92,5 +92,5 @@ def _clear_config_cache() -> None:
 
     try:
         _get_config.cache_clear()
-    except Exception:
+    except AttributeError:
         pass

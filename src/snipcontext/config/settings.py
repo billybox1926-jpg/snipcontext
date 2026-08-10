@@ -270,7 +270,7 @@ def get_config() -> Config:
                             setattr(section, sub_key, sub_value)
                 else:
                     setattr(config, key, value)
-        except Exception:
+        except (AttributeError, TypeError, ValueError):
             pass
     return config
 

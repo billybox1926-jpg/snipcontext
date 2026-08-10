@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from snipcontext.core.models import Snippet
 from snipcontext.core.search import HybridSearch
-from snipcontext.core.storage import StorageEngine
+from snipcontext.core.storage import StorageEngine, StorageError
 from snipcontext.plugins.registry import PluginRegistry
 
 
@@ -108,7 +108,7 @@ def export_snippets(
         for sid in ids:
             try:
                 snippets.append(storage.get(sid))
-            except Exception:
+            except StorageError:
                 pass  # Skip not-found IDs
     elif query:
         results = search_snippets(storage, search, query, top_k=top_k)

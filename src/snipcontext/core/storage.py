@@ -213,7 +213,7 @@ class StorageEngine:
                 with open(path, encoding="utf-8") as f:
                     data = json.load(f)
                 yield Snippet.model_validate(data)
-            except Exception:
+            except (OSError, json.JSONDecodeError, ValueError):
                 logger.warning("Skipping unreadable snippet file: %s", path)
                 continue
 
@@ -327,8 +327,8 @@ class StorageEngine:
                     data = json.load(f)
                 Snippet.model_validate(data)
                 valid_ids.add(snippet_id)
-            except Exception:
-                pass
+            except (OSError, json.JSONDecodeError, ValueError):
+                logger.debug("Skipping invalid snippet during vacuum: %s", path)
 
         for path in self.snippets_dir.glob("*.json"):
             snippet_id = path.stem

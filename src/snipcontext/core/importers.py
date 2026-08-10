@@ -121,7 +121,7 @@ def parse_import(raw: str, format: str | None = None) -> list[ImportedSnippet]:
     if normalized.startswith("---"):
         try:
             return parse_markdown_import(raw)
-        except Exception:
+        except (ValueError, ImportError):
             pass
     return parse_yaml_import(raw)
 
@@ -242,12 +242,12 @@ def import_tar_gz(raw: bytes) -> list[ImportedSnippet]:
 
                 try:
                     results.extend(parse_import(text))
-                except Exception:
+                except (ValueError, RuntimeError, ImportError):
                     continue
     finally:
         try:
             shutil.rmtree(tmp_dir, ignore_errors=True)
-        except Exception:
+        except OSError:
             pass
 
     return results
