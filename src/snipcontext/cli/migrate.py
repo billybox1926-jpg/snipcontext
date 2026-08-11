@@ -45,6 +45,7 @@ def migrate(
     typer.echo("Please backup your snippets and manually upgrade following docs/MIGRATION.md.")
     if dry_run:
         typer.echo("Dry run – no changes made.")
+        raise typer.Exit(code=0)
     raise typer.Exit(code=1)
 
 

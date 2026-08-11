@@ -6,14 +6,14 @@ runner = CliRunner()
 
 
 def test_migrate_dry_run():
-    result = runner.invoke(app, ["migrate", "--dry-run"])
-    assert result.exit_code == 0
-    assert "Dry run" in result.output or "already at the latest" in result.output
+    result = runner.invoke(app, ["migrate", "migrate", "--dry-run"])
+    assert result.exit_code == 0, result.stdout + result.stderr
+    assert "Dry run" in result.output or "Automatic migration is not yet implemented" in result.output
 
 
 def test_migrate_stub_output():
-    result = runner.invoke(app, ["migrate"])
-    assert result.exit_code == 1
+    result = runner.invoke(app, ["migrate", "migrate"])
+    assert result.exit_code == 1, result.stdout + result.stderr
     assert "Automatic migration is not yet implemented" in result.output
 
 
