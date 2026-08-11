@@ -69,6 +69,7 @@ from snipcontext.cli.search import register_commands as register_search  # noqa:
 from snipcontext.cli.snippets import register_commands as register_snippets  # noqa: E402
 from snipcontext.cli.stats import register_commands as register_stats  # noqa: E402
 from snipcontext.cli.watch import register_commands as register_watch  # noqa: E402
+from snipcontext.cli.migrate import register_commands as register_migrate  # noqa: E402
 
 register_agent(app)
 register_snippets(app)
@@ -78,11 +79,12 @@ register_import(app)
 register_export(app)
 register_watch(app)
 register_stats(app)
-register_benchmark(app)
+register_migrate(app)
+register_git(app)
 register_config(config_app)
 register_init(app)
+register_benchmark(app)
 register_info(app)
-register_git(app)
 
 
 @app.command()  # type: ignore[untyped-decorator]

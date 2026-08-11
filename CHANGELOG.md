@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `snipcontext migrate` stub command to prepare for future automatic migrations.
+- `docs/MIGRATION.md` with detailed backup and migration instructions.
+- Storage version tracking via `index/_meta.json`.
+
+### Migration
+No migration is required for this version. However, we recommend backing up before any upgrade.
+
 ## [0.6.2] - 2026-08-09
 
 ### Changed

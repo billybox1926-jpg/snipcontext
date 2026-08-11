@@ -64,6 +64,35 @@ class StorageEngine:
         self._deleted_ids: set[str] = set()
 
     @property
+    def _meta_path(self) -> Path:
+        return self.index_dir / "_meta.json"
+
+    @property
+    def expected_version(self) -> str:
+        """Return the current SnipContext version this code understands."""
+        from snipcontext import __version__
+
+        return __version__
+
+    def read_storage_version(self) -> str:
+        """Read the stored schema/data version from the storage metadata file."""
+        if not self._meta_path.exists():
+            return "0.0.0"
+        try:
+            data = json.loads(self._meta_path.read_text(encoding="utf-8"))
+            return str(data.get("version", "0.0.0"))
+        except (OSError, json.JSONDecodeError):
+            return "0.0.0"
+
+    def write_storage_version(self) -> None:
+        """Write the current expected version to the storage metadata file."""
+        self._meta_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {"version": self.expected_version}
+        self._meta_path.write_text(
+            json.dumps(payload, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+
+    @property
     def snippets_dir(self) -> Path:
         return self._config.snippets_path
 
