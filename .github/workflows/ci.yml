@@ -30,11 +30,11 @@ jobs:
 
       - name: Ruff lint & fix
         run: |
-          ruff check --fix src/snipcontext tests
-          ruff format --check src/snipcontext tests
+          uv run ruff check --fix src/snipcontext tests
+          uv run ruff format --check src/snipcontext tests
 
       - name: Mypy type check
-        run: mypy src/snipcontext --ignore-missing-imports --no-site-packages
+        run: uv run mypy src/snipcontext --ignore-missing-imports --no-site-packages
 
   # ── Tests across Python versions ─────────────────────────────────
   test:
@@ -78,14 +78,14 @@ jobs:
         shell: bash
         run: |
           export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
-          python -m pytest -q --tb=short -m "not slow" --cov=src/snipcontext --cov-report=term-missing
+          uv run pytest -q --tb=short -m "not slow" --cov=src/snipcontext --cov-report=term-missing
 
       - name: Run slow tests
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
-          python -m pytest -q --tb=short -m "slow"
+          uv run pytest -q --tb=short -m "slow"
 
   # ── Full semantic dependency matrix ──────────────────────────────
   test-semantic:
@@ -123,7 +123,7 @@ jobs:
         shell: bash
         run: |
           export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
-          python -m pytest -q --tb=short -m "not slow" --cov=src/snipcontext --cov-report=term-missing
+          uv run pytest -q --tb=short -m "not slow" --cov=src/snipcontext --cov-report=term-missing
 
   # ── Minimal install (no optional extras) ──────────────────────────
   test-minimal:
@@ -145,7 +145,7 @@ jobs:
 
       - name: Verify optional deps are NOT installed
         run: |
-          python -c "
+          uv run python -c "
           try:
               import sentence_transformers
               print('ERROR: sentence_transformers should not be installed')
@@ -172,13 +172,13 @@ jobs:
         shell: bash
         run: |
           export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
-          python -m pytest -q --tb=short -m "not slow" --cov=src/snipcontext --cov-report=term-missing --cov-fail-under=0
+          uv run pytest -q --tb=short -m "not slow" --cov=src/snipcontext --cov-report=term-missing --cov-fail-under=0
 
       - name: Verify optional-dep modules import cleanly
         shell: bash
         run: |
           export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
-          python -c "
+          uv run python -c "
           from snipcontext.core.search import SEMANTIC_AVAILABLE, HybridSearch, KeywordIndex
           assert not SEMANTIC_AVAILABLE, 'SEMANTIC_AVAILABLE should be False'
           print('OK: SEMANTIC_AVAILABLE=False')
@@ -240,4 +240,4 @@ jobs:
             source .venv/bin/activate
             pip install --upgrade pip
             pip install -e ".[dev]"
-            pytest tests/test_storage.py tests/test_search_history.py tests/test_config.py -v --tb=short
+            uv run pytest tests/test_storage.py tests/test_search_history.py tests/test_config.py -v --tb=short
