@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-08-11
+
+### Added
+- Neovim plugin (`:SnipcontextList`, `:SnipcontextSave`, `:SnipcontextRefresh`) with Telescope support
+- `snipcontext stats` command with Rich formatting, `--verbose`, and `--json` output
+- Auto-index switching documentation and tests for flat → IVFPQ promotion at threshold
+- Provider contract tests using Hypothesis for adversarial Unicode/edge cases
+- VS Code extension sidebar for browsing and inserting snippets
+
+### Changed
+- CI fully migrated to `uv` for installs, caching, and test execution
+- Config init error handling improved with clearer `typer.BadParameter` messages
+- Migration strategy documented with `docs/MIGRATION.md` and stub `snipcontext migrate` command
+
+### Fixed
+- Snapshot and registry tests aligned with current package version
+
 ## [0.2.0] - 2026-08-11
 
 ### Added
