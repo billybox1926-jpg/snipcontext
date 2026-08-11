@@ -18,7 +18,6 @@ def test_migrate_stub_output():
 
 
 def test_migrate_check_when_no_meta(tmp_path, monkeypatch):
-    import os
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("SNIPCONTEXT_HOME", raising=False)

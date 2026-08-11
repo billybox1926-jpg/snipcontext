@@ -65,11 +65,11 @@ from snipcontext.cli.history import register_commands as register_history  # noq
 from snipcontext.cli.import_ import register_commands as register_import  # noqa: E402
 from snipcontext.cli.info import register_commands as register_info  # noqa: E402
 from snipcontext.cli.init import register_commands as register_init  # noqa: E402
+from snipcontext.cli.migrate import register_commands as register_migrate  # noqa: E402
 from snipcontext.cli.search import register_commands as register_search  # noqa: E402
 from snipcontext.cli.snippets import register_commands as register_snippets  # noqa: E402
 from snipcontext.cli.stats import register_commands as register_stats  # noqa: E402
 from snipcontext.cli.watch import register_commands as register_watch  # noqa: E402
-from snipcontext.cli.migrate import register_commands as register_migrate  # noqa: E402
 
 register_agent(app)
 register_snippets(app)

@@ -2,8 +2,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from snipcontext.core.index_backends import _create_backend
 from snipcontext.config.settings import Config
+from snipcontext.core.index_backends import _create_backend
 
 
 def _config(threshold: int = 10, auto_switch: bool = True) -> Config:

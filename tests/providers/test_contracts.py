@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import re
-import xml.etree.ElementTree as ET
-
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given, settings

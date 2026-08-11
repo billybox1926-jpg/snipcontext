@@ -37,7 +37,6 @@ def _render_ascii_bar(data: dict[str, int], max_width: int = 30) -> list[str]:
 def _detect_index_backend(config) -> str | None:
     """Return current vector index backend name, if available."""
     try:
-        from snipcontext.core.indexes.vector_index import VectorIndex
         from snipcontext.core.search import HybridSearch
         searcher = HybridSearch(config)
         searcher.load_indices()
