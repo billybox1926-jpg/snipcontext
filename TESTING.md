@@ -99,6 +99,16 @@ All providers (`snipcontext.providers.*`) implement:
 
 The return value is a plain text string formatted for the target LLM or IDE. Providers **must not** raise exceptions for any valid `Snippet` input (including empty content, unusual Unicode, etc.). Tests should verify that the output is a non‑empty string and, for structured formats, perform light schema validation (see `tests/property/test_provider_schema.py`).
 
+## Provider Contract Tests
+
+Run the Hypothesis-based provider contract tests with:
+
+```bash
+uv run pytest tests/providers/test_contracts.py -m provider -v
+```
+
+These tests generate adversarial Unicode and empty/edge-case snippets and verify all built-in providers return well-formed, exception-free output.
+
 ## Plugin Test Pattern
 
 Plugins are discovered via entry points. To test plugin loading and discovery:
