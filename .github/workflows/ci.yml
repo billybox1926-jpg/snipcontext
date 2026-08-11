@@ -24,7 +24,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv pip install -e ".[dev]"
+        run: uv pip install --system -e ".[dev]"
 
       - name: Ruff lint & fix
         run: |
@@ -68,7 +68,7 @@ jobs:
             hf-models-${{ runner.os }}-
 
       - name: Install dependencies
-        run: uv pip install -e ".[dev,web]"
+        run: uv pip install --system -e ".[dev,web]"
 
       - name: Run tests
         shell: bash
@@ -111,7 +111,7 @@ jobs:
             hf-semantic-${{ runner.os }}-
 
       - name: Install dependencies
-        run: uv pip install -e ".[dev,semantic]"
+        run: uv pip install --system -e ".[dev,semantic]"
 
       - name: Run tests
         shell: bash
@@ -133,7 +133,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies (minimal — no optional extras)
-        run: uv pip install -e ".[dev]"
+        run: uv pip install --system -e ".[dev]"
 
       - name: Verify optional deps are NOT installed
         run: |
