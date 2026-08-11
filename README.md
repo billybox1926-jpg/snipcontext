@@ -26,6 +26,22 @@ Save, search, tag, and instantly inject your best boilerplate, patterns, and con
 *Searching, tagging, and exporting code snippets — all from the terminal.*
 *[Watch the animated demo (GIF)](docs/demo.gif)*
 
+## Quick Demo
+
+Save a snippet from your editor or CLI, then instantly search it semantically — all offline.
+
+**CLI:**
+```bash
+snipcontext add --title "Quick sort" --content "$(cat quicksort.py)" --language python
+snipcontext search "sorting algorithm"
+```
+
+**VS Code:** Open the SnipContext sidebar, browse snippets, click one to insert.
+
+**Neovim:** `:SnipcontextList` to fuzzy-find and insert.
+
+[Full demo walkthrough →](DEMO.md)
+
 ---
 
 ## Why SnipContext?
