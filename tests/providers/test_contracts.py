@@ -71,7 +71,8 @@ def _make_snippet(
 # ---------------------------------------------------------------------------
 
 valid_id_strategy = st.text(
-    alphabet=st.characters(whitelist_categories=("L", "N"), max_codepoint=127) | st.sampled_from(list("_-")),
+    alphabet=st.characters(whitelist_categories=("L", "N"), max_codepoint=127)
+    | st.sampled_from(list("_-")),
     min_size=1,
     max_size=40,
 ).filter(lambda s: s.strip() != "")
@@ -85,8 +86,11 @@ _valid_languages = [
 ]
 
 
-_xml_valid_chars = st.characters(blacklist_categories=("Cs",), min_codepoint=0x20, max_codepoint=0xD7FF) | st.characters(min_codepoint=0xE000, max_codepoint=0x10FFFF)
+_xml_valid_chars = st.characters(
+    blacklist_categories=("Cs",), min_codepoint=0x20, max_codepoint=0xD7FF
+) | st.characters(min_codepoint=0xE000, max_codepoint=0x10FFFF)
 _xml_text = st.text(alphabet=_xml_valid_chars, min_size=0, max_size=100)
+
 
 @st.composite
 def snippet_strategy(draw):

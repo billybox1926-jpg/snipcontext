@@ -8,7 +8,9 @@ runner = CliRunner()
 def test_migrate_dry_run():
     result = runner.invoke(app, ["migrate", "migrate", "--dry-run"])
     assert result.exit_code == 0, result.stdout + result.stderr
-    assert "Dry run" in result.output or "Automatic migration is not yet implemented" in result.output
+    assert (
+        "Dry run" in result.output or "Automatic migration is not yet implemented" in result.output
+    )
 
 
 def test_migrate_stub_output():

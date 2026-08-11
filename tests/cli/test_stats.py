@@ -8,7 +8,10 @@ runner = CliRunner()
 def test_stats_basic():
     result = runner.invoke(app, ["stats"])
     assert result.exit_code == 0, result.stdout + result.stderr
-    assert "No snippets in your collection yet" in result.output or "SnipContext Stats" in result.output
+    assert (
+        "No snippets in your collection yet" in result.output
+        or "SnipContext Stats" in result.output
+    )
 
 
 def test_stats_json():

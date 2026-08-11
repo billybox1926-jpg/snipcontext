@@ -25,9 +25,7 @@ def migrate_check() -> None:
         typer.echo(f"✅ Storage is already at version {current}.")
         raise typer.Exit()
 
-    typer.echo(
-        f"⚠️  Storage version {current} is behind expected version {expected}."
-    )
+    typer.echo(f"⚠️  Storage version {current} is behind expected version {expected}.")
     typer.echo("Run `snipcontext migrate --dry-run` for next steps.")
 
 
@@ -52,4 +50,3 @@ def migrate(
 def register_commands(app: typer.Typer) -> None:
     """Register migration commands."""
     app.add_typer(migrate_app)
-

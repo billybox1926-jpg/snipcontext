@@ -56,7 +56,11 @@ def test_config_init_refuses_overwrite(runner, monkeypatch, tmp_path):
     monkeypatch.chdir(project)
     result = runner.invoke(app, ["config", "init"])
     assert result.exit_code == 0, result.stdout + result.stderr
-    assert "already exists" in result.output or "overwrite" in result.output or "Use --force" in result.output
+    assert (
+        "already exists" in result.output
+        or "overwrite" in result.output
+        or "Use --force" in result.output
+    )
     assert config_path.read_text() == "old: data"
 
 

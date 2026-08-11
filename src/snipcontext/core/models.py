@@ -75,6 +75,7 @@ class SnippetVersion(BaseModel):  # type: ignore[misc]
         if not v or not all(c.isalnum() or c in {"_", "-"} for c in v):
             raise ValueError("SnippetVersion id must be non-empty and match [A-Za-z0-9_-]+")
         return v
+
     created_at: datetime = Field(default_factory=_utc_now)
     change_message: str = Field(default="", description="Description of what changed")
     change_hash: str = Field(
@@ -143,6 +144,7 @@ class Snippet(BaseModel):  # type: ignore[misc]
         if not v or not all(c.isalnum() or c in {"_", "-"} for c in v):
             raise ValueError("Snippet id must be non-empty and match [A-Za-z0-9_-]+")
         return v
+
     content: str = Field(default="", description="Current code content")
     metadata: SnippetMetadata = Field(default_factory=lambda: SnippetMetadata(title="Untitled"))
     tags: list[str] = Field(default_factory=list, description="Searchable tags")

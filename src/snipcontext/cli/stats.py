@@ -38,6 +38,7 @@ def _detect_index_backend(config) -> str | None:
     """Return current vector index backend name, if available."""
     try:
         from snipcontext.core.search import HybridSearch
+
         searcher = HybridSearch(config)
         searcher.load_indices()
         return searcher.vector_index.backend_name

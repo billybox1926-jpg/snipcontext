@@ -88,9 +88,7 @@ class StorageEngine:
         """Write the current expected version to the storage metadata file."""
         self._meta_path.parent.mkdir(parents=True, exist_ok=True)
         payload = {"version": self.expected_version}
-        self._meta_path.write_text(
-            json.dumps(payload, ensure_ascii=False) + "\n", encoding="utf-8"
-        )
+        self._meta_path.write_text(json.dumps(payload, ensure_ascii=False) + "\n", encoding="utf-8")
 
     @property
     def snippets_dir(self) -> Path:

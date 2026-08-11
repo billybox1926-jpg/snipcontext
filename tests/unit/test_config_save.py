@@ -50,4 +50,3 @@ def test_save_to_file_os_error(tmp_path: Path):
             with pytest.raises(BadParameter) as excinfo:
                 config.save_to_file()
             assert "OS error" in str(excinfo.value)
-
