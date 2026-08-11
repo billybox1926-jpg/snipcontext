@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-08-11
+
+### Added
+- Config init error handling with `typer.BadParameter` (#160)
+- Optional file watcher for automatic index rebuild via `snipcontext watch` and `--watch` (#161)
+- `snipcontext migrate` stub and `docs/MIGRATION.md` for upgrade guidance (#162)
+- Provider contract tests using Hypothesis for adversarial Unicode/edge cases
+
+### Changed
+- CI now uses `uv` for faster, reproducible installs and caching
+
 ## [Unreleased]
 
 ### Added

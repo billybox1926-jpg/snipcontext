@@ -19,18 +19,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v3
         with:
-          python-version: "3.12"
-          cache: "pip"
+          enable-cache: true
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: uv pip install -e ".[dev]"
 
       - name: Ruff lint & fix
         run: |
           ruff check --fix src/snipcontext tests
-          ruff format src/snipcontext tests
+          ruff format --check src/snipcontext tests
 
       - name: Mypy type check
         run: mypy src/snipcontext --ignore-missing-imports --no-site-packages
@@ -54,10 +53,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v3
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
+          enable-cache: true
 
       - name: Cache Hugging Face models
         uses: actions/cache@v4
@@ -69,9 +68,7 @@ jobs:
             hf-models-${{ runner.os }}-
 
       - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -e ".[dev,web]"
+        run: uv pip install -e ".[dev,web]"
 
       - name: Run tests
         shell: bash
@@ -99,10 +96,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v3
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
+          enable-cache: true
 
       - name: Cache Hugging Face models
         uses: actions/cache@v4
@@ -114,9 +111,7 @@ jobs:
             hf-semantic-${{ runner.os }}-
 
       - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -e ".[dev,semantic]"
+        run: uv pip install -e ".[dev,semantic]"
 
       - name: Run tests
         shell: bash
@@ -132,15 +127,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v3
         with:
           python-version: "3.12"
-          cache: "pip"
+          enable-cache: true
 
       - name: Install dependencies (minimal — no optional extras)
-        run: |
-          pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv pip install -e ".[dev]"
 
       - name: Verify optional deps are NOT installed
         run: |
@@ -198,12 +191,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v3
         with:
           python-version: "3.12"
+          enable-cache: true
 
       - name: Install build tools
-        run: pip install build twine
+        run: uv pip install build twine
 
       - name: Build package
         run: python -m build
@@ -233,7 +227,6 @@ jobs:
             apt-get update
             apt-get install -y python3 python3-pip python3-venv git
           run: |
-            # Explicitly set PYTHONPATH to avoid unbound variable error.
             export PYTHONPATH="$(pwd)/src"
             python3 -m venv .venv
             source .venv/bin/activate
