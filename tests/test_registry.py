@@ -54,7 +54,7 @@ def _build_test_entry(plugin_name, requires):
 def test_version_compatibility_compatible():
     reset_registry_for_testing()
     registry = PluginRegistry()
-    mock_ep = _build_test_entry("test_plugin", ["snipcontext>=0.3.0"])
+    mock_ep = _build_test_entry("test_plugin", ["snipcontext>=0.2.0"])
 
     fake_eps = MagicMock()
 
