@@ -780,6 +780,12 @@ npm install
 npm run compile
 ```
 
+## Neovim Plugin
+
+A Neovim plugin is also available for `:SnipcontextList`, `:SnipcontextSave`, and `:SnipcontextRefresh`.
+
+See `editors/neovim/README.md` for installation and usage.
+
 ## Project Structure
 
 ```
@@ -792,6 +798,15 @@ snipcontext/
 │   │   └── commands.ts        # insert/save commands
 │   ├── package.json
 │   ├── tsconfig.json
+│   └── README.md
+├── editors/neovim/             # Neovim plugin
+│   ├── plugin/
+│   │   └── snipcontext.lua    # entry point
+│   ├── lua/snipcontext/
+│   │   ├── init.lua
+│   │   ├── api.lua
+│   │   ├── pickers.lua
+│   │   └── commands.lua
 │   └── README.md
 ├── src/snipcontext/          # Python package
 │   ├── __init__.py
