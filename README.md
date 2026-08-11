@@ -759,10 +759,40 @@ pre-commit install
 - [`docs/benchmark.md`](docs/benchmark.md) — `sc benchmark index` usage
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — detailed design documentation
 
+## VS Code Extension
+
+A VS Code extension is available to browse, insert, and save snippets directly from your editor.
+
+### Requirements
+- VS Code >= 1.85.0
+- `snipcontext serve` running locally at `http://localhost:8000`
+
+### Usage
+1. Run `snipcontext serve` in a terminal so the local API is available.
+2. Open the SnipContext sidebar from the Activity Bar.
+3. Browse snippets and click one to insert it at the cursor.
+4. Select text, right-click, and choose **Save Selection as Snippet**, or use `Ctrl+Alt+S`.
+
+### Development
+```bash
+cd editors/vscode
+npm install
+npm run compile
+```
+
 ## Project Structure
 
 ```
 snipcontext/
+├── editors/vscode/            # VS Code extension
+│   ├── src/
+│   │   ├── extension.ts       # entry point
+│   │   ├── sidebarProvider.ts # tree view data provider
+│   │   ├── snippetApi.ts      # HTTP client for local API
+│   │   └── commands.ts        # insert/save commands
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── README.md
 ├── src/snipcontext/          # Python package
 │   ├── __init__.py
 │   ├── __main__.py           # python -m snipcontext

@@ -1,0 +1,80 @@
+{
+  "name": "snipcontext",
+  "displayName": "SnipContext",
+  "description": "Manage and insert code snippets from your local SnipContext store.",
+  "version": "0.2.0",
+  "publisher": "snipcontext",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Programming Languages", "Snippets"],
+  "activationEvents": ["onView:snipcontextSidebar"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "snipcontext.insertSnippet",
+        "title": "Insert Snippet"
+      },
+      {
+        "command": "snipcontext.saveSelection",
+        "title": "Save Selection as Snippet"
+      },
+      {
+        "command": "snipcontext.refreshSidebar",
+        "title": "Refresh Snippets"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "snipcontext",
+          "title": "SnipContext",
+          "icon": "assets/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "snipcontext": [
+        {
+          "id": "snipcontextSidebar",
+          "name": "Snippets"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "snipcontext.saveSelection",
+        "key": "ctrl+alt+s",
+        "when": "editorTextFocus"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "snipcontext.saveSelection",
+          "group": "SnipContext"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "20.x",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}
