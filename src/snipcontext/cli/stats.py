@@ -34,7 +34,19 @@ def _render_ascii_bar(data: dict[str, int], max_width: int = 30) -> list[str]:
     return format_ascii_bar(data, max_width)
 
 
-def _render_basic_stats(s: dict) -> None:
+def _detect_index_backend(config) -> str | None:
+    """Return current vector index backend name, if available."""
+    try:
+        from snipcontext.core.indexes.vector_index import VectorIndex
+        from snipcontext.core.search import HybridSearch
+        searcher = HybridSearch(config)
+        searcher.load_indices()
+        return searcher.vector_index.backend_name
+    except Exception:
+        return None
+
+
+def _render_basic_stats(s: dict, index_backend: str | None = None) -> None:
     """Render basic stats mode with Rich."""
     total = s["total_snippets"]
 
@@ -61,6 +73,10 @@ def _render_basic_stats(s: dict) -> None:
     if date_section:
         date_block = f"[bold]Dates:[/bold]{nl}{date_section}"
 
+    backend_block = ""
+    if index_backend:
+        backend_block = f"\n[bold]Index:[/bold]\n  Backend: [cyan]{index_backend}[/cyan]"
+
     console.print(
         Panel(
             f"""[bold]Collection Overview[/bold]
@@ -69,6 +85,7 @@ def _render_basic_stats(s: dict) -> None:
   Languages: [cyan]{len(s.get("languages", {}))}[/cyan]
   Size: [cyan]{_format_size(s.get("total_size_bytes", 0))}[/cyan]
 {date_block}
+{backend_block}
 
 [bold]By Language:[/bold]
 {lang_section}
@@ -84,9 +101,13 @@ def _render_basic_stats(s: dict) -> None:
     )
 
 
-def _render_detailed_stats(d: dict) -> None:
+def _render_detailed_stats(d: dict, index_backend: str | None = None) -> None:
     """Render detailed stats mode with Rich tables and bar charts."""
     total = d["total_snippets"]
+
+    backend_block = ""
+    if index_backend:
+        backend_block = f"  Backend: [cyan]{index_backend}[/cyan]\n"
 
     console.print(
         Panel(
@@ -96,7 +117,8 @@ def _render_detailed_stats(d: dict) -> None:
   Languages: [cyan]{len(d.get("languages", {}))}[/cyan]
   Deleted: [cyan]{d.get("deleted_count", 0)}[/cyan]
   Size: [cyan]{_format_size(d.get("total_size_bytes", 0))}[/cyan]
-  Avg tags/snippet: [cyan]{d.get("avg_tags_per_snippet", 0)}[/cyan]""",
+  Avg tags/snippet: [cyan]{d.get("avg_tags_per_snippet", 0)}[/cyan]
+{backend_block}""",
             title="SnipContext Stats [bold cyan](Detailed)[/bold cyan]",
             border_style="green",
         )
@@ -238,9 +260,11 @@ def register_commands(app: typer.Typer) -> None:
 
             detailed_stats = compute_detailed_stats(snippets)
             detailed_stats["data_dir"] = str(config.storage.data_dir)
-            _render_detailed_stats(detailed_stats)
+            index_backend = _detect_index_backend(config)
+            _render_detailed_stats(detailed_stats, index_backend=index_backend)
         else:
-            _render_basic_stats(basic)
+            index_backend = _detect_index_backend(config)
+            _render_basic_stats(basic, index_backend=index_backend)
 
     @app.command()  # type: ignore[untyped-decorator]
     def demo() -> None:

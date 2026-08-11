@@ -106,7 +106,7 @@ Snippet IDs / Search Results → Provider (format) → LLM-optimized string
 ### Semantic Search
 - **Model**: `all-MiniLM-L6-v2` (default) — 384-dim, fast, high quality
 - **Index**: FAISS IndexFlatIP (exact inner product = cosine similarity)
-- **Scaling**: Automatically switches to IndexIVFFlat for >5000 vectors
+- **Scaling**: Automatically promotes to IVFPQ when `auto_index_threshold` is exceeded
 - **Normalization**: L2-normalized vectors for cosine similarity
 
 ### Keyword Search
@@ -118,6 +118,12 @@ Snippet IDs / Search Results → Provider (format) → LLM-optimized string
 - **Fusion**: `score = w_sem * semantic_score + w_kw * keyword_score`
 - **Defaults**: 70% semantic, 30% keyword (configurable)
 - **Reciprocal Rank Fusion** also supported for rank-based combination
+
+### Index Scaling Behavior
+- `search.auto_index_threshold` controls when promotion occurs; default is `5000`.
+- `search.auto_switch` enables or disables automatic promotion.
+- When enabled and the snippet count exceeds the threshold, the backend factory returns `IVFPQIndexBackend` instead of `FlatIndexBackend`.
+- Use `snipcontext stats` to see the current backend name.
 
 ## Plugin Architecture
 

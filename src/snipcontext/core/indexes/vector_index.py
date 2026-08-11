@@ -46,6 +46,10 @@ class VectorIndex:
         return self._backend.count if self._backend else 0
 
     @property
+    def backend_name(self) -> str:
+        return self._backend.__class__.__name__ if self._backend else "none"
+
+    @property
     def snippet_ids(self) -> tuple[str, ...]:
         return tuple(self._backend.snippet_ids if self._backend else [])
 

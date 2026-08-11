@@ -24,3 +24,18 @@ benchmark script after indexing your snippets:
 ```bash
 python scripts/benchmark.py
 ```
+
+## Index Scaling
+
+For collections above `search.auto_index_threshold` (default: 5000), SnipContext automatically
+promotes the FAISS index from an exact flat index to an approximate IVFPQ index.
+This keeps semantic search fast as your collection grows.
+
+- **Flat**: exact, fastest up to a few thousand vectors
+- **IVFPQ**: quantized approximate search; better throughput at larger scale
+
+You can inspect the active backend with:
+
+```bash
+snipcontext stats
+```
