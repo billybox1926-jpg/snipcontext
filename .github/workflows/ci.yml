@@ -205,13 +205,15 @@ jobs:
           enable-cache: true
 
       - name: Install build tools
-        run: uv pip install build twine
+        run: |
+          uv venv
+          uv pip install build twine
 
       - name: Build package
-        run: python -m build
+        run: uv run python -m build
 
       - name: Check package with twine
-        run: twine check dist/*
+        run: uv run twine check dist/*
 
   # ── ARM via QEMU ──────────────────────────────────────────────────
   test-arm:
