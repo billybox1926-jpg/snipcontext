@@ -8,7 +8,7 @@ index management.
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import (
     APIRouter,
@@ -21,13 +21,17 @@ from fastapi import (
 )
 
 from snipcontext.config.settings import get_config
-from snipcontext.core.search_ops import export_snippets as core_export_snippets
 from snipcontext.core.models import Snippet
 from snipcontext.core.search import HybridSearch
-from snipcontext.core.search_ops import search_snippets as core_search_snippets
+from snipcontext.core.search_ops import (
+    export_snippets as core_export_snippets,
+)
+from snipcontext.core.search_ops import (
+    search_snippets as core_search_snippets,
+)
 from snipcontext.core.storage import StorageEngine
 from snipcontext.web.dependencies import get_storage
-from snipcontext.web.schemas import ExportRequest, SearchRequest
+from snipcontext.web.schemas import ExportRequest
 from snipcontext.web.websocket import manager
 
 router = APIRouter(tags=["web-ui"])
@@ -66,8 +70,8 @@ def _get_search(storage: StorageEngine = Depends(get_storage)) -> HybridSearch:
 async def list_snippets(
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    language: Optional[str] = Query(None),
-    tag: Optional[str] = Query(None),
+    language: str | None = Query(None),
+    tag: str | None = Query(None),
     storage: StorageEngine = Depends(get_storage),
 ) -> dict[str, Any]:
     snippets = storage.list_all(include_deleted=False)
