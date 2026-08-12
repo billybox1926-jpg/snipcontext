@@ -318,9 +318,7 @@ async def rebuild_index(
 async def _rebuild_and_notify(search: HybridSearch, storage: StorageEngine) -> None:
     try:
         snippets = storage.list_all()
-        await asyncio.get_event_loop().run_in_executor(
-            None, search.rebuild_incremental, snippets
-        )
+        await asyncio.get_event_loop().run_in_executor(None, search.rebuild_incremental, snippets)
         await manager.broadcast({"type": "index_rebuild_completed"})
     except Exception as exc:  # pragma: no cover - background path
         await manager.broadcast({"type": "index_rebuild_failed", "error": str(exc)})
