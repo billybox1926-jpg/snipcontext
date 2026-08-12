@@ -44,6 +44,26 @@ snipcontext search "sorting algorithm"
 
 ---
 
+## Web Interface
+
+SnipContext now includes a full-featured web UI. Run `snipcontext serve` and open
+`http://localhost:8000` to:
+
+- Browse and search your snippets with live semantic results
+- Create, edit, and delete snippets
+- Manage tags (rename, delete, bulk merge)
+- Export snippets in Claude XML, OpenAI, Cursor, or Generic Markdown formats
+- View collection statistics and index status
+
+![SnipContext Web UI](docs/web-ui-screenshot.png)
+
+_The web UI provides a visual interface for managing your snippet collection._
+
+> **Note:** The web UI is served automatically by `snipcontext serve` — no separate frontend
+> server required.
+
+---
+
 ## Why SnipContext?
 
 - **Stop rewriting** the same auth flows, component patterns, or utility functions
