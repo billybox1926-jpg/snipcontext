@@ -206,7 +206,7 @@ async def rename_tag(
 @router.delete("/tags/{tag_name}")  # type: ignore[untyped-decorator]
 async def delete_tag(
     tag_name: str, storage: StorageEngine = Depends(get_storage)
-) -> dict[str, Any]:
+) -> dict[str, bool]:
     snippets = storage.list_all()
     changed = 0
     for s in snippets:
@@ -217,6 +217,40 @@ async def delete_tag(
             changed += 1
     await manager.broadcast({"type": "tags_updated"})
     return {"ok": True, "updated": changed}
+
+
+@router.post("/tags/merge")  # type: ignore[untyped-decorator]
+async def merge_tags(
+    body: dict[str, Any] = Body(...),
+    storage: StorageEngine = Depends(get_storage),
+) -> dict[str, Any]:
+    source_tags = [str(t).strip() for t in body.get("source_tags") or [] if str(t).strip()]
+    destination_tag = str(body.get("destination_tag") or "").strip()
+    if not source_tags or not destination_tag:
+        raise HTTPException(status_code=422, detail="source_tags and destination_tag are required")
+    source_set = {t.lower(): t for t in source_tags}
+    if destination_tag.lower() in source_set:
+        raise HTTPException(status_code=422, detail="destination_tag cannot be a source tag")
+    snippets = storage.list_all()
+    updated = 0
+    for s in snippets:
+        tags = list(getattr(s.metadata, "tags", []) or [])
+        next_tags: list[str] = []
+        changed = False
+        for t in tags:
+            if t.lower() in source_set:
+                if t.lower() != destination_tag.lower():
+                    next_tags.append(destination_tag)
+                changed = True
+            else:
+                next_tags.append(t)
+        if changed:
+            uniq = list(dict.fromkeys(next_tags))
+            s.metadata.tags = uniq
+            storage.save(s)
+            updated += 1
+    await manager.broadcast({"type": "tags_updated"})
+    return {"ok": True, "updated": updated}
 
 
 # ---------------------------------------------------------------------------
