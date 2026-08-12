@@ -66,7 +66,7 @@ def create_app() -> FastAPI:
             return Response((dist_dir / "index.html").read_bytes(), media_type="text/html")
 
         @app.get("/{full_path:path}", include_in_schema=False, response_model=None)  # type: ignore[untyped-decorator]
-        async def serve_frontend(request_path: str) -> JSONResponse | Response:
+        async def serve_frontend(request_path: str) -> Response:
             if (
                 request_path.startswith("api/")
                 or request_path.startswith("docs/")
