@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-08-12
+
+### Added
+- Web UI for snippet browsing, search, and management with FastAPI + React
+- Snippet list with pagination, language/tag filtering, and detail view
+- Inline snippet editing with live WebSocket updates
+- Tag management UI with inline rename and delete
+- Bulk tag merge UI with source/destination selection and preview counts
+- Export UI with provider selection and formatted output preview
+- WebSocket live updates for snippets, tags, and index rebuild progress
+- `POST /api/tags/merge` endpoint for bulk tag consolidation
+- Frontend hooks for tags, search, snippets, export, index status, and WebSocket
+
+### Changed
+- Backend router types improved with targeted `# type: ignore[untyped-decorator]` annotations
+- Storage tag mutations now broadcast `tags_updated` events
+
+### Fixed
+- Mypy errors in `web_ui.py` including invalid `list_all(include_deleted=...)` calls and `soft_delete` references
+
 ## [0.7.0] - 2026-08-11
 
 ### Added
