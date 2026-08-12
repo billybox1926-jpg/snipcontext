@@ -2,15 +2,15 @@ import { SnippetItem } from "../hooks/useSnippets"
 
 type Props = {
   item: SnippetItem
-  onClick?: () => void
+  onClick?: (id: string) => void
 }
 
 export default function SnippetCard({ item, onClick }: Props) {
   return (
     <div
-      onClick={onClick}
-      className={`group rounded border border-gray-800 bg-gray-900/60 p-3 transition-colors cursor-default ${
-        onClick ? "hover:border-gray-600 hover:bg-gray-900" : ""
+      onClick={onClick ? () => onClick(item.id) : undefined}
+      className={`group rounded border border-gray-800 bg-gray-900/60 p-3 transition-colors ${
+        onClick ? "cursor-pointer hover:border-gray-600 hover:bg-gray-900" : "cursor-default"
       }`}
     >
       <div className="flex items-center justify-between gap-3">

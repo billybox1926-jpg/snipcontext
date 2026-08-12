@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
-import { useSearchParams } from "react-router-dom"
-import { useSnippets } from "../hooks/useSnippets"
+import { useSearchParams, useNavigate } from "react-router-dom"
+import { useSnippets, useDeleteSnippet } from "../hooks/useSnippets"
 import { useSearch } from "../hooks/useSearch"
 import SearchBar from "../components/SearchBar"
 import SnippetCard from "../components/SnippetCard"
@@ -44,6 +44,8 @@ export default function Snippets() {
   const [offset, setOffset] = useState(0)
   const [language, setLanguage] = useState("")
   const [tagFilter, setTagFilter] = useState<string[]>([])
+  const navigate = useNavigate()
+  const deleteMutation = useDeleteSnippet()
 
   // Keep local state in sync when URL changes (e.g. browser back/forward)
   useEffect(() => {
@@ -109,7 +111,16 @@ export default function Snippets() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Snippets</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-semibold">Snippets</h1>
+          <button
+            type="button"
+            onClick={() => navigate("/snippets/new")}
+            className="rounded border border-gray-700 px-3 py-1.5 text-sm text-gray-200 hover:border-gray-500"
+          >
+            + New snippet
+          </button>
+        </div>
       </div>
 
       {/* Search + mode */}
@@ -213,7 +224,28 @@ export default function Snippets() {
         <>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {items.map((item) => (
-              <SnippetCard key={item.id} item={item} />
+              <div key={item.id} className="relative">
+                <SnippetCard
+                  item={item}
+                  onClick={(id) => navigate(`/snippets/${id}`)}
+                />
+                {isSearching && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const label = item.title?.trim() || "Untitled"
+                      if (confirm(`Delete "${label}"? This cannot be undone.`)) {
+                        deleteMutation.mutate(id, { onError: () => {} })
+                      }
+                    }}
+                    className="absolute top-2 right-2 rounded border border-red-900/50 px-1.5 py-0.5 text-xs text-red-300 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-950/40"
+                    disabled={deleteMutation.isPending}
+                  >
+                    {deleteMutation.isPending ? "…" : "Del"}
+                  </button>
+                )}
+              </div>
             ))}
           </div>
 
