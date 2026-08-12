@@ -25,8 +25,6 @@ from snipcontext.core.models import Snippet
 from snipcontext.core.search import HybridSearch
 from snipcontext.core.search_ops import (
     export_snippets as core_export_snippets,
-)
-from snipcontext.core.search_ops import (
     search_snippets as core_search_snippets,
 )
 from snipcontext.core.storage import StorageEngine
@@ -66,7 +64,7 @@ def _get_search(storage: StorageEngine = Depends(get_storage)) -> HybridSearch:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/snippets")
+@router.get("/snippets")  # type: ignore[untyped-decorator]
 async def list_snippets(
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
@@ -94,7 +92,7 @@ async def list_snippets(
     }
 
 
-@router.get("/snippets/{snippet_id}")
+@router.get("/snippets/{snippet_id}")  # type: ignore[untyped-decorator]
 async def get_snippet(
     snippet_id: str, storage: StorageEngine = Depends(get_storage)
 ) -> dict[str, Any]:
@@ -124,7 +122,7 @@ async def get_snippet(
     }
 
 
-@router.put("/snippets/{snippet_id}")
+@router.put("/snippets/{snippet_id}")  # type: ignore[untyped-decorator]
 async def update_snippet(
     snippet_id: str,
     body: dict[str, Any] = Body(...),
@@ -156,7 +154,7 @@ async def update_snippet(
     return await get_snippet(snippet_id, storage)
 
 
-@router.delete("/snippets/{snippet_id}")
+@router.delete("/snippets/{snippet_id}")  # type: ignore[untyped-decorator]
 async def delete_snippet(
     snippet_id: str, storage: StorageEngine = Depends(get_storage)
 ) -> dict[str, bool]:
@@ -173,7 +171,7 @@ async def delete_snippet(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/tags")
+@router.get("/tags")  # type: ignore[untyped-decorator]
 async def list_tags(storage: StorageEngine = Depends(get_storage)) -> dict[str, Any]:
     snippets = storage.list_all()
     counts: dict[str, int] = {}
@@ -184,7 +182,7 @@ async def list_tags(storage: StorageEngine = Depends(get_storage)) -> dict[str, 
     return {"items": tags, "total": len(tags)}
 
 
-@router.put("/tags/{tag_name}")
+@router.put("/tags/{tag_name}")  # type: ignore[untyped-decorator]
 async def rename_tag(
     tag_name: str,
     body: dict[str, Any] = Body(...),
@@ -205,7 +203,7 @@ async def rename_tag(
     return {"ok": True, "updated": changed}
 
 
-@router.delete("/tags/{tag_name}")
+@router.delete("/tags/{tag_name}")  # type: ignore[untyped-decorator]
 async def delete_tag(
     tag_name: str, storage: StorageEngine = Depends(get_storage)
 ) -> dict[str, Any]:
@@ -226,7 +224,7 @@ async def delete_tag(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/search")
+@router.get("/search")  # type: ignore[untyped-decorator]
 async def search_items(
     q: str = Query(..., min_length=1),
     mode: str = Query("hybrid", pattern="^(semantic|keyword|hybrid)$"),
@@ -250,7 +248,7 @@ async def search_items(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/export")
+@router.post("/export")  # type: ignore[untyped-decorator]
 async def export_items(
     body: dict[str, Any] = Body(...),
     storage: StorageEngine = Depends(get_storage),
@@ -281,7 +279,7 @@ async def export_items(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/index/status")
+@router.get("/index/status")  # type: ignore[untyped-decorator]
 async def index_status(
     search: HybridSearch = Depends(_get_search),
     storage: StorageEngine = Depends(get_storage),
@@ -303,7 +301,7 @@ async def index_status(
     }
 
 
-@router.post("/index/rebuild")
+@router.post("/index/rebuild")  # type: ignore[untyped-decorator]
 async def rebuild_index(
     search: HybridSearch = Depends(_get_search),
     storage: StorageEngine = Depends(get_storage),
@@ -327,7 +325,7 @@ async def _rebuild_and_notify(search: HybridSearch, storage: StorageEngine) -> N
 # ---------------------------------------------------------------------------
 
 
-@router.websocket("/ws")
+@router.websocket("/ws")  # type: ignore[untyped-decorator]
 async def websocket_endpoint(websocket: WebSocket) -> None:
     await manager.connect(websocket)
     try:
