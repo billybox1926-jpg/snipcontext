@@ -23,7 +23,12 @@ all: lint mypy test
 
 # ── Build ──────────────────────────────────────────────────────────
 
-build-wheel:
+build-frontend:
+	cd web-ui && npm ci && npm run build
+	mkdir -p src/snipcontext/web/static
+	cp -R web-ui/dist/* src/snipcontext/web/static/
+
+build-wheel: build-frontend
 	uv build
 
 build-binary:

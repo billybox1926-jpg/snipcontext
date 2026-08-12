@@ -125,10 +125,12 @@ include = [
     "/scripts",
     "/README.md",
     "/pyproject.toml",
+    "/web-ui/dist",
 ]
 [tool.hatch.build.targets.wheel]
 packages = ["src/snipcontext"]
 artifacts = ["scripts/snipcontext.cmd"]
+include = ["src/snipcontext/web/static"]
 [tool.hatch.build]
 exclude = [
     "/tests",
