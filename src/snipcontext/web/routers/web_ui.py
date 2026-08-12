@@ -10,7 +10,15 @@ from __future__ import annotations
 import asyncio
 from typing import Any, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 
 from snipcontext.config.settings import get_config
 from snipcontext.core.search_ops import export_snippets as core_export_snippets
@@ -29,11 +37,16 @@ router = APIRouter(tags=["web-ui"])
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _snippet_to_list_item(snippet: Snippet) -> dict[str, Any]:
     return {
         "id": getattr(snippet, "id", ""),
         "title": getattr(snippet.metadata, "title", "") or "",
-        "language": getattr(snippet.metadata.language, "value", "") if getattr(snippet.metadata, "language", None) else "",
+        "language": (
+            getattr(snippet.metadata.language, "value", "")
+            if getattr(snippet.metadata, "language", None)
+            else ""
+        ),
         "tags": list(getattr(snippet.metadata, "tags", []) or []),
         "updated_at": getattr(snippet.metadata, "updated_at", ""),
         "created_at": getattr(snippet, "created_at", ""),
@@ -48,6 +61,7 @@ def _get_search(storage: StorageEngine = Depends(get_storage)) -> HybridSearch:
 # Snippets list/detail/update/delete
 # ---------------------------------------------------------------------------
 
+
 @router.get("/snippets")
 async def list_snippets(
     offset: int = Query(0, ge=0),
@@ -58,9 +72,15 @@ async def list_snippets(
 ) -> dict[str, Any]:
     snippets = storage.list_all(include_deleted=False)
     if language:
-        snippets = [s for s in snippets if (getattr(s.metadata, "language", None) or "").lower() == language.lower()]
+        snippets = [
+            s
+            for s in snippets
+            if (getattr(s.metadata, "language", None) or "").lower() == language.lower()
+        ]
     if tag:
-        snippets = [s for s in snippets if tag in (getattr(s.metadata, "tags", []) or [])]
+        snippets = [
+            s for s in snippets if tag in (getattr(s.metadata, "tags", []) or [])
+        ]
     snippets.sort(key=lambda s: getattr(s.metadata, "updated_at", ""), reverse=True)
     total = len(snippets)
     page = snippets[offset : offset + limit]
@@ -73,7 +93,9 @@ async def list_snippets(
 
 
 @router.get("/snippets/{snippet_id}")
-async def get_snippet(snippet_id: str, storage: StorageEngine = Depends(get_storage)) -> dict[str, Any]:
+async def get_snippet(
+    snippet_id: str, storage: StorageEngine = Depends(get_storage)
+) -> dict[str, Any]:
     try:
         snippet = storage.get(snippet_id)
     except Exception as exc:
@@ -82,13 +104,21 @@ async def get_snippet(snippet_id: str, storage: StorageEngine = Depends(get_stor
         "id": snippet.id,
         "title": getattr(snippet.metadata, "title", "") or "",
         "content": getattr(snippet, "content", "") or "",
-        "language": getattr(snippet.metadata.language, "value", "") if getattr(snippet.metadata, "language", None) else "",
+        "language": (
+            getattr(snippet.metadata.language, "value", "")
+            if getattr(snippet.metadata, "language", None)
+            else ""
+        ),
         "tags": list(getattr(snippet.metadata, "tags", []) or []),
         "description": getattr(snippet.metadata, "description", ""),
         "created_at": getattr(snippet, "created_at", ""),
         "updated_at": getattr(snippet.metadata, "updated_at", ""),
         "deleted": bool(getattr(snippet, "deleted", False)),
-        "metadata": snippet.metadata.model_dump() if hasattr(snippet.metadata, "model_dump") else getattr(snippet.metadata, "__dict__", {}),
+        "metadata": (
+            snippet.metadata.model_dump()
+            if hasattr(snippet.metadata, "model_dump")
+            else getattr(snippet.metadata, "__dict__", {})
+        ),
     }
 
 
@@ -125,7 +155,9 @@ async def update_snippet(
 
 
 @router.delete("/snippets/{snippet_id}")
-async def delete_snippet(snippet_id: str, storage: StorageEngine = Depends(get_storage)) -> dict[str, bool]:
+async def delete_snippet(
+    snippet_id: str, storage: StorageEngine = Depends(get_storage)
+) -> dict[str, bool]:
     try:
         storage.soft_delete(snippet_id)
     except Exception as exc:
@@ -137,6 +169,7 @@ async def delete_snippet(snippet_id: str, storage: StorageEngine = Depends(get_s
 # ---------------------------------------------------------------------------
 # Tags
 # ---------------------------------------------------------------------------
+
 
 @router.get("/tags")
 async def list_tags(storage: StorageEngine = Depends(get_storage)) -> dict[str, Any]:
@@ -150,7 +183,11 @@ async def list_tags(storage: StorageEngine = Depends(get_storage)) -> dict[str, 
 
 
 @router.put("/tags/{tag_name}")
-async def rename_tag(tag_name: str, body: dict[str, Any] = Body(...), storage: StorageEngine = Depends(get_storage)) -> dict[str, bool]:
+async def rename_tag(
+    tag_name: str,
+    body: dict[str, Any] = Body(...),
+    storage: StorageEngine = Depends(get_storage),
+) -> dict[str, bool]:
     new_name = str(body.get("new_name") or "").strip()
     if not new_name:
         raise HTTPException(status_code=400, detail="new_name is required")
@@ -167,7 +204,9 @@ async def rename_tag(tag_name: str, body: dict[str, Any] = Body(...), storage: S
 
 
 @router.delete("/tags/{tag_name}")
-async def delete_tag(tag_name: str, storage: StorageEngine = Depends(get_storage)) -> dict[str, bool]:
+async def delete_tag(
+    tag_name: str, storage: StorageEngine = Depends(get_storage)
+) -> dict[str, bool]:
     snippets = storage.list_all(include_deleted=False)
     changed = 0
     for s in snippets:
@@ -183,6 +222,7 @@ async def delete_tag(tag_name: str, storage: StorageEngine = Depends(get_storage
 # ---------------------------------------------------------------------------
 # Search
 # ---------------------------------------------------------------------------
+
 
 @router.get("/search")
 async def search_items(
@@ -207,6 +247,7 @@ async def search_items(
 # Export
 # ---------------------------------------------------------------------------
 
+
 @router.post("/export")
 async def export_items(
     body: dict[str, Any] = Body(...),
@@ -226,12 +267,17 @@ async def export_items(
         query=request.query,
         top_k=10,
     )
-    return {"format": request.provider, "content": formatted, "snippet_count": len(snippets)}
+    return {
+        "format": request.provider,
+        "content": formatted,
+        "snippet_count": len(snippets),
+    }
 
 
 # ---------------------------------------------------------------------------
 # Index status/rebuild
 # ---------------------------------------------------------------------------
+
 
 @router.get("/index/status")
 async def index_status(
@@ -268,7 +314,9 @@ async def rebuild_index(
 async def _rebuild_and_notify(search: HybridSearch, storage: StorageEngine) -> None:
     try:
         snippets = storage.list_all()
-        await asyncio.get_event_loop().run_in_executor(None, search.rebuild_incremental, snippets)
+        await asyncio.get_event_loop().run_in_executor(
+            None, search.rebuild_incremental, snippets
+        )
         await manager.broadcast({"type": "index_rebuild_completed"})
     except Exception as exc:  # pragma: no cover - background path
         await manager.broadcast({"type": "index_rebuild_failed", "error": str(exc)})
@@ -277,6 +325,7 @@ async def _rebuild_and_notify(search: HybridSearch, storage: StorageEngine) -> N
 # ---------------------------------------------------------------------------
 # WebSocket
 # ---------------------------------------------------------------------------
+
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
