@@ -218,7 +218,7 @@ async def delete_tag(
             storage.save(s)
             changed += 1
     await manager.broadcast({"type": "tags_updated"})
-    return cast(dict[str, Any], {"ok": True, "updated": changed})
+    return {"ok": True, "updated": changed}
 
 
 @router.post("/tags/merge")  # type: ignore[untyped-decorator]

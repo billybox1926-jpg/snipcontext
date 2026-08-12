@@ -13,14 +13,25 @@ from snipcontext.web.routers import agent, health, snippets, web_ui
 
 
 def _web_dist_dir() -> Path | None:
-    base_dir = Path(__file__).resolve().parent.parent.parent
-    candidates = [
-        base_dir / "web-ui" / "dist",
-        base_dir / "src" / "snipcontext" / "web" / "static",
-    ]
-    for candidate in candidates:
-        if candidate.is_dir():
-            return candidate
+    # app.py is at src/snipcontext/web/app.py. Walk up 3 levels to reach the
+    # repo root (web/ → snipcontext/ → src/ → repo-root), then look for web-ui/dist.
+    # On case-insensitive filesystems (Windows), Path().resolve() may uppercase
+    # the first dir letter ("Snipcontext"), so also probe case-insensitively.
+    file_dir = Path(__file__).resolve().parent  # .../web/
+    repo_root = file_dir.parent.parent.parent  # .../repo-root/  (3 parents)
+    primary = repo_root / "web-ui" / "dist"
+    if primary.is_dir():
+        return primary
+    # Case-insensitive fallback: find a sibling named "web-ui" (any case)
+    for sibling in repo_root.iterdir():
+        if sibling.is_dir() and sibling.name.lower() == "web-ui":
+            candidate = sibling / "dist"
+            if candidate.is_dir():
+                return candidate
+    # Last resort: bundled static dir next to this file
+    static = file_dir / "static"
+    if static.is_dir():
+        return static
     return None
 
 
@@ -44,17 +55,17 @@ def create_app() -> FastAPI:
     app.include_router(agent.router)
     app.include_router(web_ui.router)
 
-    @app.get("/", include_in_schema=False)  # type: ignore[untyped-decorator]
-    async def root() -> JSONResponse:
-        return JSONResponse({"status": "ok", "docs": "/docs"})
-
     dist_dir = _web_dist_dir()
     if dist_dir is not None:
         assets_dir = dist_dir / "assets"
         if assets_dir.is_dir():
             app.mount("/assets", StaticFiles(directory=assets_dir), name="web-assets")
 
-        @app.get("/{full_path:path}", include_in_schema=False)  # type: ignore[untyped-decorator]
+        @app.get("/index.html", include_in_schema=False)  # type: ignore[untyped-decorator]
+        async def index_html() -> Response:
+            return Response((dist_dir / "index.html").read_bytes(), media_type="text/html")
+
+        @app.get("/{full_path:path}", include_in_schema=False, response_model=None)  # type: ignore[untyped-decorator]
         async def serve_frontend(request_path: str) -> JSONResponse | Response:
             if (
                 request_path.startswith("api/")
