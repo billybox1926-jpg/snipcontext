@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from typing import Union
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -57,8 +55,12 @@ def create_app() -> FastAPI:
             app.mount("/assets", StaticFiles(directory=assets_dir), name="web-assets")
 
         @app.get("/{full_path:path}", include_in_schema=False)  # type: ignore[untyped-decorator]
-        async def serve_frontend(request_path: str) -> Union[JSONResponse, Response]:
-            if request_path.startswith("api/") or request_path.startswith("docs/") or request_path.startswith("redoc"):
+        async def serve_frontend(request_path: str) -> JSONResponse | Response:
+            if (
+                request_path.startswith("api/")
+                or request_path.startswith("docs/")
+                or request_path.startswith("redoc")
+            ):
                 return JSONResponse({"detail": "not found"}, status_code=404)
             candidate = dist_dir / request_path
             if request_path and candidate.is_file():
