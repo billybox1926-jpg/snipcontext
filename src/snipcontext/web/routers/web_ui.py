@@ -51,7 +51,7 @@ def _snippet_to_list_item(snippet: Snippet) -> dict[str, Any]:
             if getattr(snippet.metadata, "language", None)
             else ""
         ),
-        "tags": list(getattr(snippet.metadata, "tags", []) or []),
+        "tags": list(getattr(snippet, "tags", []) or []),
         "updated_at": getattr(snippet.metadata, "updated_at", ""),
         "created_at": getattr(snippet, "created_at", ""),
     }
@@ -82,7 +82,7 @@ async def list_snippets(
             if (getattr(s.metadata, "language", None) or "").lower() == language.lower()
         ]
     if tag:
-        snippets = [s for s in snippets if tag in (getattr(s.metadata, "tags", []) or [])]
+        snippets = [s for s in snippets if tag in (getattr(s, "tags", []) or [])]
     snippets.sort(key=lambda s: getattr(s.metadata, "updated_at", ""), reverse=True)
     total = len(snippets)
     page = snippets[offset : offset + limit]
@@ -111,7 +111,7 @@ async def get_snippet(
             if getattr(snippet.metadata, "language", None)
             else ""
         ),
-        "tags": list(getattr(snippet.metadata, "tags", []) or []),
+        "tags": list(getattr(snippet, "tags", []) or []),
         "description": getattr(snippet.metadata, "description", ""),
         "created_at": getattr(snippet, "created_at", ""),
         "updated_at": getattr(snippet.metadata, "updated_at", ""),
@@ -178,7 +178,7 @@ async def list_tags(storage: StorageEngine = Depends(get_storage)) -> dict[str, 
     snippets = storage.list_all()
     counts: dict[str, int] = {}
     for s in snippets:
-        for t in getattr(s.metadata, "tags", []) or []:
+        for t in getattr(s, "tags", []) or []:
             counts[t] = counts.get(t, 0) + 1
     tags = [{"name": name, "count": count} for name, count in sorted(counts.items())]
     return {"items": tags, "total": len(tags)}
