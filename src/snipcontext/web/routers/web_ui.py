@@ -82,9 +82,7 @@ async def list_snippets(
             if (getattr(s.metadata, "language", None) or "").lower() == language.lower()
         ]
     if tag:
-        snippets = [
-            s for s in snippets if tag in (getattr(s.metadata, "tags", []) or [])
-        ]
+        snippets = [s for s in snippets if tag in (getattr(s.metadata, "tags", []) or [])]
     snippets.sort(key=lambda s: getattr(s.metadata, "updated_at", ""), reverse=True)
     total = len(snippets)
     page = snippets[offset : offset + limit]
