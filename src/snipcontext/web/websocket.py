@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
-from typing import Set
 
 from fastapi import WebSocket
 
 
 class ConnectionManager:
     def __init__(self) -> None:
-        self.active_connections: Set[WebSocket] = set()
+        self.active_connections: set[WebSocket] = set()
 
     async def connect(self, websocket: WebSocket) -> None:
         await websocket.accept()

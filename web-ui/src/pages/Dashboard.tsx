@@ -1,10 +1,23 @@
-import { useIndexStatus, useSnippets } from '../hooks/useSnippets'
+import { useIndexStatus } from '../hooks/useIndex'
+import { useSnippets } from '../hooks/useSnippets'
+import { useNavigate } from 'react-router-dom'
 import SearchBar from '../components/SearchBar'
 import SnippetCard from '../components/SnippetCard'
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const { data: index } = useIndexStatus()
   const { data: snippets } = useSnippets({ limit: 10 })
+
+  function handleSearchChange(value: string) {
+    if (value.trim()) {
+      navigate(`/snippets?q=${encodeURIComponent(value.trim())}`, { replace: true })
+    }
+  }
+
+  function handleModeChange() {
+    // keep dashboard search bar simple — just a launch point
+  }
 
   return (
     <div className="space-y-6">
@@ -25,7 +38,12 @@ export default function Dashboard() {
       </div>
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Recent</h2>
-        <SearchBar value="" onChange={() => {}} />
+        <SearchBar
+          value=""
+          onChange={handleSearchChange}
+          mode="hybrid"
+          onModeChange={handleModeChange}
+        />
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {(snippets?.items ?? []).slice(0, 8).map((item) => (
             <SnippetCard key={item.id} item={item} />
