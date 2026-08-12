@@ -6,8 +6,11 @@ import SnippetDetail from './pages/SnippetDetail'
 import NewSnippet from './pages/NewSnippet'
 import Tags from './pages/Tags'
 import ExportPage from './pages/Export'
+import { useWebSocket } from './hooks/useWebSocket'
 
-export default function App() {
+function App() {
+  useWebSocket('/ws')
+
   return (
     <Routes>
       <Route element={<Layout />}>
@@ -21,3 +24,5 @@ export default function App() {
     </Routes>
   )
 }
+
+export default App

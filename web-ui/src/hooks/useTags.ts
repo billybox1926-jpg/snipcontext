@@ -27,3 +27,12 @@ export function useDeleteTag() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tags'] }),
   })
 }
+
+export function useMergeTags() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ sourceTags, destinationTag }: { sourceTags: string[]; destinationTag: string }) =>
+      post<{ ok: boolean; updated: number }>('/api/tags/merge', { source_tags: sourceTags, destination_tag: destinationTag }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tags'] }),
+  })
+}

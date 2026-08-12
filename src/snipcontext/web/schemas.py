@@ -44,6 +44,7 @@ class ExportRequest(BaseModel):
     output: str | None = None
     query: str | None = None
     ids: list[str] | None = None
+    top_k: int = 10
 
 
 class MessageResponse(BaseModel):

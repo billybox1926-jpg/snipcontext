@@ -1,3 +1,4 @@
+import { useNavigate, Link } from "react-router-dom"
 import { SnippetItem } from "../hooks/useSnippets"
 
 type Props = {
@@ -6,6 +7,8 @@ type Props = {
 }
 
 export default function SnippetCard({ item, onClick }: Props) {
+  const navigate = useNavigate()
+
   return (
     <div
       onClick={onClick ? () => onClick(item.id) : undefined}
@@ -34,12 +37,17 @@ export default function SnippetCard({ item, onClick }: Props) {
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
         {(item.tags || []).map((tag) => (
-          <span
+          <button
             key={tag}
-            className="rounded-full border border-gray-700 bg-gray-800 px-2 py-0.5 text-xs text-gray-200 transition-colors group-hover:border-gray-500"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              navigate(`/snippets?tag=${encodeURIComponent(tag)}`)
+            }}
+            className="rounded-full border border-gray-700 bg-gray-800 px-2 py-0.5 text-xs text-gray-200 transition-colors group-hover:border-gray-500 hover:border-gray-400"
           >
             {tag}
-          </span>
+          </button>
         ))}
         {(!item.tags || item.tags.length === 0) && (
           <span className="rounded-full border border-dashed border-gray-700 px-2 py-0.5 text-xs text-gray-500">

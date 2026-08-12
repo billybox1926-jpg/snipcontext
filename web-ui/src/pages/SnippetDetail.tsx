@@ -181,6 +181,22 @@ export default function SnippetDetail() {
           <div>Created {snippet.created_at ? new Date(snippet.created_at).toLocaleString() : "—"}</div>
           <div>Updated {snippet.updated_at ? new Date(snippet.updated_at).toLocaleString() : "—"}</div>
         </div>
+
+        {/* Tags (clickable from view mode) */}
+        {snippet.tags && snippet.tags.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {snippet.tags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => navigate(`/snippets?tag=${encodeURIComponent(tag)}`)}
+                className="rounded-full border border-gray-700 bg-gray-800 px-2.5 py-0.5 text-xs text-gray-200 transition-colors hover:border-gray-400"
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
