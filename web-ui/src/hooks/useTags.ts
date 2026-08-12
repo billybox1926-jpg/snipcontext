@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { get, put, del } from '../api/client'
+import { get, put, del, post } from '../api/client'
 
 export type TagItem = { name: string; count: number }
 

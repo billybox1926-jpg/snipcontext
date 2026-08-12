@@ -35,7 +35,7 @@ function TagsFilter({ tags, selected, onToggle }: { tags: string[]; selected: st
 }
 
 export default function Snippets() {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const queryFromUrl = searchParams.get("q") || ""
   const modeFromUrl = (searchParams.get("mode") as SearchMode) || "hybrid"
 
@@ -54,21 +54,6 @@ export default function Snippets() {
     setOffset(0)
   }, [queryFromUrl, modeFromUrl])
 
-  // Derive available tags from the currently loaded items so we don't need a separate endpoint
-  const allTags = [
-    ...new Set(
-      ((() => {
-        const items = []
-        if (browseData?.items) items.push(...browseData.items)
-        if (searchData?.items) items.push(...searchData.items)
-        return items
-      })() || [])
-        .map((s) => s.tags)
-        .flat()
-        .filter(Boolean),
-    ),
-  ].sort()
-
   const browseData = useSnippets({
     offset,
     limit: PAGE_SIZE,
@@ -78,12 +63,25 @@ export default function Snippets() {
 
   const searchData = useSearch(query, mode)
 
+  // Derive available tags from the currently loaded items so we don't need a separate endpoint
+  const allTags = [
+    ...new Set(
+      ((() => {
+        const items: Array<{ tags?: string[] }> = []
+        const bd = browseData.data
+        const sd = searchData.data
+        if (bd?.items) items.push(...bd.items as Array<{ tags?: string[] }>)
+        if (sd?.items) items.push(...sd.items as Array<{ tags?: string[] }>)
+        return items
+      })() || []).map((s) => s.tags).flat().filter(Boolean),
+    ),
+  ].sort()
+
   const isSearching = query.trim().length > 0
   const items = isSearching ? searchData.data?.items ?? [] : browseData.data?.items ?? []
   const total = isSearching ? searchData.data?.total ?? 0 : browseData.data?.total ?? 0
 
   const activeTagCount = tagFilter.length
-  const filteredTag = tagFilter[0]
 
   function handleSearchChange(v: string) {
     setQuery(v)
@@ -187,7 +185,7 @@ export default function Snippets() {
           ))}
         </select>
 
-        <TagsFilter tags={allTags} selected={tagFilter} onToggle={handleTagToggle} />
+        <TagsFilter tags={allTags as string[]} selected={tagFilter} onToggle={handleTagToggle} />
 
         {hasFilters && (
           <button
@@ -236,7 +234,7 @@ export default function Snippets() {
                       e.stopPropagation()
                       const label = item.title?.trim() || "Untitled"
                       if (confirm(`Delete "${label}"? This cannot be undone.`)) {
-                        deleteMutation.mutate(id, { onError: () => {} })
+                        deleteMutation.mutate(item.id, { onError: () => {} })
                       }
                     }}
                     className="absolute top-2 right-2 rounded border border-red-900/50 px-1.5 py-0.5 text-xs text-red-300 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-950/40"

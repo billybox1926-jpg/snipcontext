@@ -35,11 +35,11 @@ const LANGUAGES = [
 function LanguageSelect({
   value,
   onChange,
-  readonly,
+  readonly = false,
 }: {
   value: string
   onChange: (v: string) => void
-  readonly: boolean
+  readonly?: boolean
 }) {
   return (
     <select

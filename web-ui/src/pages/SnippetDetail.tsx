@@ -1,6 +1,6 @@
 import { useSnippet, useUpdateSnippet, useDeleteSnippet } from "../hooks/useSnippets"
 import { useParams, useNavigate, Link } from "react-router-dom"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import SnippetForm from "../components/SnippetForm"
 
 type Values = {
@@ -68,7 +68,6 @@ export default function SnippetDetail() {
       await updateMutation.mutateAsync({
         title: values.title,
         content: values.content,
-        description: values.description,
         tags: values.tags,
       })
       setEditing(false)

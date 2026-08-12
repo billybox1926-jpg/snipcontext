@@ -75,7 +75,6 @@ export default function ExportPage() {
     URL.revokeObjectURL(url)
   }
 
-  const selectedCount = mode === "ids" ? selectedIds.size : mode === "query" ? null : allItems.length
   const providerDef = PROVIDERS.find((p) => p.value === provider)
 
   return (
