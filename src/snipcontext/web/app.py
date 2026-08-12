@@ -65,7 +65,7 @@ def create_app() -> FastAPI:
         async def index_html() -> Response:
             return Response((dist_dir / "index.html").read_bytes(), media_type="text/html")
 
-        @app.get("/{full_path:path}", include_in_schema=False, response_model=None)  # type: ignore[untyped-decorator]
+        @app.get("/{request_path:path}", include_in_schema=False, response_model=None)  # type: ignore[untyped-decorator]
         async def serve_frontend(request_path: str) -> Response:
             if (
                 request_path.startswith("api/")
@@ -76,6 +76,6 @@ def create_app() -> FastAPI:
             candidate = dist_dir / request_path
             if request_path and candidate.is_file():
                 return Response(candidate.read_bytes(), media_type="application/octet-stream")
-            return JSONResponse((dist_dir / "index.html").read_bytes(), media_type="text/html")
+            return Response((dist_dir / "index.html").read_bytes(), media_type="text/html")
 
     return app
