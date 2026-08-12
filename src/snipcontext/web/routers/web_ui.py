@@ -8,7 +8,7 @@ index management.
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, cast
 
 from fastapi import (
     APIRouter,
@@ -25,6 +25,8 @@ from snipcontext.core.models import Snippet
 from snipcontext.core.search import HybridSearch
 from snipcontext.core.search_ops import (
     export_snippets as core_export_snippets,
+)
+from snipcontext.core.search_ops import (
     search_snippets as core_search_snippets,
 )
 from snipcontext.core.storage import StorageEngine
@@ -147,7 +149,7 @@ async def update_snippet(
         except Exception:
             pass
     if tags is not None:
-        snippet.metadata.tags = list(tags)
+        snippet.tags = list(tags)
 
     storage.save(snippet)
     await manager.broadcast({"type": "snippet_updated", "id": snippet_id})
@@ -194,9 +196,9 @@ async def rename_tag(
     snippets = storage.list_all()
     changed = 0
     for s in snippets:
-        tags = list(getattr(s.metadata, "tags", []) or [])
+        tags = list(getattr(s, "tags", []) or [])
         if tag_name in tags:
-            s.metadata.tags = [new_name if t == tag_name else t for t in tags]
+            s.tags = [new_name if t == tag_name else t for t in tags]
             storage.save(s)
             changed += 1
     await manager.broadcast({"type": "tags_updated"})
@@ -206,17 +208,17 @@ async def rename_tag(
 @router.delete("/tags/{tag_name}")  # type: ignore[untyped-decorator]
 async def delete_tag(
     tag_name: str, storage: StorageEngine = Depends(get_storage)
-) -> dict[str, bool]:
+) -> dict[str, Any]:
     snippets = storage.list_all()
     changed = 0
     for s in snippets:
-        tags = list(getattr(s.metadata, "tags", []) or [])
+        tags = list(getattr(s, "tags", []) or [])
         if tag_name in tags:
-            s.metadata.tags = [t for t in tags if t != tag_name]
+            s.tags = [t for t in tags if t != tag_name]
             storage.save(s)
             changed += 1
     await manager.broadcast({"type": "tags_updated"})
-    return {"ok": True, "updated": changed}
+    return cast(dict[str, Any], {"ok": True, "updated": changed})
 
 
 @router.post("/tags/merge")  # type: ignore[untyped-decorator]
@@ -234,7 +236,7 @@ async def merge_tags(
     snippets = storage.list_all()
     updated = 0
     for s in snippets:
-        tags = list(getattr(s.metadata, "tags", []) or [])
+        tags = list(getattr(s, "tags", []) or [])
         next_tags: list[str] = []
         changed = False
         for t in tags:
@@ -246,7 +248,7 @@ async def merge_tags(
                 next_tags.append(t)
         if changed:
             uniq = list(dict.fromkeys(next_tags))
-            s.metadata.tags = uniq
+            s.tags = uniq
             storage.save(s)
             updated += 1
     await manager.broadcast({"type": "tags_updated"})
