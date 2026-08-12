@@ -267,7 +267,7 @@ async def export_items(
         provider_name=request.provider,
         ids=request.ids,
         query=request.query,
-        top_k=10,
+        top_k=request.top_k,
     )
     return {
         "format": request.provider,
