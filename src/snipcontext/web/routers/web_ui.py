@@ -74,7 +74,7 @@ async def list_snippets(
     tag: str | None = Query(None),
     storage: StorageEngine = Depends(get_storage),
 ) -> dict[str, Any]:
-    snippets = storage.list_all(include_deleted=False)
+    snippets = storage.list_all()
     if language:
         snippets = [
             s
@@ -161,7 +161,7 @@ async def delete_snippet(
     snippet_id: str, storage: StorageEngine = Depends(get_storage)
 ) -> dict[str, bool]:
     try:
-        storage.soft_delete(snippet_id)
+        storage.mark_deleted(snippet_id)
     except Exception as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     await manager.broadcast({"type": "snippet_deleted", "id": snippet_id})
@@ -175,7 +175,7 @@ async def delete_snippet(
 
 @router.get("/tags")
 async def list_tags(storage: StorageEngine = Depends(get_storage)) -> dict[str, Any]:
-    snippets = storage.list_all(include_deleted=False)
+    snippets = storage.list_all()
     counts: dict[str, int] = {}
     for s in snippets:
         for t in getattr(s.metadata, "tags", []) or []:
@@ -189,11 +189,11 @@ async def rename_tag(
     tag_name: str,
     body: dict[str, Any] = Body(...),
     storage: StorageEngine = Depends(get_storage),
-) -> dict[str, bool]:
+) -> dict[str, Any]:
     new_name = str(body.get("new_name") or "").strip()
     if not new_name:
         raise HTTPException(status_code=400, detail="new_name is required")
-    snippets = storage.list_all(include_deleted=False)
+    snippets = storage.list_all()
     changed = 0
     for s in snippets:
         tags = list(getattr(s.metadata, "tags", []) or [])
@@ -208,8 +208,8 @@ async def rename_tag(
 @router.delete("/tags/{tag_name}")
 async def delete_tag(
     tag_name: str, storage: StorageEngine = Depends(get_storage)
-) -> dict[str, bool]:
-    snippets = storage.list_all(include_deleted=False)
+) -> dict[str, Any]:
+    snippets = storage.list_all()
     changed = 0
     for s in snippets:
         tags = list(getattr(s.metadata, "tags", []) or [])
@@ -294,7 +294,7 @@ async def index_status(
         if index_obj is not None:
             vector_count = int(getattr(index_obj, "ntotal", 0) or 0)
     last_rebuild = getattr(search, "last_rebuild", None)
-    snippets = storage.list_all(include_deleted=False)
+    snippets = storage.list_all()
     return {
         "index_type": backend_name,
         "vector_count": vector_count,
