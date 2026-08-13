@@ -18,4 +18,4 @@ def test_root() -> None:
     client = TestClient(create_app())
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json()["status"] == "ok"
+    assert response.text.startswith("<!doctype html>") or "<html" in response.text
