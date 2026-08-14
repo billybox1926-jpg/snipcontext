@@ -102,6 +102,7 @@ def test_init_fails_if_exists(tmp_path: Path):
     result = runner.invoke(app, ["init"])
     assert result.exit_code != 0
 
+
 def test_init_with_local_path(tmp_path: Path):
     custom_path = tmp_path / "custom"
     result = runner.invoke(app, ["init", "--local", str(custom_path)])
@@ -109,6 +110,7 @@ def test_init_with_local_path(tmp_path: Path):
     target = custom_path / ".snipcontext"
     assert target.is_dir()
     assert (target / "config.json").is_file()
+
 
 def test_init_with_force(tmp_path: Path):
     target = tmp_path / ".snipcontext"
@@ -119,6 +121,7 @@ def test_init_with_force(tmp_path: Path):
     assert result.exit_code == 0
     assert (target / "config.json").is_file()
     assert (target / "old.txt").is_file()
+
 
 def test_init_with_template(tmp_path: Path):
     template = tmp_path / "example.json"
@@ -147,9 +150,7 @@ def test_init_git_creates_repo(tmp_path: Path) -> None:
 
 def test_init_git_with_remote(tmp_path: Path) -> None:
     os.chdir(tmp_path)
-    result = runner.invoke(
-        app, ["init", "--git", "--remote", "https://example.com/repo.git"]
-    )
+    result = runner.invoke(app, ["init", "--git", "--remote", "https://example.com/repo.git"])
     assert result.exit_code == 0, result.output
     target = tmp_path / ".snipcontext"
     remote_output = _run(["remote", "get-url", "origin"], target).stdout.strip()

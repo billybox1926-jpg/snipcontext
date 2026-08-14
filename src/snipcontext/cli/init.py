@@ -88,9 +88,13 @@ def register_commands(app: typer.Typer) -> None:
 
     @app.command("init")  # type: ignore[untyped-decorator]
     def init(
-        local: str | None = typer.Option(None, "--local", help="Path to initialize (defaults to CWD if omitted)"),
+        local: str | None = typer.Option(
+            None, "--local", help="Path to initialize (defaults to CWD if omitted)"
+        ),
         force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing config"),
-        template: str | None = typer.Option(None, "--template", help="Path to a JSON snippet template to copy"),
+        template: str | None = typer.Option(
+            None, "--template", help="Path to a JSON snippet template to copy"
+        ),
         git: bool = typer.Option(False, "--git", help="Initialize git repo in target directory"),
         remote: str | None = typer.Option(None, "--remote", help="Git remote URL"),
     ) -> None:
@@ -119,9 +123,7 @@ def register_commands(app: typer.Typer) -> None:
         payload = config.model_dump(mode="json", exclude_none=True)
 
         # Write default config.json
-        (target / "config.json").write_text(
-            json.dumps(payload, indent=2), encoding="utf-8"
-        )
+        (target / "config.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
         if template:
             template_path = Path(template)
@@ -130,7 +132,9 @@ def register_commands(app: typer.Typer) -> None:
                 shutil.copy2(template_path, dest)
                 console.print(f"[green]Copied template {template_path.name} to {dest}[/green]")
             else:
-                console.print(f"[yellow]Warning: Template {template} not found or is not a file.[/yellow]")
+                console.print(
+                    f"[yellow]Warning: Template {template} not found or is not a file.[/yellow]"
+                )
 
         if git:
             _init_git(target, remote)
