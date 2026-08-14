@@ -88,37 +88,48 @@ def register_commands(app: typer.Typer) -> None:
 
     @app.command("init")  # type: ignore[untyped-decorator]
     def init(
-        local: bool = typer.Option(False, "--local", help="Initialize project-local .snipcontext/"),
-        path: str = typer.Option(".snipcontext", "--path", help="Target directory name"),
+        local: str | None = typer.Option(None, "--local", help="Path to initialize (defaults to CWD if omitted)"),
+        force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing config"),
+        template: str | None = typer.Option(None, "--template", help="Path to a JSON snippet template to copy"),
         git: bool = typer.Option(False, "--git", help="Initialize git repo in target directory"),
         remote: str | None = typer.Option(None, "--remote", help="Git remote URL"),
     ) -> None:
         """Scaffold a project-local .snipcontext/ directory with optional Git setup."""
-        if not local:
-            console.print("[yellow]Usage: sc init --local[/yellow]")
-            raise typer.Exit(1)
+        # Use provided local path, or fallback to current working directory
+        root_dir = Path(local).resolve() if local else Path.cwd()
+        target = root_dir / ".snipcontext"
 
-        target = Path.cwd() / path
-        if target.exists():
+        if target.exists() and not force:
             console.print(f"[red]Error: {target} already exists[/red]")
+            console.print("Use --force to overwrite the configuration.")
             raise typer.Exit(1)
 
-        target.mkdir(parents=True)
-        (target / "snippets").mkdir()
-        (target / ".gitignore").write_text("index.faiss\n")
+        target.mkdir(parents=True, exist_ok=True)
+        snippets_dir = target / "snippets"
+        snippets_dir.mkdir(exist_ok=True)
+        (target / ".gitignore").write_text("index.faiss\n", encoding="utf-8")
 
-        import yaml
+        from snipcontext.config.settings import Config
+        import json
 
-        payload = {
-            "storage": {
-                "data_dir": str(target.resolve()),
-                "snippets_dir": "snippets",
-                "index_dir": "index",
-            }
-        }
-        (target / "config.yaml").write_text(
-            yaml.safe_dump(payload, default_flow_style=False, sort_keys=False)
+        # Generate defaults using Config model
+        config = Config()
+        config.storage.data_dir = target.resolve()
+        payload = config.model_dump(mode="json", exclude_none=True)
+        
+        # Write default config.json
+        (target / "config.json").write_text(
+            json.dumps(payload, indent=2), encoding="utf-8"
         )
+
+        if template:
+            template_path = Path(template)
+            if template_path.exists() and template_path.is_file():
+                dest = snippets_dir / template_path.name
+                shutil.copy2(template_path, dest)
+                console.print(f"[green]Copied template {template_path.name} to {dest}[/green]")
+            else:
+                console.print(f"[yellow]Warning: Template {template} not found or is not a file.[/yellow]")
 
         if git:
             _init_git(target, remote)

@@ -84,33 +84,60 @@ def test_get_config_path_project_local(tmp_path: Path):
     assert get_config_path() == (tmp_path / ".snipcontext" / "config.yaml").resolve()
 
 
-def test_init_local_creates_directory(tmp_path: Path):
+def test_init_creates_directory(tmp_path: Path):
     os.chdir(tmp_path)
-    result = runner.invoke(app, ["init", "--local"])
+    result = runner.invoke(app, ["init"])
     assert result.exit_code == 0, result.output
     target = tmp_path / ".snipcontext"
     assert target.is_dir()
     assert (target / "snippets").is_dir()
-    assert (target / "config.yaml").is_file()
+    assert (target / "config.json").is_file()
     assert (target / ".gitignore").is_file()
     assert "index.faiss" in (target / ".gitignore").read_text()
 
 
-def test_init_local_fails_if_exists(tmp_path: Path):
+def test_init_fails_if_exists(tmp_path: Path):
     (tmp_path / ".snipcontext").mkdir()
     os.chdir(tmp_path)
-    result = runner.invoke(app, ["init", "--local"])
+    result = runner.invoke(app, ["init"])
     assert result.exit_code != 0
 
+def test_init_with_local_path(tmp_path: Path):
+    custom_path = tmp_path / "custom"
+    result = runner.invoke(app, ["init", "--local", str(custom_path)])
+    assert result.exit_code == 0
+    target = custom_path / ".snipcontext"
+    assert target.is_dir()
+    assert (target / "config.json").is_file()
 
-def test_init_local_git_creates_repo(tmp_path: Path) -> None:
+def test_init_with_force(tmp_path: Path):
+    target = tmp_path / ".snipcontext"
+    target.mkdir()
+    (target / "old.txt").write_text("old")
     os.chdir(tmp_path)
-    result = runner.invoke(app, ["init", "--local", "--git"])
+    result = runner.invoke(app, ["init", "--force"])
+    assert result.exit_code == 0
+    assert (target / "config.json").is_file()
+    assert (target / "old.txt").is_file()
+
+def test_init_with_template(tmp_path: Path):
+    template = tmp_path / "example.json"
+    template.write_text('{"code": "print(1)"}')
+    os.chdir(tmp_path)
+    result = runner.invoke(app, ["init", "--template", str(template)])
+    assert result.exit_code == 0
+    target = tmp_path / ".snipcontext"
+    assert (target / "snippets" / "example.json").is_file()
+
+
+def test_init_git_creates_repo(tmp_path: Path) -> None:
+    os.chdir(tmp_path)
+    result = runner.invoke(app, ["init", "--git"])
     assert result.exit_code == 0, result.output
     target = tmp_path / ".snipcontext"
     assert (target / ".git").is_dir()
     assert (target / ".gitignore").is_file()
-    assert (target / "config.yaml").is_file()
+    assert (target / "config.json").is_file()
     assert (target / "snippets").is_dir()
     assert any(
         "initialize SnipContext storage" in line
@@ -118,10 +145,10 @@ def test_init_local_git_creates_repo(tmp_path: Path) -> None:
     )
 
 
-def test_init_local_git_with_remote(tmp_path: Path) -> None:
+def test_init_git_with_remote(tmp_path: Path) -> None:
     os.chdir(tmp_path)
     result = runner.invoke(
-        app, ["init", "--local", "--git", "--remote", "https://example.com/repo.git"]
+        app, ["init", "--git", "--remote", "https://example.com/repo.git"]
     )
     assert result.exit_code == 0, result.output
     target = tmp_path / ".snipcontext"
@@ -129,10 +156,10 @@ def test_init_local_git_with_remote(tmp_path: Path) -> None:
     assert remote_output == "https://example.com/repo.git"
 
 
-def test_init_local_git_fails_without_git(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_init_git_fails_without_git(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("shutil.which", lambda name: None if name == "git" else True)
     os.chdir(tmp_path)
-    result = runner.invoke(app, ["init", "--local", "--git"])
+    result = runner.invoke(app, ["init", "--git"])
     assert result.exit_code != 0
     assert "git" in result.output.lower()
 
