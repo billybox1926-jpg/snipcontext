@@ -101,9 +101,7 @@ def register_commands(app: typer.Typer) -> None:
             None, "--template", help="Path to a JSON snippet template to copy"
         ),
         git: bool = typer.Option(False, "--git", help="Initialize git repo in target directory"),
-        remote: str | None = typer.Option(
-            None, "--remote", help="Git remote URL (implies --git)"
-        ),
+        remote: str | None = typer.Option(None, "--remote", help="Git remote URL (implies --git)"),
         yes: bool = typer.Option(
             False,
             "--yes",
@@ -138,9 +136,7 @@ def register_commands(app: typer.Typer) -> None:
 
         if target.exists() and not force and not yes:
             console.print(f"[red]Error: {target} already exists[/red]")
-            console.print(
-                "Use --force to overwrite, or --yes for non-interactive mode."
-            )
+            console.print("Use --force to overwrite, or --yes for non-interactive mode.")
             raise typer.Exit(1)
 
         target.mkdir(parents=True, exist_ok=True)
@@ -158,9 +154,7 @@ def register_commands(app: typer.Typer) -> None:
         payload = config.model_dump(mode="json", exclude_none=True)
 
         # Write default config.json
-        (target / "config.json").write_text(
-            json.dumps(payload, indent=2), encoding="utf-8"
-        )
+        (target / "config.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
         if template:
             template_path = Path(template)
