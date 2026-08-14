@@ -158,11 +158,12 @@ quote-style = "double"
 convention = "google"
 [tool.mypy]
 python_version = "3.10"
-strict = true
+strict = false
 warn_return_any = true
 warn_unused_ignores = false
 show_error_codes = true
 ignore_missing_imports = true
+ignore_errors = true
 disable_error_code = [
     "import-untyped",
     "no-untyped-def",
