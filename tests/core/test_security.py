@@ -15,6 +15,7 @@ from snipcontext.core.sanitization import (
 
 # ── sanitize_text ──────────────────────────────────────────────────────────
 
+
 class TestSanitizeText:
     """sanitize_text strips control chars and neutralizes Rich markup [tag] syntax.
 
@@ -57,6 +58,7 @@ class TestSanitizeText:
 
 # ── sanitize_html ──────────────────────────────────────────────────────────
 
+
 class TestSanitizeHtml:
     r"""sanitize_html escapes & < > \" ' for XML/HTML output contexts (Claude XML provider)."""
 
@@ -86,7 +88,7 @@ class TestSanitizeHtml:
 
     def test_multiple_chars_in_one_string(self) -> None:
         """All five HTML-sensitive chars escaped in a single string."""
-        result = sanitize_html('a & b < c > d " e \' f')
+        result = sanitize_html("a & b < c > d \" e ' f")
         assert "&amp;" in result
         assert "&lt;" in result
         assert "&gt;" in result
@@ -115,6 +117,7 @@ class TestSanitizeHtml:
 
 
 # ── sanitize_code ──────────────────────────────────────────────────────────
+
 
 class TestSanitizeCode:
     """sanitize_code prevents markdown code-fence breakout and strips control chars.
@@ -192,7 +195,7 @@ class TestSanitizeCode:
         # Single backtick — no replacement
         result = sanitize_code("use `foo` here")
         assert result == "use `foo` here"
-        assert("\u200b" not in result)
+        assert "\u200b" not in result
 
         # Double backtick — no replacement
         result = sanitize_code("use ``foo`` here")
@@ -200,6 +203,7 @@ class TestSanitizeCode:
 
 
 # ── sanitize_for_display ────────────────────────────────────────────────────
+
 
 class TestSanitizeForDisplay:
     """sanitize_for_display strips ANSI and control chars for direct terminal output.
@@ -237,6 +241,7 @@ class TestSanitizeForDisplay:
 
 
 # ── Cross-cutting security tests ────────────────────────────────────────────
+
 
 class TestSanitizationCrossCutting:
     """Tests that verify the sanitization pipeline holistically."""
