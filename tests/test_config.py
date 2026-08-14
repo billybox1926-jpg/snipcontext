@@ -195,9 +195,7 @@ def test_init_git_creates_repo(tmp_path: Path) -> None:
 def test_init_git_with_remote(tmp_path: Path) -> None:
     _debug("test_init_git_with_remote", tmp_path=tmp_path)
     os.chdir(tmp_path)
-    result = runner.invoke(
-        app, ["init", "--git", "--remote", "https://example.com/repo.git"]
-    )
+    result = runner.invoke(app, ["init", "--git", "--remote", "https://example.com/repo.git"])
     print(f"  exit_code: {result.exit_code}")
     print(f"  output: {result.output!r}")
     if result.exception:
@@ -247,7 +245,10 @@ def test_config_file_is_loaded(tmp_path: Path):
     if result.exception:
         print(f"  exception: {result.exception!r}")
         import traceback
-        traceback.print_exception(type(result.exception), result.exception, result.exception.__traceback__)
+
+        traceback.print_exception(
+            type(result.exception), result.exception, result.exception.__traceback__
+        )
     assert result.exit_code == 0, result.output
     reset_config()
     config = get_config()
