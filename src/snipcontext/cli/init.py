@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import typer
@@ -89,23 +90,57 @@ def register_commands(app: typer.Typer) -> None:
     @app.command("init")  # type: ignore[untyped-decorator]
     def init(
         local: str | None = typer.Option(
-            None, "--local", help="Path to initialize (defaults to CWD if omitted)"
+            None,
+            "--local",
+            help="Path to initialize (defaults to CWD if omitted; otherwise reads from stdin)",
         ),
-        force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing config"),
+        force: bool = typer.Option(
+            False, "--force", "-f", help="Overwrite existing config without prompting"
+        ),
         template: str | None = typer.Option(
             None, "--template", help="Path to a JSON snippet template to copy"
         ),
         git: bool = typer.Option(False, "--git", help="Initialize git repo in target directory"),
-        remote: str | None = typer.Option(None, "--remote", help="Git remote URL"),
+        remote: str | None = typer.Option(
+            None, "--remote", help="Git remote URL (implies --git)"
+        ),
+        yes: bool = typer.Option(
+            False,
+            "--yes",
+            "-y",
+            help="Non-interactive: overwrite existing config without prompting",
+        ),
     ) -> None:
-        """Scaffold a project-local .snipcontext/ directory with optional Git setup."""
-        # Use provided local path, or fallback to current working directory
-        root_dir = Path(local).resolve() if local else Path.cwd()
+        r"""Scaffold a project-local .snipcontext/ directory with optional Git setup.
+
+        \b
+        If --local is omitted, the command uses the current working directory.
+        Alternatively, pipe a path via stdin: echo /path | sc init
+
+        Use --force or --yes to overwrite an existing .snipcontext/ directory
+        without being prompted.
+        """
+        # Resolve target path: --local arg > stdin > CWD
+        root_dir: Path
+        if local:
+            root_dir = Path(local).resolve()
+        elif not sys.stdin.isatty():
+            # Read path from stdin (first non-empty line)
+            stdin_text = sys.stdin.read().strip()
+            if stdin_text:
+                root_dir = Path(stdin_text).resolve()
+            else:
+                root_dir = Path.cwd()
+        else:
+            root_dir = Path.cwd()
+
         target = root_dir / ".snipcontext"
 
-        if target.exists() and not force:
+        if target.exists() and not force and not yes:
             console.print(f"[red]Error: {target} already exists[/red]")
-            console.print("Use --force to overwrite the configuration.")
+            console.print(
+                "Use --force to overwrite, or --yes for non-interactive mode."
+            )
             raise typer.Exit(1)
 
         target.mkdir(parents=True, exist_ok=True)
@@ -123,7 +158,9 @@ def register_commands(app: typer.Typer) -> None:
         payload = config.model_dump(mode="json", exclude_none=True)
 
         # Write default config.json
-        (target / "config.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        (target / "config.json").write_text(
+            json.dumps(payload, indent=2), encoding="utf-8"
+        )
 
         if template:
             template_path = Path(template)
@@ -135,6 +172,9 @@ def register_commands(app: typer.Typer) -> None:
                 console.print(
                     f"[yellow]Warning: Template {template} not found or is not a file.[/yellow]"
                 )
+
+        if remote:
+            git = True  # --remote implies --git
 
         if git:
             _init_git(target, remote)
