@@ -6,14 +6,12 @@ Tests each public sanitization function against known attack vectors.
 
 from __future__ import annotations
 
-import pytest
 from snipcontext.core.sanitization import (
-    sanitize_text,
-    sanitize_html,
     sanitize_code,
     sanitize_for_display,
+    sanitize_html,
+    sanitize_text,
 )
-
 
 # ── sanitize_text ──────────────────────────────────────────────────────────
 
@@ -32,7 +30,7 @@ class TestSanitizeText:
         assert sanitize_text("mixedCase123_!@#") == "mixedCase123_!@#"
 
     def test_control_characters_stripped(self) -> None:
-        """Control chars (\\x00-\\x08, \\x0b, \\x0c, \\x0e-\\x1f, \\x7f, \\x9b) are removed."""
+        r"""Control chars (\x00-\x08, \x0b, \x0c, \x0e-\x1f, \x7f, \x9b) are removed."""
         # DEL character
         assert "\x7f" not in sanitize_text("hello\x7fworld")
         assert sanitize_text("hello\x7fworld") == "helloworld"
@@ -60,7 +58,7 @@ class TestSanitizeText:
 # ── sanitize_html ──────────────────────────────────────────────────────────
 
 class TestSanitizeHtml:
-    """sanitize_html escapes & < > \" ' for XML/HTML output contexts (Claude XML provider)."""
+    r"""sanitize_html escapes & < > \" ' for XML/HTML output contexts (Claude XML provider)."""
 
     def test_no_html_chars_passthrough(self) -> None:
         """Plain text without HTML-sensitive chars passes through unchanged."""
@@ -245,7 +243,7 @@ class TestSanitizationCrossCutting:
 
     def test_export_pipeline_sanitizes_all_fields(self) -> None:
         """All fields in an export are sanitized (metadata + content)."""
-        from snipcontext.core.sanitization import sanitize_text, sanitize_code
+        from snipcontext.core.sanitization import sanitize_code, sanitize_text
 
         # Simulate what an export pipeline does: sanitize every field
         malicious_title = "Title [\x07bold]with\x1fcontrol"
@@ -273,7 +271,7 @@ class TestSanitizationCrossCutting:
 
     def test_unicode_injection_resistant(self) -> None:
         """Unicode characters (including zero-width, RTL, emoji) pass through safely."""
-        from snipcontext.core.sanitization import sanitize_text, sanitize_code
+        from snipcontext.core.sanitization import sanitize_text
 
         # Zero-width space (already used by sanitize_code as escape mechanism)
         zwsp = "\u200b"
@@ -286,7 +284,7 @@ class TestSanitizationCrossCutting:
 
     def test_very_long_input_handled(self) -> None:
         """Extremely long strings don't crash or hang."""
-        from snipcontext.core.sanitization import sanitize_text, sanitize_code
+        from snipcontext.core.sanitization import sanitize_code, sanitize_text
 
         long_string = "a" * 1_000_000
         result = sanitize_text(long_string)
@@ -299,7 +297,7 @@ class TestSanitizationCrossCutting:
 
     def test_null_byte_handling(self) -> None:
         """Null bytes (C-string terminators) are stripped."""
-        from snipcontext.core.sanitization import sanitize_text, sanitize_code, sanitize_for_display
+        from snipcontext.core.sanitization import sanitize_code, sanitize_for_display, sanitize_text
 
         for func in [sanitize_text, sanitize_code, sanitize_for_display]:
             result = func("before\x00after")
