@@ -109,14 +109,15 @@ def register_commands(app: typer.Typer) -> None:
         snippets_dir.mkdir(exist_ok=True)
         (target / ".gitignore").write_text("index.faiss\n", encoding="utf-8")
 
-        from snipcontext.config.settings import Config
         import json
+
+        from snipcontext.config.settings import Config
 
         # Generate defaults using Config model
         config = Config()
         config.storage.data_dir = target.resolve()
         payload = config.model_dump(mode="json", exclude_none=True)
-        
+
         # Write default config.json
         (target / "config.json").write_text(
             json.dumps(payload, indent=2), encoding="utf-8"
