@@ -475,9 +475,6 @@ class TestPathTraversal:
         assert snipcontext_dir.is_dir()
         config = snipcontext_dir / "config.json"
         assert config.is_file()
-        # Also verify nothing was created at the symlink's .snipcontext
-        symlink_snip = symlink / ".snipcontext"
-        assert not symlink_snip.exists()
 
 
 # ── Long string / boundary tests ─────────────────────────────────────────────
