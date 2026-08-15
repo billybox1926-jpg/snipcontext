@@ -1,9 +1,4 @@
-from pathlib import Path
-
 from typer.testing import CliRunner
-
-from snipcontext.cli.app import app
-
 
 runner = CliRunner()
 
