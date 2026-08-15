@@ -130,7 +130,7 @@ def register_commands(app: typer.Typer) -> None:
             else:
                 root_dir = Path.cwd()
         else:
-            root_dir = Path.cwd()
+            root_dir = Path.cwd().resolve()
 
         target = root_dir / ".snipcontext"
 
