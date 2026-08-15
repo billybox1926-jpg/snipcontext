@@ -19,17 +19,17 @@
 | cli/search.py | search | 30 | D |
 | cli/stats.py | _render_detailed_stats | 29 | D |
 | core/snippet_ops.py | edit_snippet | 26 | D |
-| cli/git.py | git_pull | 15 | C |
-| core/importers.py | import_tar_gz | 15 | C |
-| tui/formatter.py | format_output | 15 | C |
 | web/routers/web_ui.py | merge_tags | 15 | C |
+| tui/formatter.py | format_output | 15 | C |
+| core/importers.py | import_tar_gz | 15 | C |
+| cli/git.py | git_pull | 15 | C |
 | core/importers.py | parse_yaml_import | 13 | C |
 | config/settings.py | get_config | 12 | C |
-| cli/init.py | _init_git | 11 | C |
-| cli/snippets.py | _print_snippet | 11 | C |
+| core/index_backends.py | _create_backend | 11 | C |
 | core/analytics.py | compute_basic_stats | 11 | C |
 | core/importers.py | parse_json_import | 11 | C |
-| core/index_backends.py | _create_backend | 11 | C |
+| cli/snippets.py | _print_snippet | 11 | C |
+| cli/init.py | _init_git | 11 | C |
 
 ## Maintainability Index — Files Below 30 (Needs Attention)
 
