@@ -16,26 +16,29 @@ from __future__ import annotations
 
 import os
 import sys
-import pytest
 
-from hypothesis import given, strategies as st, settings
+import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from hypothesis.strategies import characters
+from typer.testing import CliRunner
 
 from snipcontext.cli.app import app
-from typer.testing import CliRunner
 
 # Real ESC byte (0x1B) — used throughout the ANSI/terminal escape tests
 ESC = "\x1b"
 
 # ── Fuzz: ANSI / OSC escape sequences ────────────────────────────────────────
 
+
 class TestAnsiFuzz:
-    """Fuzz the sanitizer with random ANSI/OSC escape patterns.
+    r"""Fuzz the sanitizer with random ANSI/OSC escape patterns.
 
     The sanitizer's sanitize_for_display() strips the ESC byte but leaves
     CSI bracket sequences as literal text. These tests verify that the
     sanitizer handles the full range of escape patterns without crashing
     and without allowing terminal injection to survive.
+
     """
 
     @given(
@@ -52,12 +55,14 @@ class TestAnsiFuzz:
     def test_sanitize_for_display_does_not_crash_on_random_text(self, text: str) -> None:
         """sanitize_for_display never crashes on arbitrary unicode text."""
         from snipcontext.core.sanitization import sanitize_for_display
+
         result = sanitize_for_display(text)
         assert isinstance(result, str)
 
     def test_osc_string_terminated_normally(self) -> None:
         """OSC (ESC ] ... BEL) strings: ESC stripped, rest is literal text."""
         from snipcontext.core.sanitization import sanitize_for_display
+
         # OSC 0 sets window title: ESC ] 0 ; title BEL
         payload = f"{ESC}]0;my-title\x07"
         result = sanitize_for_display(payload)
@@ -65,8 +70,9 @@ class TestAnsiFuzz:
         assert "my-title" in result
 
     def test_osc_string_terminated_by_st(self) -> None:
-        """OSC (ESC ] ... ST / ESC \) strings: ESC stripped, rest is literal."""
+        r"""OSC (ESC ] ... ST / ESC \) strings: ESC stripped, rest is literal."""
         from snipcontext.core.sanitization import sanitize_for_display
+
         # OSC 2 sets window name: ESC ] 2 ; name ST (ST = ESC \)
         payload = f"{ESC}]2;window-name{ESC}\\"
         result = sanitize_for_display(payload)
@@ -76,6 +82,7 @@ class TestAnsiFuzz:
     def test_csi_sequence_with_multiple_params(self) -> None:
         """CSI sequences with multiple numeric parameters don't crash."""
         from snipcontext.core.sanitization import sanitize_for_display
+
         # Cursor position: ESC [ 10 ; 20 H
         payload = f"{ESC}[10;20H"
         result = sanitize_for_display(payload)
@@ -85,6 +92,7 @@ class TestAnsiFuzz:
     def test_nested_escape_attempts(self) -> None:
         """Multiple ESC bytes in a single string are all stripped."""
         from snipcontext.core.sanitization import sanitize_for_display
+
         payload = f"{ESC}[31mred{ESC}[0m and {ESC}[32mgreen{ESC}[0m"
         result = sanitize_for_display(payload)
         assert ESC not in result
@@ -93,6 +101,7 @@ class TestAnsiFuzz:
     def test_esc_byte_only(self) -> None:
         """A lone ESC byte is stripped cleanly."""
         from snipcontext.core.sanitization import sanitize_for_display
+
         result = sanitize_for_display(ESC)
         assert ESC not in result
         assert result == ""
@@ -100,6 +109,7 @@ class TestAnsiFuzz:
     def test_long_ansi_flood(self) -> None:
         """A long string full of escape sequences is handled without OOM."""
         from snipcontext.core.sanitization import sanitize_for_display
+
         payload = f"{ESC}[31m" * 1000 + "x" + f"{ESC}[0m" * 1000
         result = sanitize_for_display(payload)
         assert ESC not in result
@@ -110,6 +120,7 @@ class TestAnsiFuzz:
     def test_ansi_flood_with_real_text(self) -> None:
         """ANSI flood interleaved with real text preserves the text."""
         from snipcontext.core.sanitization import sanitize_for_display
+
         payload = ""
         for i in range(500):
             payload += f"{ESC}[31m" + "X" + f"{ESC}[0m" + str(i)
@@ -121,6 +132,7 @@ class TestAnsiFuzz:
     def test_terminal_title_setting_attempts(self) -> None:
         """Terminal title-setting OSC sequences are neutralized."""
         from snipcontext.core.sanitization import sanitize_for_display
+
         sequences = [
             f"{ESC}]0;hacked-title\x07",
             f"{ESC}]2;hacked{ESC}\\",
@@ -136,6 +148,7 @@ class TestAnsiFuzz:
     def test_color_reset_garbage(self) -> None:
         """Malformed color sequences (missing params) are handled."""
         from snipcontext.core.sanitization import sanitize_for_display
+
         malformed = [
             f"{ESC}[",
             f"{ESC}[m",
@@ -150,10 +163,14 @@ class TestAnsiFuzz:
             assert ESC not in result
 
     def test_carriage_return_survives(self) -> None:
-        """Carriage return (\\r / U+000D) is a known gap: it passes through
+        r"""Carriage return (\r / U+000D) is a known gap: it passes through.
+
         sanitize_text without being stripped. CR can be used for terminal
-        line-overwrite attacks (e.g. 'good\\rbad'). This test documents the gap."""
+        line-overwrite attacks (e.g. 'good\rbad'). This test documents the gap.
+
+        """
         from snipcontext.core.sanitization import sanitize_text
+
         payload = "good\rbad"
         result = sanitize_text(payload)
         assert "\r" in result  # CR survives — known gap, see issue #170 coverage notes
@@ -163,8 +180,9 @@ class TestAnsiFuzz:
 
 # ── Fuzz: HTML / XML injection vectors ───────────────────────────────────────
 
+
 class TestHtmlFuzz:
-    """Fuzz sanitize_html with HTML/XML injection patterns."""
+    r"""Fuzz sanitize_html with HTML/XML injection patterns."""
 
     @given(
         text=st.text(
@@ -179,12 +197,14 @@ class TestHtmlFuzz:
     def test_sanitize_html_does_not_crash_on_random_text(self, text: str) -> None:
         """sanitize_html never crashes on arbitrary unicode text."""
         from snipcontext.core.sanitization import sanitize_html
+
         result = sanitize_html(text)
         assert isinstance(result, str)
 
     def test_script_tag_neutralized(self) -> None:
         """<script>...</script> is escaped so the browser won't interpret it."""
         from snipcontext.core.sanitization import sanitize_html
+
         payload = "<script>alert('xss')</script>"
         result = sanitize_html(payload)
         assert "<script>" not in result
@@ -193,6 +213,7 @@ class TestHtmlFuzz:
     def test_event_handler_neutralized(self) -> None:
         """onclick= and similar attributes are escaped."""
         from snipcontext.core.sanitization import sanitize_html
+
         payload = '<div onclick="alert(1)">click</div>'
         result = sanitize_html(payload)
         assert "&lt;div" in result
@@ -200,6 +221,7 @@ class TestHtmlFuzz:
     def test_entity_encoding_bypass_attempt(self) -> None:
         """&lt; entities are re-escaped if they could form a tag."""
         from snipcontext.core.sanitization import sanitize_html
+
         payload = "&lt;script&gt;alert(1)&lt;/script&gt;"
         result = sanitize_html(payload)
         assert "&amp;" in result
@@ -207,6 +229,7 @@ class TestHtmlFuzz:
     def test_mixed_script_and_html(self) -> None:
         """Complex HTML with script tags embedded is fully escaped."""
         from snipcontext.core.sanitization import sanitize_html
+
         payload = "<div><p>Hello</p><script>fetch('/steal')</script></div>"
         result = sanitize_html(payload)
         assert "&lt;script&gt;" in result
@@ -214,6 +237,7 @@ class TestHtmlFuzz:
     def test_html_comment_neutralized(self) -> None:
         """<!-- comment --> is escaped."""
         from snipcontext.core.sanitization import sanitize_html
+
         payload = "<!-- hidden comment -->"
         result = sanitize_html(payload)
         assert "&lt;!--" in result
@@ -221,6 +245,7 @@ class TestHtmlFuzz:
     def test_nofollow_style_injection(self) -> None:
         """javascript: URL injection is escaped."""
         from snipcontext.core.sanitization import sanitize_html
+
         payload = '<a href="javascript:alert(document.cookie)">pwned</a>'
         result = sanitize_html(payload)
         assert "&lt;a" in result
@@ -228,6 +253,7 @@ class TestHtmlFuzz:
     def test_doctype_declaration_escaped(self) -> None:
         """<!DOCTYPE ...> is escaped."""
         from snipcontext.core.sanitization import sanitize_html
+
         payload = "<!DOCTYPE html><html><body>test</body></html>"
         result = sanitize_html(payload)
         assert "&lt;!DOCTYPE" in result or "DOCTYPE" in result
@@ -235,6 +261,7 @@ class TestHtmlFuzz:
     def test_cdata_section_escaped(self) -> None:
         """<![CDATA[ ... ]]> is escaped."""
         from snipcontext.core.sanitization import sanitize_html
+
         payload = "<![CDATA[ <script>evil</script> ]]>"
         result = sanitize_html(payload)
         assert "&lt;![CDATA[" in result or "![CDATA[" in result
@@ -242,6 +269,7 @@ class TestHtmlFuzz:
     def test_iframe_injection(self) -> None:
         """<iframe> injection attempts are escaped."""
         from snipcontext.core.sanitization import sanitize_html
+
         payload = '<iframe src="https://evil.com/steal"></iframe>'
         result = sanitize_html(payload)
         assert "&lt;iframe" in result
@@ -249,13 +277,16 @@ class TestHtmlFuzz:
 
 # ── Property-based tests for input validation ────────────────────────────────
 
+
 class TestInputValidationProperties:
-    """Property-based tests verifying sanitizer invariants hold across
-    the full input space, including unicode edge cases, long strings,
+    r"""Property-based tests verifying sanitizer invariants hold across.
+
+    The full input space, including unicode edge cases, long strings,
     and boundary conditions.
+
     """
 
-    _SAFE_CONTROL_CHARS = frozenset({0x09, 0x0a})  # tab, newline — safe in display
+    _SAFE_CONTROL_CHARS = frozenset({0x09, 0x0A})  # tab, newline — safe in display
 
     @given(
         text=st.text(
@@ -268,6 +299,7 @@ class TestInputValidationProperties:
     def test_sanitize_text_no_crash_on_full_unicode(self, text: str) -> None:
         """sanitize_text handles any valid unicode without crashing."""
         from snipcontext.core.sanitization import sanitize_text
+
         result = sanitize_text(text)
         assert isinstance(result, str)
 
@@ -282,6 +314,7 @@ class TestInputValidationProperties:
     def test_sanitize_html_no_crash_on_full_unicode(self, text: str) -> None:
         """sanitize_html handles any valid unicode without crashing."""
         from snipcontext.core.sanitization import sanitize_html
+
         result = sanitize_html(text)
         assert isinstance(result, str)
 
@@ -296,6 +329,7 @@ class TestInputValidationProperties:
     def test_sanitize_for_display_no_crash_on_full_unicode(self, text: str) -> None:
         """sanitize_for_display handles any valid unicode without crashing."""
         from snipcontext.core.sanitization import sanitize_for_display
+
         result = sanitize_for_display(text)
         assert isinstance(result, str)
 
@@ -308,16 +342,20 @@ class TestInputValidationProperties:
     )
     @settings(max_examples=100, deadline=None)
     def test_sanitize_html_escapes_all_five_chars(self, text: str) -> None:
-        """Guarantees that when any of & < > " ' appear, the corresponding
-        entity is present and the raw character does not appear unescaped."""
+        r"""Guarantees that when any of & < > " ' appear, the corresponding.
+
+        entity is present and the raw character does not appear unescaped.
+
+        """
         from snipcontext.core.sanitization import sanitize_html
+
         guaranteed = text + "&<>\"'"
         result = sanitize_html(guaranteed)
-        assert "&#x27;" in result   # ' → &#x27;
-        assert "&quot;" in result   # " → &quot;
-        assert "&lt;" in result     # < → &lt;
-        assert "&gt;" in result     # > → &gt;
-        assert "&amp;" in result    # & → &amp;
+        assert "&#x27;" in result  # ' → &#x27;
+        assert "&quot;" in result  # " → &quot;
+        assert "&lt;" in result  # < → &lt;
+        assert "&gt;" in result  # > → &gt;
+        assert "&amp;" in result  # & → &amp;
 
     @given(
         text=st.text(
@@ -328,28 +366,39 @@ class TestInputValidationProperties:
     )
     @settings(max_examples=100, deadline=None)
     def test_sanitize_text_output_no_control_chars_except_safe(self, text: str) -> None:
-        """Output of sanitize_text contains no control chars except tab/newline.
-        Carriage return (0x0D) is a known gap — see coverage notes."""
+        r"""Output of sanitize_text contains no control chars except tab/newline.
+
+        Carriage return (0x0D) is a known gap — see coverage notes.
+
+        """
         from snipcontext.core.sanitization import sanitize_text
+
         result = sanitize_text(text)
         for ch in result:
             code = ord(ch)
-            if code not in self._SAFE_CONTROL_CHARS and (code < 0x20 or code == 0x7f):
-                if code == 0x0d:
+            if code not in self._SAFE_CONTROL_CHARS and (code < 0x20 or code == 0x7F):
+                if code == 0x0D:
                     # Known gap: CR passes through. See issue #170.
                     continue
-                assert False, f"Control char U+{code:04X} found in sanitized output"
+                raise AssertionError(f"Control char U+{code:04X} found in sanitized output")
 
 
 # ── Path traversal tests ─────────────────────────────────────────────────────
 
+
 class TestPathTraversal:
-    """Verify that the init command's path resolution cannot be tricked into
-    creating files outside the intended target directory."""
+    r"""Verify that the init command's path resolution cannot be tricked into.
+
+    creating files outside the intended target directory.
+
+    """
 
     def test_init_resolves_relative_path_to_absolute(self, tmp_path) -> None:
-        """The init command resolves --local to an absolute path before
-        creating files, preventing relative-path tricks."""
+        r"""The init command resolves --local to an absolute path before.
+
+        creating files, preventing relative-path tricks.
+
+        """
         subdir = tmp_path / "subdir"
         subdir.mkdir()
 
@@ -357,11 +406,12 @@ class TestPathTraversal:
         try:
             os.chdir(tmp_path)
             runner = CliRunner()
-            result = runner.invoke(
+            runner.invoke(
                 app,
                 [
                     "init",
-                    "--local", "subdir",
+                    "--local",
+                    "subdir",
                 ],
             )
             expected = subdir / ".snipcontext" / "config.json"
@@ -374,8 +424,11 @@ class TestPathTraversal:
         reason="Symlink creation requires admin privilege on Windows; the security property is documented without executing the symlink attack vector.",
     )
     def test_init_resolves_symlink_target(self, tmp_path) -> None:
-        """If the target is a symlink pointing to a directory, init follows
-        the symlink and creates .snipcontext inside the real directory."""
+        r"""If the target is a symlink pointing to a directory, init follows.
+
+        the symlink and creates .snipcontext inside the real directory.
+
+        """
         real_dir = tmp_path / "real-project"
         real_dir.mkdir()
         symlink = tmp_path / "link"
@@ -389,8 +442,10 @@ class TestPathTraversal:
             app,
             [
                 "init",
-                "--local", str(symlink),
-                "--template", str(template),
+                "--local",
+                str(symlink),
+                "--template",
+                str(template),
             ],
         )
         assert result.exit_code == 0
@@ -405,12 +460,14 @@ class TestPathTraversal:
 
 # ── Long string / boundary tests ─────────────────────────────────────────────
 
+
 class TestLongStrings:
     """Boundary tests for the sanitizer with very long inputs."""
 
     def test_sanitize_html_10k_chars(self) -> None:
         """A 10,000-character string is sanitized quickly and correctly."""
         from snipcontext.core.sanitization import sanitize_html
+
         payload = "a" * 10000 + "<script>alert(1)</script>" + "b" * 10000
         result = sanitize_html(payload)
         assert len(result) > 0
@@ -419,6 +476,7 @@ class TestLongStrings:
     def test_sanitize_text_10k_chars(self) -> None:
         """A 10,000-character string is sanitized quickly and correctly."""
         from snipcontext.core.sanitization import sanitize_text
+
         payload = "hello world " * 2000
         result = sanitize_text(payload)
         assert len(result) == len(payload)
@@ -427,6 +485,7 @@ class TestLongStrings:
     def test_sanitize_for_display_10k_chars(self) -> None:
         """A 10,000-character string with many escape sequences is sanitized."""
         from snipcontext.core.sanitization import sanitize_for_display
+
         payload = f"{ESC}[31m" * 1000 + "x" * 7000 + f"{ESC}[0m" * 1000
         result = sanitize_for_display(payload)
         assert ESC not in result
@@ -436,11 +495,12 @@ class TestLongStrings:
     def test_empty_string_roundtrip(self) -> None:
         """Empty string passes through all sanitizers unchanged."""
         from snipcontext.core.sanitization import (
-            sanitize_text,
-            sanitize_html,
-            sanitize_for_display,
             sanitize_code,
+            sanitize_for_display,
+            sanitize_html,
+            sanitize_text,
         )
+
         assert sanitize_text("") == ""
         assert sanitize_html("") == ""
         assert sanitize_for_display("") == ""
@@ -449,11 +509,12 @@ class TestLongStrings:
     def test_unicode_emoji_passthrough(self) -> None:
         """Emoji and other high-codepoint characters pass through sanitizers."""
         from snipcontext.core.sanitization import (
-            sanitize_text,
-            sanitize_html,
             sanitize_for_display,
+            sanitize_html,
+            sanitize_text,
         )
-        emoji_text = "Hello \U0001F600 World \U0001F680"
+
+        emoji_text = "Hello \U0001f600 World \U0001f680"
         assert sanitize_text(emoji_text) == emoji_text
         assert sanitize_html(emoji_text) == emoji_text
         assert sanitize_for_display(emoji_text) == emoji_text
@@ -461,10 +522,11 @@ class TestLongStrings:
     def test_surrogate_pair_handling(self) -> None:
         """Surrogate pairs (high-codepoint chars) are preserved."""
         from snipcontext.core.sanitization import sanitize_text
+
         # Musical G Clef (U+1D11E) — surrogate pair in UTF-16
-        text = "note: \U0001D11E"
+        text = "note: \U0001d11e"
         result = sanitize_text(text)
-        assert "\U0001D11E" in result
+        assert "\U0001d11e" in result
 
 
 # ── Coverage gaps documentation ──────────────────────────────────────────────
