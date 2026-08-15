@@ -476,6 +476,8 @@ class TestPathTraversal:
         config = snipcontext_dir / "config.json"
         assert config.is_file()
 
+# ── Long string / boundary tests ─────────────────────────────────────────────
+
 
 # ── Long string / boundary tests ─────────────────────────────────────────────
 
