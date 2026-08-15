@@ -78,6 +78,7 @@ from __future__ import annotations
 import pytest
 from snipcontext.plugins.registry import PluginRegistry
 
+
 def test_plugin_discovery():
     registry = PluginRegistry()
     count = registry.discover()
@@ -101,6 +102,7 @@ def test_plugin_load_and_unload():
 
 ```python
 from snipcontext.plugins.registry import reset_registry_for_testing
+
 
 @pytest.fixture(autouse=True)
 def _reset_registry():

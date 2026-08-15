@@ -10,6 +10,7 @@ interface, and all third-party providers must do the same.
 from snipcontext.providers.base import BaseProvider, ExportFormat, ProviderError
 from snipcontext.core.models import Snippet
 
+
 class MyProvider(BaseProvider):
     name = "myprovider"
     description = "Custom format"

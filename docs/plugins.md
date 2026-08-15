@@ -25,6 +25,7 @@ Snipcontext's plugin system allows extending core functionality via a unified li
 ```python
 from snipcontext.plugins.base import Plugin, PluginManifest
 
+
 class MyPlugin(Plugin):
     manifest = PluginManifest(
         name="my_plugin",

@@ -103,8 +103,8 @@ snippet = Snippet(
 snippet.merge_tags(["security", "jwt"])
 
 # Access
-print(snippet.tags)        # ['auth', 'jwt', 'python', 'security', 'web']
-print(snippet.tag_line)    # #auth, #jwt, #python, #security, #web
+print(snippet.tags)  # ['auth', 'jwt', 'python', 'security', 'web']
+print(snippet.tag_line)  # #auth, #jwt, #python, #security, #web
 ```
 
 ## Storage Engine

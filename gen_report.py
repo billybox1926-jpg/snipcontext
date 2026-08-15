@@ -1,4 +1,5 @@
 """Generate complexity report for snipcontext — radon + pygount."""
+
 import shutil
 import subprocess
 import sys
@@ -6,6 +7,7 @@ from pathlib import Path
 
 OUT = Path("docs/complexity_report.md")
 OUT.parent.mkdir(parents=True, exist_ok=True)
+
 
 def find_exe(name: str) -> str:
     path = shutil.which(name)
@@ -20,6 +22,7 @@ def find_exe(name: str) -> str:
             return str(c)
     raise FileNotFoundError(f"Cannot find {name}")
 
+
 PYGOUNT = find_exe("pygount")
 RADON = find_exe("radon")
 
@@ -29,7 +32,9 @@ print(f"radon:   {RADON}", file=sys.stderr)
 # ── pygount LOC ──────────────────────────────────────────────────────────────
 loc_result = subprocess.run(
     [PYGOUNT, "src/snipcontext"],
-    capture_output=True, text=True, timeout=120,
+    capture_output=True,
+    text=True,
+    timeout=120,
 )
 if loc_result.returncode != 0:
     print(f"pygount failed: {loc_result.stderr}", file=sys.stderr)
@@ -58,7 +63,9 @@ for line in loc_lines:
 # ── radon cc ────────────────────────────────────────────────────────────────
 cc_result = subprocess.run(
     [RADON, "cc", "src/snipcontext", "--show-complexity", "-a"],
-    capture_output=True, text=True, timeout=120,
+    capture_output=True,
+    text=True,
+    timeout=120,
 )
 if cc_result.returncode != 0:
     print(f"radon cc failed: {cc_result.stderr}", file=sys.stderr)
@@ -77,7 +84,9 @@ for line in cc_lines:
     # Normalize path separators
     normalized = stripped.replace("\\", "/")
     # Module header: starts with "src/" and has no leading F/C/B/A marker
-    if normalized.startswith("src/") and not any(normalized.startswith(f"src/{t} ") for t in ("F", "C", "B", "A")):
+    if normalized.startswith("src/") and not any(
+        normalized.startswith(f"src/{t} ") for t in ("F", "C", "B", "A")
+    ):
         current_file = normalized
         file_cc.setdefault(current_file, [])
         continue
@@ -99,7 +108,9 @@ for line in cc_lines:
 # ── radon mi ────────────────────────────────────────────────────────────────
 mi_result = subprocess.run(
     [RADON, "mi", "src/snipcontext", "--show"],
-    capture_output=True, text=True, timeout=120,
+    capture_output=True,
+    text=True,
+    timeout=120,
 )
 if mi_result.returncode != 0:
     print(f"radon mi failed: {mi_result.stderr}", file=sys.stderr)
@@ -119,7 +130,7 @@ for line in mi_lines:
         paren_start = rest.rfind("(")
         paren_end = rest.rfind(")")
         if paren_start >= 0 and paren_end > paren_start:
-            score_str = rest[paren_start + 1:paren_end]
+            score_str = rest[paren_start + 1 : paren_end]
             try:
                 file_mi[f] = round(float(score_str), 1)
             except ValueError:
@@ -137,7 +148,9 @@ for f, entries in file_cc.items():
 lines: list[str] = []
 lines.append("# Code Complexity & Maintainability Report")
 lines.append("")
-lines.append("**Generated:** 2026-08-15 | **Tool:** radon + pygount | **Scope:** `src/snipcontext/`")
+lines.append(
+    "**Generated:** 2026-08-15 | **Tool:** radon + pygount | **Scope:** `src/snipcontext/`"
+)
 lines.append("")
 lines.append("## Summary")
 lines.append("")
@@ -145,8 +158,12 @@ lines.append("| Metric | Value |")
 lines.append("|--------|-------|")
 lines.append(f"| Total Python LOC (src, excl. web/static) | {total_lines:,} |")
 lines.append(f"| Python files analyzed | {len(file_cc)} |")
-lines.append(f"| Files rated D or F (cyclomatic) | {sum(1 for v in file_summary.values() if v[1] >= 26)} |")
-lines.append(f"| Files with MI < 20 (low maintainability) | {sum(1 for v in file_mi.values() if v < 20)} |")
+lines.append(
+    f"| Files rated D or F (cyclomatic) | {sum(1 for v in file_summary.values() if v[1] >= 26)} |"
+)
+lines.append(
+    f"| Files with MI < 20 (low maintainability) | {sum(1 for v in file_mi.values() if v < 20)} |"
+)
 lines.append("")
 
 lines.append("## Cyclomatic Complexity — Top 15 Most Complex Functions")
