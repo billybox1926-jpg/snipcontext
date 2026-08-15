@@ -84,7 +84,8 @@ _The web UI provides a visual interface for managing your snippet collection._
 | LLM-optimized export providers | ✅ | Claude XML, Cursor, OpenAI, Generic Markdown |
 | Auto-tagging via embeddings | ✅ | Suggests tags based on similar snippets |
 | Similarity-based deduplication | ✅ | Warns when adding near-duplicate snippets |
-| Semantic search | ✅ | Local embeddings with FAISS |
+|| Semantic search | ✅ | Local embeddings with FAISS |
+|| **ARM/Termux fallback** | ✅ | Graceful keyword-only mode when semantic deps unavailable |
 | File watchdog / real-time indexing | ✅ | Auto-reindex on file changes |
 | Plugin system | ✅ | Entry points for providers and exporters |
 | CLI + Python library | ✅ | Use from terminal or import as a module |
