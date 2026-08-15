@@ -97,6 +97,8 @@ dev = [
     "mkdocs>=1.6,<2.0",
     "mkdocs-material>=9.5,<10.0",
     "textual>=0.32,<1.0",
+    "radon>=6.0.0",
+    "pygount>=1.0.0",
 ]
 [project.scripts]
 snipcontext = "snipcontext.cli.app:app"
