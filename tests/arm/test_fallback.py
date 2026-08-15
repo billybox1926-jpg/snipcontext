@@ -30,6 +30,7 @@ from snipcontext.core.search_fusion import HybridSearch
 
 # ── Environment characterization ────────────────────────────────────────────
 
+
 class TestArmEnvironmentDetection:
     """Characterize the current environment for ARM/Termux compatibility."""
 
@@ -64,6 +65,7 @@ class TestArmEnvironmentDetection:
 
 # ── Semantic availability detection ─────────────────────────────────────────
 
+
 class TestSemanticAvailabilityDetection:
     """Verify that the SEMANTIC_AVAILABLE flag is correctly computed."""
 
@@ -82,6 +84,7 @@ class TestSemanticAvailabilityDetection:
 
 
 # ── Fallback behavior ────────────────────────────────────────────────────────
+
 
 class TestFallbackToKeywordOnly:
     """Verify graceful fallback to keyword-only search when semantic deps absent."""
@@ -112,12 +115,9 @@ class TestFallbackToKeywordOnly:
                 warning_records = [
                     r
                     for r in list_handler.records
-                    if r.levelno == logging.WARNING
-                    and "not installed" in r.getMessage()
+                    if r.levelno == logging.WARNING and "not installed" in r.getMessage()
                 ]
-                assert len(warning_records) >= 1, (
-                    "Expected a warning about missing semantic deps"
-                )
+                assert len(warning_records) >= 1, "Expected a warning about missing semantic deps"
         finally:
             logger.removeHandler(list_handler)
 
@@ -129,9 +129,7 @@ class TestFallbackToKeywordOnly:
 
             config = get_config()
             index = KeywordIndex(config)
-            now = __import__("datetime").datetime.now(
-                __import__("datetime").timezone.utc
-            )
+            now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
             snippets = [
                 Snippet(
                     id="t1",
@@ -201,19 +199,19 @@ class TestHybridSearchIndicesReadyFallback:
         """When SEMANTIC_AVAILABLE is False, indices_ready is True after keyword index builds."""
         with patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False):
             search = HybridSearch()
-            now = __import__("datetime").datetime.now(
-                __import__("datetime").timezone.utc
+            now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
+            search.keyword_index.build(
+                [
+                    Snippet(
+                        id="k1",
+                        title="test",
+                        content="test content for index readiness",
+                        language=Language.MARKDOWN,
+                        tags=[],
+                        created_at=now,
+                    ),
+                ]
             )
-            search.keyword_index.build([
-                Snippet(
-                    id="k1",
-                    title="test",
-                    content="test content for index readiness",
-                    language=Language.MARKDOWN,
-                    tags=[],
-                    created_at=now,
-                ),
-            ])
             assert search.indices_ready is True
 
 
@@ -231,6 +229,7 @@ class TestHybridSearchNoSemanticFlag:
 
 
 # ── ARM CI-specific ──────────────────────────────────────────────────────────
+
 
 class TestArmCiJobReadiness:
     """Verify that the ARM CI job environment is correctly configured for fallback testing."""
