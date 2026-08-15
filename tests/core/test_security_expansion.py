@@ -16,11 +16,12 @@ from __future__ import annotations
 
 import os
 import sys
-
 import pytest
+
 from hypothesis import given, settings
 from hypothesis import strategies as st
 from hypothesis.strategies import characters
+from hypothesis.errors import InvalidArgument
 from typer.testing import CliRunner
 
 from snipcontext.cli.app import app
@@ -28,8 +29,23 @@ from snipcontext.cli.app import app
 # Real ESC byte (0x1B) — used throughout the ANSI/terminal escape tests
 ESC = "\x1b"
 
-# ── Fuzz: ANSI / OSC escape sequences ────────────────────────────────────────
+# ── Compatibility: hypothesis < 6.100 had strategies under hypothesis.strategies
+#    In newer versions (6.100+) the import path is hypothesis.strategies
+#    We re-export characters via st.characters to be safe across versions
 
+def _safe_characters(**kwargs):
+    """Get characters strategy, compatible with hypothesis 6.x (all versions)."""
+    try:
+        # Try the modern path first
+        return characters(**kwargs)
+    except InvalidArgument:
+        raise
+    except Exception:
+        # Fall back — shouldn't happen with hypothesis 6.x
+        return st.characters(**kwargs)
+
+
+# ── Fuzz: ANSI / OSC escape sequences ────────────────────────────────────────
 
 class TestAnsiFuzz:
     r"""Fuzz the sanitizer with random ANSI/OSC escape patterns.
@@ -43,7 +59,7 @@ class TestAnsiFuzz:
 
     @given(
         text=st.text(
-            alphabet=characters(
+            alphabet=_safe_characters(
                 blacklist_categories=("Cs",),
                 blacklist_characters=(ESC,),
             ),
@@ -70,7 +86,9 @@ class TestAnsiFuzz:
         assert "my-title" in result
 
     def test_osc_string_terminated_by_st(self) -> None:
-        r"""OSC (ESC ] ... ST / ESC \) strings: ESC stripped, rest is literal."""
+        r"""OSC (ESC ] ... ST / ESC \) strings: ESC stripped, rest is literal.
+
+        """
         from snipcontext.core.sanitization import sanitize_for_display
 
         # OSC 2 sets window name: ESC ] 2 ; name ST (ST = ESC \)
@@ -180,13 +198,12 @@ class TestAnsiFuzz:
 
 # ── Fuzz: HTML / XML injection vectors ───────────────────────────────────────
 
-
 class TestHtmlFuzz:
     r"""Fuzz sanitize_html with HTML/XML injection patterns."""
 
     @given(
         text=st.text(
-            alphabet=characters(
+            alphabet=_safe_characters(
                 blacklist_categories=("Cs",),
             ),
             min_size=0,
@@ -277,7 +294,6 @@ class TestHtmlFuzz:
 
 # ── Property-based tests for input validation ────────────────────────────────
 
-
 class TestInputValidationProperties:
     r"""Property-based tests verifying sanitizer invariants hold across.
 
@@ -335,7 +351,7 @@ class TestInputValidationProperties:
 
     @given(
         text=st.text(
-            alphabet=characters(blacklist_categories=("Cs",)),
+            alphabet=_safe_characters(blacklist_categories=("Cs",)),
             min_size=0,
             max_size=500,
         ),
@@ -353,13 +369,13 @@ class TestInputValidationProperties:
         result = sanitize_html(guaranteed)
         assert "&#x27;" in result  # ' → &#x27;
         assert "&quot;" in result  # " → &quot;
-        assert "&lt;" in result  # < → &lt;
-        assert "&gt;" in result  # > → &gt;
-        assert "&amp;" in result  # & → &amp;
+        assert "&lt;" in result     # < → &lt;
+        assert "&gt;" in result     # > → &gt;
+        assert "&amp;" in result    # & → &amp;
 
     @given(
         text=st.text(
-            alphabet=characters(blacklist_categories=("Cs",)),
+            alphabet=_safe_characters(blacklist_categories=("Cs",)),
             min_size=1,
             max_size=1000,
         ),
@@ -384,7 +400,6 @@ class TestInputValidationProperties:
 
 
 # ── Path traversal tests ─────────────────────────────────────────────────────
-
 
 class TestPathTraversal:
     r"""Verify that the init command's path resolution cannot be tricked into.
@@ -460,7 +475,6 @@ class TestPathTraversal:
 
 # ── Long string / boundary tests ─────────────────────────────────────────────
 
-
 class TestLongStrings:
     """Boundary tests for the sanitizer with very long inputs."""
 
@@ -500,7 +514,6 @@ class TestLongStrings:
             sanitize_html,
             sanitize_text,
         )
-
         assert sanitize_text("") == ""
         assert sanitize_html("") == ""
         assert sanitize_for_display("") == ""
@@ -513,8 +526,7 @@ class TestLongStrings:
             sanitize_html,
             sanitize_text,
         )
-
-        emoji_text = "Hello \U0001f600 World \U0001f680"
+        emoji_text = "Hello \U0001F600 World \U0001F680"
         assert sanitize_text(emoji_text) == emoji_text
         assert sanitize_html(emoji_text) == emoji_text
         assert sanitize_for_display(emoji_text) == emoji_text
@@ -524,9 +536,9 @@ class TestLongStrings:
         from snipcontext.core.sanitization import sanitize_text
 
         # Musical G Clef (U+1D11E) — surrogate pair in UTF-16
-        text = "note: \U0001d11e"
+        text = "note: \U0001D11E"
         result = sanitize_text(text)
-        assert "\U0001d11e" in result
+        assert "\U0001D11E" in result
 
 
 # ── Coverage gaps documentation ──────────────────────────────────────────────
@@ -564,8 +576,8 @@ Remaining gaps in security test coverage (issue #170):
 
 Documented known limitations from this expansion phase:
 
-- Carriage return (U+000D / \\r) passes through sanitize_text without being
-  stripped. This allows terminal line-overwrite attacks (e.g. "good\\rbad").
+- Carriage return (U+000D / \r) passes through sanitize_text without being
+  stripped. This allows terminal line-overwrite attacks (e.g. "good\rbad").
   The sanitizer strips 0x00-0x08, 0x0b, 0x0c, 0x0e-0x1f, 0x7f, 0x9b but
   not 0x09 (tab), 0x0a (LF), or 0x0d (CR). CR is the most dangerous of the
   survivors. Fix: add 0x0d to the stripped set in sanitization.py.
