@@ -16,12 +16,12 @@ from __future__ import annotations
 
 import os
 import sys
-import pytest
 
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from hypothesis.strategies import characters
 from hypothesis.errors import InvalidArgument
+from hypothesis.strategies import characters
 from typer.testing import CliRunner
 
 from snipcontext.cli.app import app
@@ -33,8 +33,13 @@ ESC = "\x1b"
 #    In newer versions (6.100+) the import path is hypothesis.strategies
 #    We re-export characters via st.characters to be safe across versions
 
+
 def _safe_characters(**kwargs):
-    """Get characters strategy, compatible with hypothesis 6.x (all versions)."""
+    """Get characters strategy, compatible with hypothesis 6.x (all versions).
+
+    Tries the direct `characters` import first, then falls back to
+    `st.characters` if needed.
+    """
     try:
         # Try the modern path first
         return characters(**kwargs)
@@ -46,6 +51,7 @@ def _safe_characters(**kwargs):
 
 
 # ── Fuzz: ANSI / OSC escape sequences ────────────────────────────────────────
+
 
 class TestAnsiFuzz:
     r"""Fuzz the sanitizer with random ANSI/OSC escape patterns.
@@ -86,9 +92,7 @@ class TestAnsiFuzz:
         assert "my-title" in result
 
     def test_osc_string_terminated_by_st(self) -> None:
-        r"""OSC (ESC ] ... ST / ESC \) strings: ESC stripped, rest is literal.
-
-        """
+        r"""OSC (ESC ] ... ST / ESC \) strings: ESC stripped, rest is literal."""
         from snipcontext.core.sanitization import sanitize_for_display
 
         # OSC 2 sets window name: ESC ] 2 ; name ST (ST = ESC \)
@@ -198,6 +202,7 @@ class TestAnsiFuzz:
 
 # ── Fuzz: HTML / XML injection vectors ───────────────────────────────────────
 
+
 class TestHtmlFuzz:
     r"""Fuzz sanitize_html with HTML/XML injection patterns."""
 
@@ -294,6 +299,7 @@ class TestHtmlFuzz:
 
 # ── Property-based tests for input validation ────────────────────────────────
 
+
 class TestInputValidationProperties:
     r"""Property-based tests verifying sanitizer invariants hold across.
 
@@ -369,9 +375,9 @@ class TestInputValidationProperties:
         result = sanitize_html(guaranteed)
         assert "&#x27;" in result  # ' → &#x27;
         assert "&quot;" in result  # " → &quot;
-        assert "&lt;" in result     # < → &lt;
-        assert "&gt;" in result     # > → &gt;
-        assert "&amp;" in result    # & → &amp;
+        assert "&lt;" in result  # < → &lt;
+        assert "&gt;" in result  # > → &gt;
+        assert "&amp;" in result  # & → &amp;
 
     @given(
         text=st.text(
@@ -400,6 +406,7 @@ class TestInputValidationProperties:
 
 
 # ── Path traversal tests ─────────────────────────────────────────────────────
+
 
 class TestPathTraversal:
     r"""Verify that the init command's path resolution cannot be tricked into.
@@ -475,6 +482,7 @@ class TestPathTraversal:
 
 # ── Long string / boundary tests ─────────────────────────────────────────────
 
+
 class TestLongStrings:
     """Boundary tests for the sanitizer with very long inputs."""
 
@@ -514,6 +522,7 @@ class TestLongStrings:
             sanitize_html,
             sanitize_text,
         )
+
         assert sanitize_text("") == ""
         assert sanitize_html("") == ""
         assert sanitize_for_display("") == ""
@@ -526,7 +535,8 @@ class TestLongStrings:
             sanitize_html,
             sanitize_text,
         )
-        emoji_text = "Hello \U0001F600 World \U0001F680"
+
+        emoji_text = "Hello \U0001f600 World \U0001f680"
         assert sanitize_text(emoji_text) == emoji_text
         assert sanitize_html(emoji_text) == emoji_text
         assert sanitize_for_display(emoji_text) == emoji_text
@@ -536,9 +546,9 @@ class TestLongStrings:
         from snipcontext.core.sanitization import sanitize_text
 
         # Musical G Clef (U+1D11E) — surrogate pair in UTF-16
-        text = "note: \U0001D11E"
+        text = "note: \U0001d11e"
         result = sanitize_text(text)
-        assert "\U0001D11E" in result
+        assert "\U0001d11e" in result
 
 
 # ── Coverage gaps documentation ──────────────────────────────────────────────
