@@ -255,10 +255,10 @@ class TestEmbeddingEngineFallback:
         """encode() returns numpy array with shape (len(texts), dimension)."""
         if not _SENTENCE_TRANSFORMERS_AVAILABLE:
             pytest.skip("sentence_transformers not installed; 'when available' tests require it")
-        mock_model = MagicMock()
-        mock_model.get_sentence_embedding_dimension.return_value = 384
         import numpy as np
 
+        mock_model = MagicMock()
+        mock_model.get_sentence_embedding_dimension.return_value = 384
         mock_model.encode.return_value = np.array([[0.0] * 384] * 3, dtype=np.float32)
         with patch(
             "sentence_transformers.SentenceTransformer",
@@ -280,9 +280,11 @@ class TestEmbeddingEngineFallback:
         """encode([]) returns an empty array with correct column dimension."""
         if not _SENTENCE_TRANSFORMERS_AVAILABLE:
             pytest.skip("sentence_transformers not installed; 'when available' tests require it")
+        import numpy as np
+
         mock_model = MagicMock()
         mock_model.get_sentence_embedding_dimension.return_value = 384
-        mock_model.encode.return_value = []
+        mock_model.encode.return_value = np.zeros((0, 384), dtype=np.float32)
         with patch(
             "sentence_transformers.SentenceTransformer",
             return_value=mock_model,
@@ -295,7 +297,6 @@ class TestEmbeddingEngineFallback:
 
                 engine = EmbeddingEngine()
                 result = engine.encode([])
-                import numpy as np
 
                 assert isinstance(result, np.ndarray)
                 assert result.shape == (0, 384)
