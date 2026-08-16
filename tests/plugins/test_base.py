@@ -1,4 +1,5 @@
 """Tests for plugins/base.py."""
+
 import pytest
 from unittest.mock import MagicMock
 
@@ -7,11 +8,12 @@ from snipcontext.plugins.base import Plugin, PluginManifest
 
 class ConcretePlugin(Plugin):
     """A concrete plugin for testing."""
+
     manifest = PluginManifest(name="test-plugin", version="1.0.0")
-    
+
     def on_load(self) -> None:
         self.loaded = True
-    
+
     def on_snippet_saved(self, snippet) -> None:
         self.saved_snippet = snippet
 

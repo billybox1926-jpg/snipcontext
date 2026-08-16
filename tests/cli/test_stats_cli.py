@@ -1,4 +1,5 @@
 """CLI stats command tests."""
+
 import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
@@ -32,13 +33,14 @@ def cli_context(tmp_path):
     )
     config.auto_tag.enabled = False
     config.dedup.enabled = False
-    
+
     from snipcontext.core.storage import StorageEngine
+
     storage = StorageEngine(config)
-    
+
     searcher = MagicMock()
     searcher.indices_ready = False
-    
+
     return config, storage, searcher
 
 
@@ -46,7 +48,7 @@ def _invoke_cli(args, context=None, input_data=None):
     """Helper to invoke CLI commands."""
     from typer.testing import CliRunner
     from snipcontext.cli.app import app
-    
+
     runner = CliRunner()
     if context:
         with patch("snipcontext.cli.stats._get_context", return_value=context):
@@ -73,7 +75,7 @@ def test_stats_basic(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["stats"], cli_context)
     assert result.exit_code == 0
     assert "snippets" in result.output.lower() or "stats" in result.output.lower()
@@ -91,7 +93,7 @@ def test_stats_detailed(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["stats", "--detailed"], cli_context)
     assert result.exit_code == 0
 
@@ -107,10 +109,11 @@ def test_stats_json(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["stats", "--json"], cli_context)
     assert result.exit_code == 0
     import json
+
     try:
         data = json.loads(result.output)
         assert isinstance(data, dict)
@@ -130,7 +133,7 @@ def test_stats_json_detailed(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["stats", "--json", "--detailed"], cli_context)
     assert result.exit_code == 0
 
@@ -146,7 +149,7 @@ def test_demo_with_existing(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["demo"], cli_context)
     assert result.exit_code == 0
     assert "existing" in result.output.lower() or "detected" in result.output.lower()

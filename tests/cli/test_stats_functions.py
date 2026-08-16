@@ -1,4 +1,5 @@
 """Test stats.py internal functions directly."""
+
 import pytest
 from snipcontext.cli.stats import _format_size, _render_ascii_bar
 

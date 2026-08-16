@@ -1,4 +1,5 @@
 """CLI snippets command tests - extended coverage."""
+
 import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
@@ -32,13 +33,14 @@ def cli_context(tmp_path):
     )
     config.auto_tag.enabled = False
     config.dedup.enabled = False
-    
+
     from snipcontext.core.storage import StorageEngine
+
     storage = StorageEngine(config)
-    
+
     searcher = MagicMock()
     searcher.indices_ready = False
-    
+
     return config, storage, searcher
 
 
@@ -46,7 +48,7 @@ def _invoke_cli(args, context=None, input_data=None):
     """Helper to invoke CLI commands."""
     from typer.testing import CliRunner
     from snipcontext.cli.app import app
-    
+
     runner = CliRunner()
     if context:
         with patch("snipcontext.cli.snippets._get_context", return_value=context):
@@ -56,25 +58,34 @@ def _invoke_cli(args, context=None, input_data=None):
 
 def test_add_with_tags(cli_context):
     """Add snippet with tags."""
-    result = _invoke_cli(["add", "print('hi')", "--title", "Tagged", "--tag", "python", "--tag", "cli"], cli_context)
+    result = _invoke_cli(
+        ["add", "print('hi')", "--title", "Tagged", "--tag", "python", "--tag", "cli"], cli_context
+    )
     assert result.exit_code == 0
 
 
 def test_add_with_language(cli_context):
     """Add snippet with language."""
-    result = _invoke_cli(["add", "print('hi')", "--title", "Python Snippet", "--lang", "python"], cli_context)
+    result = _invoke_cli(
+        ["add", "print('hi')", "--title", "Python Snippet", "--lang", "python"], cli_context
+    )
     assert result.exit_code == 0
 
 
 def test_add_with_description(cli_context):
     """Add snippet with description."""
-    result = _invoke_cli(["add", "print('hi')", "--title", "Desc Test", "--desc", "A test snippet"], cli_context)
+    result = _invoke_cli(
+        ["add", "print('hi')", "--title", "Desc Test", "--desc", "A test snippet"], cli_context
+    )
     assert result.exit_code == 0
 
 
 def test_add_with_source(cli_context):
     """Add snippet with source URL."""
-    result = _invoke_cli(["add", "print('hi')", "--title", "Source Test", "--source", "https://example.com"], cli_context)
+    result = _invoke_cli(
+        ["add", "print('hi')", "--title", "Source Test", "--source", "https://example.com"],
+        cli_context,
+    )
     assert result.exit_code == 0
 
 
@@ -112,7 +123,7 @@ def test_list_with_tag_filter(cli_context):
     )
     cli_context[1].save(s1)
     cli_context[1].save(s2)
-    
+
     result = _invoke_cli(["list", "--tag", "python"], cli_context)
     assert result.exit_code == 0
     assert "python" in result.output.lower()
@@ -129,7 +140,7 @@ def test_list_with_lang_filter(cli_context):
         created_at=now,
     )
     cli_context[1].save(s1)
-    
+
     result = _invoke_cli(["list", "--lang", "python"], cli_context)
     assert result.exit_code == 0
 
@@ -146,7 +157,7 @@ def test_list_sort_by_title(cli_context):
             created_at=now,
         )
         cli_context[1].save(s)
-    
+
     result = _invoke_cli(["list", "--sort", "title"], cli_context)
     assert result.exit_code == 0
 
@@ -174,7 +185,7 @@ def test_edit_title(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["edit", "edit-test", "--title", "New Title", "--force"], cli_context)
     assert result.exit_code == 0
 
@@ -190,8 +201,10 @@ def test_edit_content(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
-    result = _invoke_cli(["edit", "edit-content", "--content", "new content", "--force"], cli_context)
+
+    result = _invoke_cli(
+        ["edit", "edit-content", "--content", "new content", "--force"], cli_context
+    )
     assert result.exit_code == 0
 
 
@@ -207,7 +220,7 @@ def test_edit_add_tags(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["edit", "edit-tags", "--tag", "newtag", "--force"], cli_context)
     assert result.exit_code == 0
 
@@ -224,8 +237,10 @@ def test_edit_remove_tags(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
-    result = _invoke_cli(["edit", "edit-rm-tags", "--remove-tag", "removeme", "--force"], cli_context)
+
+    result = _invoke_cli(
+        ["edit", "edit-rm-tags", "--remove-tag", "removeme", "--force"], cli_context
+    )
     assert result.exit_code == 0
 
 
@@ -254,7 +269,7 @@ def test_get_raw(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["get", "raw-test", "--raw"], cli_context)
     assert result.exit_code == 0
     assert "raw content" in result.output
@@ -271,6 +286,6 @@ def test_get_prefix(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["get", "prefix-test"], cli_context)
     assert result.exit_code == 0

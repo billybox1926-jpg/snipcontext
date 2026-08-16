@@ -1,4 +1,5 @@
 """KeywordIndex tests with proper mocking."""
+
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -155,7 +156,7 @@ def test_save_load_roundtrip(built_index, mock_config):
     """save() followed by load() preserves the index."""
     path = mock_config.index_path / "keyword_rt"
     built_index.save(path)
-    
+
     loaded = KeywordIndex(mock_config)
     assert loaded.load(path)
     assert loaded.is_trained
@@ -173,7 +174,7 @@ def test_load_corrupted_file_returns_false(mock_config):
     path = mock_config.index_path / "corrupt"
     path.mkdir(parents=True, exist_ok=True)
     (path / "keyword_index.json").write_text("not valid json {{{")
-    
+
     idx = KeywordIndex(mock_config)
     assert idx.load(path) is False
 

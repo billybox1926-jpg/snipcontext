@@ -1,4 +1,5 @@
 """CLI snippets command tests."""
+
 import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
@@ -33,13 +34,14 @@ def cli_context(tmp_path):
     # Disable auto-tag and dedup to avoid embedding-related errors
     config.auto_tag.enabled = False
     config.dedup.enabled = False
-    
+
     from snipcontext.core.storage import StorageEngine
+
     storage = StorageEngine(config)
-    
+
     searcher = MagicMock()
     searcher.indices_ready = False
-    
+
     return config, storage, searcher
 
 
@@ -47,17 +49,21 @@ def _invoke_cli(args, context, input_data=None):
     """Helper to invoke CLI commands with mocked context."""
     from typer.testing import CliRunner
     from snipcontext.cli.app import app
-    
+
     runner = CliRunner()
     # Patch _get_context in each CLI module's namespace
-    with patch("snipcontext.cli.snippets._get_context", return_value=context), \
-         patch("snipcontext.cli.search._get_context", return_value=context):
+    with (
+        patch("snipcontext.cli.snippets._get_context", return_value=context),
+        patch("snipcontext.cli.search._get_context", return_value=context),
+    ):
         return runner.invoke(app, args, input=input_data)
 
 
 def test_add_snippet(cli_context):
     """Add a snippet via CLI."""
-    result = _invoke_cli(["add", "print('hello')", "--title", "Test", "--lang", "python"], cli_context)
+    result = _invoke_cli(
+        ["add", "print('hello')", "--title", "Test", "--lang", "python"], cli_context
+    )
     assert result.exit_code == 0
     assert "added" in result.output.lower() or "test" in result.output.lower()
 
@@ -81,7 +87,7 @@ def test_list_snippets(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["list"], cli_context)
     assert result.exit_code == 0
     assert "list test" in result.output.lower() or "snippets" in result.output.lower()
@@ -99,7 +105,7 @@ def test_get_snippet(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["get", "get-test"], cli_context)
     assert result.exit_code == 0
     assert "get test" in result.output.lower()
@@ -124,6 +130,6 @@ def test_delete_snippet(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["delete", "del-test", "--force"], cli_context)
     assert result.exit_code == 0

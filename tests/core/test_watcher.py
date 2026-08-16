@@ -1,4 +1,5 @@
 """Tests for watcher.py - SnippetWatcher and SnippetChangeHandler."""
+
 import threading
 import time
 from pathlib import Path
@@ -50,11 +51,11 @@ def test_handler_on_any_event_skips_directories():
     search = MagicMock()
     storage = MagicMock()
     handler = SnippetChangeHandler(search, storage, debounce_seconds=0.1)
-    
+
     event = MagicMock()
     event.is_directory = True
     event.src_path = "/some/dir"
-    
+
     handler.on_any_event(event)
     # Should not start a timer for directory events
     assert handler._timer is None
@@ -65,11 +66,11 @@ def test_handler_on_any_event_skips_tmp_files():
     search = MagicMock()
     storage = MagicMock()
     handler = SnippetChangeHandler(search, storage, debounce_seconds=0.1)
-    
+
     event = MagicMock()
     event.is_directory = False
     event.src_path = "/some/file.tmp"
-    
+
     handler.on_any_event(event)
     # Should not start a timer for .tmp files
     assert handler._timer is None
@@ -80,15 +81,15 @@ def test_handler_on_any_event_starts_timer():
     search = MagicMock()
     storage = MagicMock()
     handler = SnippetChangeHandler(search, storage, debounce_seconds=0.1)
-    
+
     event = MagicMock()
     event.is_directory = False
     event.src_path = "/some/file.py"
-    
+
     handler.on_any_event(event)
     assert handler._timer is not None
     assert isinstance(handler._timer, threading.Timer)
-    
+
     # Clean up
     handler.cancel()
 
@@ -98,14 +99,14 @@ def test_handler_cancel_stops_timer():
     search = MagicMock()
     storage = MagicMock()
     handler = SnippetChangeHandler(search, storage, debounce_seconds=10.0)
-    
+
     event = MagicMock()
     event.is_directory = False
     event.src_path = "/some/file.py"
-    
+
     handler.on_any_event(event)
     assert handler._timer is not None
-    
+
     handler.cancel()
     assert handler._timer is None
 
@@ -116,7 +117,7 @@ def test_handler_do_reindex_calls_search():
     storage = MagicMock()
     storage.list_all.return_value = [MagicMock(), MagicMock()]
     handler = SnippetChangeHandler(search, storage, debounce_seconds=0.1)
-    
+
     handler._do_reindex()
     search.rebuild_incremental.assert_called_once()
 
@@ -127,7 +128,7 @@ def test_handler_do_reindex_handles_storage_error():
     storage = MagicMock()
     storage.list_all.side_effect = Exception("Storage error")
     handler = SnippetChangeHandler(search, storage, debounce_seconds=0.1)
-    
+
     # Should not raise
     handler._do_reindex()
     search.rebuild_incremental.assert_not_called()
@@ -151,10 +152,10 @@ def test_watcher_start_disabled(mock_config, capsys):
     search = MagicMock()
     storage = MagicMock()
     watcher = SnippetWatcher(mock_config, search, storage)
-    
+
     watcher.start()
     assert watcher.observer is None
-    
+
     captured = capsys.readouterr()
     assert "disabled" in captured.out.lower()
 
@@ -165,10 +166,10 @@ def test_watcher_start_watchdog_not_available(mock_config, capsys):
         search = MagicMock()
         storage = MagicMock()
         watcher = SnippetWatcher(mock_config, search, storage)
-        
+
         watcher.start()
         assert watcher.observer is None
-        
+
         captured = capsys.readouterr()
         assert "not installed" in captured.out.lower()
 
@@ -181,13 +182,13 @@ def test_watcher_start_success(mock_config):
             search = MagicMock()
             storage = MagicMock()
             watcher = SnippetWatcher(mock_config, search, storage)
-            
+
             # We can't actually run the blocking loop, so we'll test the setup
             # by patching the observer's is_alive to return False immediately
             mock_observer.is_alive.return_value = False
-            
+
             watcher.start()
-            
+
             assert watcher.observer is mock_observer
             assert watcher._handler is not None
             mock_observer.schedule.assert_called_once()

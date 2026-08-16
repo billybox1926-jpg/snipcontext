@@ -28,6 +28,7 @@ class _Storage:
 
 class _Config:
     """Minimal config mock compatible with SnippetWatcher expectations."""
+
     def __init__(self, snippets_path: Path, watchdog_enabled: bool = True) -> None:
         self.snippets_path = snippets_path
         self.watchdog_enabled = watchdog_enabled

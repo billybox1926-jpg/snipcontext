@@ -1,4 +1,5 @@
 """CLI export command tests."""
+
 import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
@@ -32,10 +33,11 @@ def cli_context(tmp_path):
     )
     config.auto_tag.enabled = False
     config.dedup.enabled = False
-    
+
     from snipcontext.core.storage import StorageEngine
+
     storage = StorageEngine(config)
-    
+
     # Add test snippets
     now = datetime.now(timezone.utc)
     snippets = [
@@ -58,11 +60,11 @@ def cli_context(tmp_path):
     ]
     for s in snippets:
         storage.save(s)
-    
+
     searcher = MagicMock()
     searcher.indices_ready = True
     searcher.search.return_value = []
-    
+
     return config, storage, searcher
 
 
@@ -70,7 +72,7 @@ def _invoke_cli(args, context, input_data=None):
     """Helper to invoke CLI commands with mocked context."""
     from typer.testing import CliRunner
     from snipcontext.cli.app import app
-    
+
     runner = CliRunner()
     with patch("snipcontext.cli.export._get_context", return_value=context):
         return runner.invoke(app, args, input=input_data)

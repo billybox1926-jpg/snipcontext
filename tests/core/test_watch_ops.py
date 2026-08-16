@@ -1,4 +1,5 @@
 """Tests for watch_ops.py business logic functions."""
+
 import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
@@ -63,4 +64,5 @@ def test_create_watcher_returns_snippet_watcher(mock_config):
     assert watcher is not None
     # Verify it's the right type
     from snipcontext.core.watcher import SnippetWatcher
+
     assert isinstance(watcher, SnippetWatcher)

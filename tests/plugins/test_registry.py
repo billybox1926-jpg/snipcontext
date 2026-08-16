@@ -1,4 +1,5 @@
 """Tests for plugins/registry.py."""
+
 from unittest.mock import MagicMock
 
 import pytest

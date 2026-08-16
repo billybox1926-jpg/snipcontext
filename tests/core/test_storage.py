@@ -1,4 +1,5 @@
 """StorageEngine tests with temporary directories."""
+
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -115,7 +116,7 @@ def test_list_all_returns_all_snippets(storage):
             created_at=now,
         )
         storage.save(snippet)
-    
+
     all_snippets = storage.list_all()
     assert len(all_snippets) == 3
 
@@ -133,7 +134,7 @@ def test_count_returns_total(storage):
             created_at=now,
         )
         storage.save(snippet)
-    
+
     assert storage.count() == 5
 
 
@@ -150,11 +151,11 @@ def test_iter_all_skips_corrupted_files(storage):
         created_at=now,
     )
     storage.save(valid)
-    
+
     # Create a corrupted file
     corrupt_path = storage.snippets_dir / "corrupt.json"
     corrupt_path.write_text("not valid json {{{")
-    
+
     # iter_all should skip the corrupted file
     snippets = list(storage.iter_all())
     assert len(snippets) == 1
@@ -182,7 +183,7 @@ def test_find_by_tag_returns_matching(storage):
     )
     storage.save(s1)
     storage.save(s2)
-    
+
     results = storage.find_by_tag("python")
     assert len(results) == 1
     assert results[0].id == "tagged-1"
@@ -209,7 +210,7 @@ def test_get_all_tags_returns_unique_sorted(storage):
     )
     storage.save(s1)
     storage.save(s2)
-    
+
     tags = storage.get_all_tags()
     assert tags == ["cli", "python", "web"]
 
@@ -227,7 +228,7 @@ def test_get_stats_returns_correct_counts(storage):
             created_at=now,
         )
         storage.save(snippet)
-    
+
     stats = storage.get_stats()
     assert stats["total_snippets"] == 3
     assert stats["total_tags"] == 2
@@ -281,11 +282,11 @@ def test_export_all_creates_file(storage):
         created_at=now,
     )
     storage.save(snippet)
-    
+
     output_path = storage.index_dir / "export.json"
     result = storage.export_all(output_path)
     assert result.exists()
-    
+
     with open(result) as f:
         data = json.load(f)
     assert data["count"] == 1
@@ -303,15 +304,15 @@ def test_import_file_loads_snippets(storage):
         created_at=now,
     )
     storage.save(snippet)
-    
+
     # Export and re-import
     export_path = storage.index_dir / "import_test.json"
     storage.export_all(export_path)
-    
+
     # Delete original
     storage.delete("import-1")
     assert storage.count() == 0
-    
+
     # Import
     count = storage.import_file(export_path)
     assert count == 1
@@ -330,11 +331,11 @@ def test_vacuum_removes_orphaned_files(storage):
         created_at=now,
     )
     storage.save(valid)
-    
+
     # Create orphaned file with invalid schema (content must be a string, not a number)
     orphan_path = storage.snippets_dir / "orphan.json"
     orphan_path.write_text(json.dumps({"id": "orphan", "content": 123}))
-    
+
     freed = storage.vacuum()
     assert freed > 0
     assert not orphan_path.exists()
@@ -353,7 +354,7 @@ def test_reindex_all_rewrites_files(storage):
         created_at=now,
     )
     storage.save(snippet)
-    
+
     count = storage.reindex_all()
     assert count == 1
     assert storage.exists("reindex-1")
