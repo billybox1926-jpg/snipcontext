@@ -1,24 +1,25 @@
 """HybridSearch tests with proper mocking."""
-
 import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 import tempfile
 from datetime import datetime, timezone
 
-from snipcontext.config.settings import Config
+from snipcontext.config.settings import Config, StorageConfig
 from snipcontext.core.models import Language, Snippet, SearchMode
 from snipcontext.core.storage import StorageEngine
 
 
 @pytest.fixture
 def hybrid_search_setup():
+    """Create a HybridSearch with isolated temp storage."""
     tmpdir = Path(tempfile.mkdtemp())
-    snippets_dir = tmpdir / "snippets"
-    snippets_dir.mkdir(parents=True, exist_ok=True)
-
+    (tmpdir / "snippets").mkdir(parents=True, exist_ok=True)
+    (tmpdir / "index").mkdir(parents=True, exist_ok=True)
+    
+    storage_config = StorageConfig(data_dir=tmpdir, snippets_dir="snippets", index_dir="index")
     real_config = Config(
-        storage__data_dir=tmpdir,
+        storage=storage_config,
         search__top_k=10,
         search__default_mode="hybrid",
         search__min_score=0.0,
@@ -34,18 +35,16 @@ def hybrid_search_setup():
         snippets_per_page=20,
         watchdog_ready=False,
     )
-
-    # We patch rank_bm25 to force the numpy fallback for keyword search,
+    
+    # We patch rank_bm25 to force the numpy fallback for keyword search, 
     # making the test deterministic and fast.
-    with (
-        patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False),
-        patch.dict("sys.modules", {"rank_bm25": None}),
-    ):
+    with patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False), \
+         patch.dict("sys.modules", {"rank_bm25": None}):
         from snipcontext.core.search_fusion import HybridSearch
-
+        
         search = HybridSearch(real_config)
         storage = StorageEngine(real_config)
-
+        
         now = datetime.now(timezone.utc)
         snippets = [
             Snippet(
@@ -65,10 +64,10 @@ def hybrid_search_setup():
                 created_at=now,
             ),
         ]
-
+        
         for s in snippets:
             storage.save(s)
-
+            
         search.rebuild_keyword_index(storage.list_all())
         return search, storage, real_config
 
