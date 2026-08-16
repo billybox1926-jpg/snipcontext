@@ -39,7 +39,7 @@ def is_watcher_enabled(config: Config) -> bool:
     Returns:
         True if watcher is enabled.
     """
-    return getattr(config, "watchdog_enabled", True)
+    return getattr(config.storage, "watchdog_enabled", True)
 
 
 def get_watcher_debounce(config: Config) -> float:
@@ -51,4 +51,4 @@ def get_watcher_debounce(config: Config) -> float:
     Returns:
         Debounce interval in seconds.
     """
-    return getattr(config, "watchdog_debounce_seconds", 2.0)
+    return getattr(config.storage, "watchdog_debounce_seconds", 2.0)

@@ -108,14 +108,14 @@ class SnippetWatcher:
         Does nothing if ``watchdog_enabled`` is ``False`` in config.
         Gracefully handles watchdog not being installed.
         """
-        if not getattr(self.config, "watchdog_enabled", True):
+        if not getattr(self.config.storage, "watchdog_enabled", True):
             print("Watchdog disabled in config. Exiting.")
             return
         if not _WATCHDOG_AVAILABLE:
             print("watchdog not installed. Install with: pip install watchdog")
             return
 
-        debounce = getattr(self.config, "watchdog_debounce_seconds", 2.0)
+        debounce = getattr(self.config.storage, "watchdog_debounce_seconds", 2.0)
         self._handler = SnippetChangeHandler(self.search, self.storage, debounce_seconds=debounce)
         self.observer = Observer()
         assert self.observer is not None
