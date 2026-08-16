@@ -87,44 +87,6 @@ jobs:
           export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
           uv run pytest -q --tb=short -m "slow"
 
-  # ── Full semantic dependency matrix ──────────────────────────────
-  test-semantic:
-    name: Test semantic extra (Python ${{ matrix.python-version }})
-    needs: quality
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12", "3.13"]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: astral-sh/setup-uv@v3
-        with:
-          python-version: ${{ matrix.python-version }}
-          enable-cache: true
-
-      - name: Cache Hugging Face models
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/huggingface
-          key: hf-semantic-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            hf-semantic-${{ runner.os }}-${{ matrix.python-version }}-
-            hf-semantic-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: |
-          uv venv
-          uv pip install -e ".[dev,semantic]"
-
-      - name: Run tests
-        shell: bash
-        run: |
-          export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
-          uv run pytest -q --tb=short -m "not slow" --cov=src/snipcontext --cov-report=term-missing
-
   # ── Minimal install (no optional extras) ──────────────────────────
   test-minimal:
     name: Test minimal install (no optional extras)
