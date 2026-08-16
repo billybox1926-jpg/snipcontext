@@ -33,6 +33,13 @@ class KeywordIndex:
     such as code snippets.
     """
 
+    BM25_AVAILABLE: bool = True
+    """Whether rank_bm25 (BM25Okapi) is importable.  When False, keyword search
+    falls back to a simple token-overlap scorer."""
+
+    _bm25_cache: BM25Okapi | None = None
+    """Cached BM25Okapi instance, set by :meth:`build` when available."""
+
     def __init__(self, config: Config | None = None) -> None:
         self._config = config or get_config()
         self._bm25: BM25Okapi | None = None
@@ -42,7 +49,13 @@ class KeywordIndex:
 
     @property
     def is_trained(self) -> bool:
-        return self._bm25 is not None and self._corpus is not None
+        """Return True if the index has corpus data.
+
+        The original implementation required both a BM25 object and a corpus.
+        When ``rank_bm25`` is unavailable we still want the index to be usable,
+        so we consider the index trained as long as ``_corpus`` is populated.
+        """
+        return self._corpus is not None
 
     @staticmethod
     def _tokenize(text: str) -> list[str]:
@@ -56,8 +69,51 @@ class KeywordIndex:
         return re.findall(r"\w+", text.lower())
 
     def build(self, snippets: list[Snippet]) -> None:
-        """Build the BM25 index from snippets."""
-        from rank_bm25 import BM25Okapi
+        """Build the BM25 index from snippets.
+
+        When ``rank_bm25`` is available and ``BM25_AVAILABLE`` is True, creates a
+        full BM25Okapi index.  When it is not (either because the library is
+        missing or ``BM25_AVAILABLE`` has been set to False), stores the corpus
+        and texts for simple token-overlap scoring in :meth:`search`.
+        """
+        if not self.BM25_AVAILABLE:
+            logger.warning(
+                "rank_bm25 is available but BM25_AVAILABLE is False; "
+                "falling back to simple keyword scoring.",
+            )
+            if not snippets:
+                self._bm25 = None
+                self._corpus = None
+                self._id_map = []
+                self._texts = []
+                return
+            texts = [s.to_search_text() for s in snippets]
+            self._texts = texts
+            self._corpus = [self._tokenize(t) for t in texts]
+            self._id_map = [s.id for s in snippets]
+            self._bm25 = None
+            return
+
+        try:
+            from rank_bm25 import BM25Okapi
+        except ImportError:
+            logger.warning(
+                "rank_bm25 not installed; falling back to simple keyword scoring. "
+                "Install with: pip install snipcontext[full]",
+            )
+            if not snippets:
+                self._bm25 = None
+                self._corpus = None
+                self._id_map = []
+                self._texts = []
+                return
+
+            texts = [s.to_search_text() for s in snippets]
+            self._texts = texts
+            self._corpus = [self._tokenize(t) for t in texts]
+            self._id_map = [s.id for s in snippets]
+            self._bm25 = None
+            return
 
         if not snippets:
             self._bm25 = None
@@ -86,6 +142,9 @@ class KeywordIndex:
     ) -> list[tuple[str, float]]:
         """Search by keyword relevance using BM25 scoring.
 
+        When BM25 (rank_bm25) is available, uses BM25Okapi scoring.  When it is
+        not, falls back to simple token-overlap counting.
+
         BM25 scores are unbounded positive floats.  They are normalized to
         the [0, 1] range by dividing by the maximum score in the current
         result set so that they are compatible with ``min_score`` thresholds
@@ -102,17 +161,27 @@ class KeywordIndex:
         """
         if not self.is_trained:
             return []
-
-        assert self._bm25 is not None
         tokens = self._tokenize(query)
-        raw_scores = self._bm25.get_scores(tokens)
-
-        # Normalize BM25 scores to [0, 1] for min_score compatibility.
-        max_score = float(raw_scores.max())
-        if max_score > 0:
-            scores = raw_scores / max_score
+        # Use BM25 if available, otherwise fallback to simple token overlap scoring.
+        if self._bm25 is not None:
+            raw_scores = self._bm25.get_scores(tokens)
+            max_score = float(raw_scores.max())
+            if max_score > 0:
+                scores = raw_scores / max_score
+            else:
+                scores = raw_scores.astype(np.float64)
         else:
-            scores = raw_scores.astype(np.float64)
+            # Simple token overlap scoring as fallback.
+            scores = np.zeros(len(self._corpus or []), dtype=np.float64)
+            for i, doc_tokens in enumerate(self._corpus or []):
+                overlap = len(set(tokens) & set(doc_tokens))
+                if overlap > 0:
+                    denom = (
+                        max(len(tokens), len(doc_tokens)) if (len(tokens) or len(doc_tokens)) else 1
+                    )
+                    scores[i] = overlap / denom
+            if scores.max() > 0:
+                scores = scores / scores.max()
 
         if fuzzy:
             # Augment with fuzzy matching against original texts
@@ -183,7 +252,12 @@ class KeywordIndex:
         logger.debug("Saved keyword index to %s", path)
 
     def load(self, path: Path) -> bool:
-        """Load the keyword index from disk."""
+        """Load the keyword index from disk.
+
+        When rank_bm25 is available, the BM25Okapi index is rebuilt from the
+        stored corpus.  When it is not, the corpus and texts are still loaded
+        so that the simple token-overlap fallback in :meth:`search` can work.
+        """
         index_file = path / "keyword_index.json"
         legacy_file = path / "keyword_index.pkl"
         if not index_file.exists() and legacy_file.exists():
@@ -207,9 +281,16 @@ class KeywordIndex:
                 )
                 return False
             if self._corpus:
-                from rank_bm25 import BM25Okapi
+                try:
+                    from rank_bm25 import BM25Okapi
 
-                self._bm25 = BM25Okapi(self._corpus)
+                    self._bm25 = BM25Okapi(self._corpus)
+                except ImportError:
+                    logger.warning(
+                        "rank_bm25 not available; loading keyword index in "
+                        "fallback mode (token-overlap only).",
+                    )
+                    self._bm25 = None
             else:
                 self._bm25 = None
                 self._corpus = None
