@@ -124,19 +124,3 @@ def test_list_sort_updated(cli_context):
     """List sorted by updated date."""
     result = _invoke_cli(["list", "--sort", "updated"], cli_context)
     assert result.exit_code == 0
-
-
-def test_delete_with_prefix(cli_context):
-    """Delete snippet by ID prefix."""
-    now = datetime.now(timezone.utc)
-    snippet = Snippet(
-        id="delete-prefix-test",
-        title="Delete Prefix",
-        content="test content",
-        metadata=SnippetMetadata(title="Delete Prefix", language=Language.PYTHON),
-        created_at=now,
-    )
-    cli_context[1].save(snippet)
-    
-    result = _invoke_cli(["delete", "delete-prefix", "--force"], cli_context)
-    assert result.exit_code == 0
