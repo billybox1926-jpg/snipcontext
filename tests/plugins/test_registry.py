@@ -59,7 +59,7 @@ def test_registry_unload_plugin():
     registry = _PluginRegistryImpl()
     registry._plugins["test"] = TestPlugin
     registry.load_plugin("test")
-    registry.unregister("test")
+    registry.unload_plugin("test")
     assert registry.get_plugin("test") is None
 
 
