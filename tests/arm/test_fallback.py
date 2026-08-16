@@ -17,11 +17,10 @@
         from snipcontext.core.storage import StorageEngine
 
         tmpdir = Path(tempfile.mkdtemp())
+        snippets_dir = tmpdir / "snippets"
+        snippets_dir.mkdir(parents=True, exist_ok=True)
         real_config = Config(
-            snippets_path=tmpdir / "snippets",
-            index_path=tmpdir / "index",
-            storage_path=tmpdir / "storage",
-            data_dir=tmpdir / "data",
+            storage__data_dir=tmpdir,
             search__top_k=10,
             search__default_mode="keyword",
             search__min_score=0.0,
@@ -36,9 +35,7 @@
             max_snippets_per_export=100,
             snippets_per_page=20,
             watchdog_ready=False,
-            snipcontext_dir=tmpdir,
         )
-        real_config.snippets_path.mkdir(parents=True, exist_ok=True)
         with (
             patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False),
             patch(

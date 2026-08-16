@@ -49,6 +49,12 @@ class KeywordIndex:
 
     @property
     def is_trained(self) -> bool:
+        """Return True if the index has corpus data.
+
+        The original implementation required both a BM25 object and a corpus.
+        When ``rank_bm25`` is unavailable we still want the index to be usable,
+        so we consider the index trained as long as ``_corpus`` is populated.
+        """
         return self._corpus is not None
 
     @staticmethod
@@ -137,28 +143,25 @@ class KeywordIndex:
         """
         if not self.is_trained:
             return []
-
         tokens = self._tokenize(query)
-
+        # Use BM25 if available, otherwise fallback to simple token overlap scoring.
         if self._bm25 is not None:
             raw_scores = self._bm25.get_scores(tokens)
-
-            # Normalize BM25 scores to [0, 1] for min_score compatibility.
             max_score = float(raw_scores.max())
             if max_score > 0:
                 scores = raw_scores / max_score
             else:
                 scores = raw_scores.astype(np.float64)
         else:
-            # Fallback: simple token overlap counting
-            if self._corpus is not None:
-                scores = np.zeros(len(self._corpus), dtype=np.float64)
-                for i, doc_tokens in enumerate(self._corpus):
-                    doc_token_set: set[str] = set(doc_tokens)
-                    overlap = sum(1 for t in tokens if t in doc_token_set)
-                    if overlap > 0:
-                        scores[i] = overlap / max(len(tokens), 1)
-
+            # Simple token overlap scoring as fallback.
+            scores = np.zeros(len(self._corpus or []), dtype=np.float64)
+            for i, doc_tokens in enumerate(self._corpus or []):
+                overlap = len(set(tokens) & set(doc_tokens))
+                if overlap > 0:
+                    denom = (
+                        max(len(tokens), len(doc_tokens)) if (len(tokens) or len(doc_tokens)) else 1
+                    )
+                    scores[i] = overlap / denom
             if scores.max() > 0:
                 scores = scores / scores.max()
 
