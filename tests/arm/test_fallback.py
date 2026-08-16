@@ -257,7 +257,9 @@ class TestEmbeddingEngineFallback:
             pytest.skip("sentence_transformers not installed; 'when available' tests require it")
         mock_model = MagicMock()
         mock_model.get_sentence_embedding_dimension.return_value = 384
-        mock_model.encode.return_value = [[0.0] * 384] * 3
+        import numpy as np
+
+        mock_model.encode.return_value = np.array([[0.0] * 384] * 3, dtype=np.float32)
         with patch(
             "sentence_transformers.SentenceTransformer",
             return_value=mock_model,
@@ -270,7 +272,6 @@ class TestEmbeddingEngineFallback:
 
                 engine = EmbeddingEngine()
                 result = engine.encode(["a", "b", "c"])
-                import numpy as np
 
                 assert isinstance(result, np.ndarray)
                 assert result.shape == (3, 384)
@@ -1001,6 +1002,7 @@ class TestSemanticSearchFallback:
 
         with (
             patch("snipcontext.core.embeddings.SEMANTIC_AVAILABLE", False),
+            patch("snipcontext.core.indexes.vector_index.SEMANTIC_AVAILABLE", False),
             patch(
                 "snipcontext.core.search_fusion.get_config",
                 return_value=_make_semantic_config(),
