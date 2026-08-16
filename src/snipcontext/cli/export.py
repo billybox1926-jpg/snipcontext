@@ -135,9 +135,9 @@ def register_commands(app: typer.Typer) -> None:
         actions = sum(1 for x in (list_cmd, health, load_name, unload_name) if x)
         if actions > 1:
             console.print(
-                "[red]Error: Use only one of --list, --health, --load NAME, or --unload NAME[/red]",
-                err=True,
+                "[red]Error: Use only one of --list, --health, --load NAME, or --unload NAME[/red]"
             )
+            console.print()
             raise typer.Exit(1)
 
         registry = PluginRegistry()
@@ -148,7 +148,8 @@ def register_commands(app: typer.Typer) -> None:
                 registry.load_plugin(load_name)
                 console.print(f"[green]Loaded plugin '{load_name}'[/green]")
             except ValueError as e:
-                console.print(f"[red]Error: {e}[/red]", err=True)
+                console.print(f"[red]Error: {e}[/red]")
+                console.print()
                 raise typer.Exit(1)
             return
 
@@ -157,7 +158,8 @@ def register_commands(app: typer.Typer) -> None:
                 registry.unload_plugin(unload_name)
                 console.print(f"[green]Unloaded plugin '{unload_name}'[/green]")
             except ValueError as e:
-                console.print(f"[red]Error: {e}[/red]", err=True)
+                console.print(f"[red]Error: {e}[/red]")
+                console.print()
                 raise typer.Exit(1)
             return
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from watchdog.events import FileSystemEvent, FileSystemEventHandler
@@ -23,18 +23,24 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+_WATCHDOG_AVAILABLE: bool = False
+_WATCHDOG_HANDLER_BASECLASS: type
+_WATCHDOG_OBSERVER_CLASS: Any
+
 try:  # pragma: no cover - optional dependency
     from watchdog.events import FileSystemEventHandler
     from watchdog.observers import Observer
 
     _WATCHDOG_AVAILABLE = True
+    _WATCHDOG_HANDLER_BASECLASS = FileSystemEventHandler
+    _WATCHDOG_OBSERVER_CLASS = Observer
 except ImportError:  # pragma: no cover - optional dependency
     _WATCHDOG_AVAILABLE = False
-    FileSystemEventHandler = object
-    Observer = None
+    _WATCHDOG_HANDLER_BASECLASS = object
+    _WATCHDOG_OBSERVER_CLASS = None
 
 
-class SnippetChangeHandler(FileSystemEventHandler):
+class SnippetChangeHandler(_WATCHDOG_HANDLER_BASECLASS):
     """React to snippet file changes by rebuilding the search index.
 
     Uses a debounce mechanism to avoid excessive reindexing during batch
@@ -93,7 +99,7 @@ class SnippetWatcher:
         self.config = config
         self.search = search_engine
         self.storage = storage_engine
-        self.observer: Observer | None = None
+        self.observer: Any | None = None
         self._handler: SnippetChangeHandler | None = None
 
     def start(self) -> None:
