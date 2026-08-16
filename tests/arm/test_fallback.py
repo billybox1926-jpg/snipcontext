@@ -142,24 +142,20 @@ class TestEmbeddingEngineFallback:
         """When deps available, EmbeddingEngine.load_model succeeds."""
         if not _SENTENCE_TRANSFORMERS_AVAILABLE:
             pytest.skip("sentence_transformers not installed; 'when available' tests require it")
-        with patch.dict(sys.modules, {"sentence_transformers": MagicMock()}):
+        with patch(
+            "sentence_transformers.SentenceTransformer",
+            return_value=MagicMock(get_sentence_embedding_dimension=lambda: 384),
+        ):
             with patch(
                 "snipcontext.core.embeddings.get_config",
                 return_value=_make_embedding_config(),
             ):
-                with (
-                    patch("snipcontext.core.embeddings.SEMANTIC_AVAILABLE", True),
-                    patch(
-                        "snipcontext.core.embeddings.SentenceTransformer",
-                        return_value=MagicMock(get_sentence_embedding_dimension=lambda: 384),
-                    ),
-                ):
-                    from snipcontext.core.embeddings import EmbeddingEngine
+                from snipcontext.core.embeddings import EmbeddingEngine
 
-                    engine = EmbeddingEngine()
-                    assert engine is not None
-                    _ = engine.model
-                    assert engine._model is not None
+                engine = EmbeddingEngine()
+                assert engine is not None
+                _ = engine.model
+                assert engine._model is not None
 
     def test_embedding_engine_raises_when_unavailable(self) -> None:
         """When deps unavailable, EmbeddingEngine.load_model raises ImportError."""
@@ -221,23 +217,19 @@ class TestEmbeddingEngineFallback:
             pytest.skip("sentence_transformers not installed; 'when available' tests require it")
         mock_model = MagicMock()
         mock_model.get_sentence_embedding_dimension.return_value = 384
-        with patch.dict(sys.modules, {"sentence_transformers": MagicMock()}):
+        with patch(
+            "sentence_transformers.SentenceTransformer",
+            return_value=mock_model,
+        ):
             with patch(
                 "snipcontext.core.embeddings.get_config",
                 return_value=_make_embedding_config(),
             ):
-                with (
-                    patch("snipcontext.core.embeddings.SEMANTIC_AVAILABLE", True),
-                    patch(
-                        "snipcontext.core.embeddings.SentenceTransformer",
-                        return_value=mock_model,
-                    ),
-                ):
-                    from snipcontext.core.embeddings import EmbeddingEngine
+                from snipcontext.core.embeddings import EmbeddingEngine
 
-                    engine = EmbeddingEngine()
-                    dim = engine.dimension
-                    assert dim == 384
+                engine = EmbeddingEngine()
+                dim = engine.dimension
+                assert dim == 384
 
     def test_embedding_engine_dimension_fails_on_none(self) -> None:
         """Dimension raises RuntimeError if model returns None dimension."""
@@ -245,23 +237,19 @@ class TestEmbeddingEngineFallback:
             pytest.skip("sentence_transformers not installed; 'when available' tests require it")
         mock_model = MagicMock()
         mock_model.get_sentence_embedding_dimension.return_value = None
-        with patch.dict(sys.modules, {"sentence_transformers": MagicMock()}):
+        with patch(
+            "sentence_transformers.SentenceTransformer",
+            return_value=mock_model,
+        ):
             with patch(
                 "snipcontext.core.embeddings.get_config",
                 return_value=_make_embedding_config(),
             ):
-                with (
-                    patch("snipcontext.core.embeddings.SEMANTIC_AVAILABLE", True),
-                    patch(
-                        "snipcontext.core.embeddings.SentenceTransformer",
-                        return_value=mock_model,
-                    ),
-                ):
-                    from snipcontext.core.embeddings import EmbeddingEngine
+                from snipcontext.core.embeddings import EmbeddingEngine
 
-                    engine = EmbeddingEngine()
-                    with pytest.raises(RuntimeError, match="no dimension"):
-                        _ = engine.dimension
+                engine = EmbeddingEngine()
+                with pytest.raises(RuntimeError, match="no dimension"):
+                    _ = engine.dimension
 
     def test_embedding_engine_encode_returns_correct_shape(self) -> None:
         """encode() returns numpy array with shape (len(texts), dimension)."""
@@ -270,26 +258,22 @@ class TestEmbeddingEngineFallback:
         mock_model = MagicMock()
         mock_model.get_sentence_embedding_dimension.return_value = 384
         mock_model.encode.return_value = [[0.0] * 384] * 3
-        with patch.dict(sys.modules, {"sentence_transformers": MagicMock()}):
+        with patch(
+            "sentence_transformers.SentenceTransformer",
+            return_value=mock_model,
+        ):
             with patch(
                 "snipcontext.core.embeddings.get_config",
                 return_value=_make_embedding_config(),
             ):
-                with (
-                    patch("snipcontext.core.embeddings.SEMANTIC_AVAILABLE", True),
-                    patch(
-                        "snipcontext.core.embeddings.SentenceTransformer",
-                        return_value=mock_model,
-                    ),
-                ):
-                    from snipcontext.core.embeddings import EmbeddingEngine
+                from snipcontext.core.embeddings import EmbeddingEngine
 
-                    engine = EmbeddingEngine()
-                    result = engine.encode(["a", "b", "c"])
-                    import numpy as np
+                engine = EmbeddingEngine()
+                result = engine.encode(["a", "b", "c"])
+                import numpy as np
 
-                    assert isinstance(result, np.ndarray)
-                    assert result.shape == (3, 384)
+                assert isinstance(result, np.ndarray)
+                assert result.shape == (3, 384)
 
     def test_embedding_engine_encode_empty_list_returns_empty_array(self) -> None:
         """encode([]) returns an empty array with correct column dimension."""
@@ -298,26 +282,22 @@ class TestEmbeddingEngineFallback:
         mock_model = MagicMock()
         mock_model.get_sentence_embedding_dimension.return_value = 384
         mock_model.encode.return_value = []
-        with patch.dict(sys.modules, {"sentence_transformers": MagicMock()}):
+        with patch(
+            "sentence_transformers.SentenceTransformer",
+            return_value=mock_model,
+        ):
             with patch(
                 "snipcontext.core.embeddings.get_config",
                 return_value=_make_embedding_config(),
             ):
-                with (
-                    patch("snipcontext.core.embeddings.SEMANTIC_AVAILABLE", True),
-                    patch(
-                        "snipcontext.core.embeddings.SentenceTransformer",
-                        return_value=mock_model,
-                    ),
-                ):
-                    from snipcontext.core.embeddings import EmbeddingEngine
+                from snipcontext.core.embeddings import EmbeddingEngine
 
-                    engine = EmbeddingEngine()
-                    result = engine.encode([])
-                    import numpy as np
+                engine = EmbeddingEngine()
+                result = engine.encode([])
+                import numpy as np
 
-                    assert isinstance(result, np.ndarray)
-                    assert result.shape == (0, 384)
+                assert isinstance(result, np.ndarray)
+                assert result.shape == (0, 384)
 
     def test_embedding_engine_reuses_loaded_model(self) -> None:
         """After first access, model property returns cached instance."""
@@ -325,24 +305,20 @@ class TestEmbeddingEngineFallback:
             pytest.skip("sentence_transformers not installed; 'when available' tests require it")
         mock_model = MagicMock()
         mock_model.get_sentence_embedding_dimension.return_value = 384
-        with patch.dict(sys.modules, {"sentence_transformers": MagicMock()}):
+        with patch(
+            "sentence_transformers.SentenceTransformer",
+            return_value=mock_model,
+        ):
             with patch(
                 "snipcontext.core.embeddings.get_config",
                 return_value=_make_embedding_config(),
             ):
-                with (
-                    patch("snipcontext.core.embeddings.SEMANTIC_AVAILABLE", True),
-                    patch(
-                        "snipcontext.core.embeddings.SentenceTransformer",
-                        return_value=mock_model,
-                    ),
-                ):
-                    from snipcontext.core.embeddings import EmbeddingEngine
+                from snipcontext.core.embeddings import EmbeddingEngine
 
-                    engine = EmbeddingEngine()
-                    m1 = engine.model
-                    m2 = engine.model
-                    assert m1 is m2
+                engine = EmbeddingEngine()
+                m1 = engine.model
+                m2 = engine.model
+                assert m1 is m2
 
 
 # ---------------------------------------------------------------------------
@@ -1007,7 +983,7 @@ class TestSemanticSearchFallback:
         Attempting to search without semantic deps raises ImportError.
         """
         with (
-            patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False),
+            patch("snipcontext.core.embeddings.SEMANTIC_AVAILABLE", False),
             patch(
                 "snipcontext.core.search_fusion.get_config",
                 return_value=_make_semantic_config(),
@@ -1024,7 +1000,7 @@ class TestSemanticSearchFallback:
         from snipcontext.core.models import Language, Snippet
 
         with (
-            patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False),
+            patch("snipcontext.core.embeddings.SEMANTIC_AVAILABLE", False),
             patch(
                 "snipcontext.core.search_fusion.get_config",
                 return_value=_make_semantic_config(),
