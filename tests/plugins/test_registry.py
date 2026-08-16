@@ -1,17 +1,18 @@
 """Tests for plugins/registry.py."""
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from snipcontext.plugins.registry import _PluginRegistryImpl, _registry, reset_registry_for_testing
+import pytest
+
 from snipcontext.plugins.base import Plugin, PluginManifest
+from snipcontext.plugins.registry import _PluginRegistryImpl, _registry, reset_registry_for_testing
 
 
 class TestPlugin(Plugin):
     manifest = PluginManifest(name="test-plugin")
-    
+
     def on_load(self) -> None:
         pass
-    
+
     def on_snippet_saved(self, snippet) -> None:
         pass
 
@@ -57,8 +58,8 @@ def test_registry_unload_plugin():
     """unload_plugin() calls on_shutdown and removes instance."""
     registry = _PluginRegistryImpl()
     registry._plugins["test"] = TestPlugin
-    plugin = registry.load_plugin("test")
-    registry.unload_plugin("test")
+    registry.load_plugin("test")
+    registry.unregister("test")
     assert registry.get_plugin("test") is None
 
 
@@ -87,7 +88,7 @@ def test_registry_run_snippet_saved_hooks():
     registry._plugins["test"] = type(plugin)
     registry._instances["test"] = plugin
     registry._loaded["test"] = True
-    
+
     snippet = MagicMock()
     registry.run_snippet_saved_hooks(snippet)
     plugin.on_snippet_saved.assert_called_once_with(snippet)
@@ -100,7 +101,7 @@ def test_registry_run_search_hooks():
     registry._plugins["test"] = TestPlugin
     registry._instances["test"] = plugin
     registry._loaded["test"] = True
-    
+
     results = [MagicMock()]
     registry.run_search_hooks("query", results)
     # Should not raise
@@ -113,7 +114,7 @@ def test_registry_shutdown():
     registry._plugins["test"] = TestPlugin
     registry._instances["test"] = plugin
     registry._loaded["test"] = True
-    
+
     registry.shutdown()
     assert registry.get_plugin("test") is None
 
