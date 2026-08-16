@@ -15,10 +15,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from unittest.mock import (
-    MagicMock,
-    patch,
-)
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -500,10 +497,16 @@ class TestHybridSearchFallback:
                 created_at=now,
             )
             storage.save(snippet)
-            search.rebuild_keyword_index(storage.list_all())
+            all_snippets = storage.list_all()
+            search.rebuild_keyword_index(all_snippets)
+            raw_results = search.keyword_index.search("test snippet", top_k=5, min_score=0.0)
             results = search.search("test snippet", top_k=5, mode="keyword")
             assert results is not None
-            assert len(results) >= 1
+            assert len(results) >= 1, (
+                f"Expected at least 1 hydrated result, got {len(results)}; "
+                f"raw results: {raw_results}; indexed snippets: {all_snippets}"
+            )
+            search.add_snippet(snippet)
 
     def test_hybrid_search_no_semantic_flag_overrides_mode(self) -> None:
         """no_semantic=True forces keyword mode even when SEMANTIC_AVAILABLE is True."""
