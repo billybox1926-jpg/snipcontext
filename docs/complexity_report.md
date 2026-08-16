@@ -6,7 +6,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Python LOC (src, excl. web/static) | 6,855 |
+| Total Python LOC (src, excl. web/static) | 6,916 |
 | Python files analyzed | 61 |
 | Files rated D or F (cyclomatic) | 4 |
 | Files with MI < 20 (low maintainability) | 2 |
@@ -47,13 +47,13 @@
 |-----------|-----|
 | snipcontext/__init__.py | 2 |
 | snipcontext/__main__.py | 21 |
-| snipcontext/cli | 2,002 |
+| snipcontext/cli | 2,004 |
 | snipcontext/config | 238 |
-| snipcontext/core | 2,825 |
+| snipcontext/core | 2,884 |
 | snipcontext/plugins | 287 |
 | snipcontext/providers | 414 |
 | snipcontext/tui | 1,066 |
-| **Total** | **6,855** |
+| **Total** | **6,916** |
 
 ## Remark
 

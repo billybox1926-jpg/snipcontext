@@ -71,10 +71,29 @@ class KeywordIndex:
     def build(self, snippets: list[Snippet]) -> None:
         """Build the BM25 index from snippets.
 
-        When ``rank_bm25`` is available, creates a full BM25Okapi index.
-        When it is not, stores the corpus and texts for simple token-overlap
-        scoring in :meth:`search`.
+        When ``rank_bm25`` is available and ``BM25_AVAILABLE`` is True, creates a
+        full BM25Okapi index.  When it is not (either because the library is
+        missing or ``BM25_AVAILABLE`` has been set to False), stores the corpus
+        and texts for simple token-overlap scoring in :meth:`search`.
         """
+        if not self.BM25_AVAILABLE:
+            logger.warning(
+                "rank_bm25 is available but BM25_AVAILABLE is False; "
+                "falling back to simple keyword scoring.",
+            )
+            if not snippets:
+                self._bm25 = None
+                self._corpus = None
+                self._id_map = []
+                self._texts = []
+                return
+            texts = [s.to_search_text() for s in snippets]
+            self._texts = texts
+            self._corpus = [self._tokenize(t) for t in texts]
+            self._id_map = [s.id for s in snippets]
+            self._bm25 = None
+            return
+
         try:
             from rank_bm25 import BM25Okapi
         except ImportError:
@@ -82,7 +101,6 @@ class KeywordIndex:
                 "rank_bm25 not installed; falling back to simple keyword scoring. "
                 "Install with: pip install snipcontext[full]",
             )
-            # Still store corpus + texts for fallback search
             if not snippets:
                 self._bm25 = None
                 self._corpus = None
