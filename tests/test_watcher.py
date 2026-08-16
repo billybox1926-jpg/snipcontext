@@ -27,9 +27,12 @@ class _Storage:
 
 
 class _Config:
+    """Minimal config mock compatible with SnippetWatcher expectations."""
     def __init__(self, snippets_path: Path, watchdog_enabled: bool = True) -> None:
         self.snippets_path = snippets_path
         self.watchdog_enabled = watchdog_enabled
+        # SnippetWatcher accesses config.storage.* in the patched version
+        self.storage = self
 
 
 def test_watcher_event_triggers_incremental_rebuild() -> None:
