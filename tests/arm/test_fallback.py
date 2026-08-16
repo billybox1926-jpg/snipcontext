@@ -453,8 +453,12 @@ class TestHybridSearchFallback:
     def test_hybrid_search_keyword_search_works_without_semantic(self) -> None:
         """Keyword search produces results when semantic deps are absent."""
         from snipcontext.config.settings import Config
+        from snipcontext.core.indexes.keyword_index import KeywordIndex
         from snipcontext.core.models import Language, Snippet
         from snipcontext.core.storage import StorageEngine
+
+        # Force fallback path to avoid dependency on rank_bm25 in CI
+        KeywordIndex.BM25_AVAILABLE = False
 
         tmpdir = Path(tempfile.mkdtemp())
         snippets_dir = tmpdir / "snippets"
@@ -478,10 +482,7 @@ class TestHybridSearchFallback:
         )
         with (
             patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False),
-            patch(
-                "snipcontext.core.search_fusion.get_config",
-                return_value=real_config,
-            ),
+            patch("snipcontext.core.search_fusion.get_config", return_value=real_config),
         ):
             from snipcontext.core.search_fusion import HybridSearch
 
@@ -497,15 +498,10 @@ class TestHybridSearchFallback:
                 created_at=now,
             )
             storage.save(snippet)
-            all_snippets = storage.list_all()
-            search.rebuild_keyword_index(all_snippets)
-            raw_results = search.keyword_index.search("test snippet", top_k=5, min_score=0.0)
+            search.rebuild_keyword_index(storage.list_all())
             results = search.search("test snippet", top_k=5, mode="keyword")
             assert results is not None
-            assert len(results) >= 1, (
-                f"Expected at least 1 hydrated result, got {len(results)}; "
-                f"raw results: {raw_results}; indexed snippets: {all_snippets}"
-            )
+            assert len(results) >= 1, f"Expected at least 1 result, got {len(results)}"
             search.add_snippet(snippet)
 
     def test_hybrid_search_no_semantic_flag_overrides_mode(self) -> None:
