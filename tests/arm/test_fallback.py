@@ -430,17 +430,21 @@ class TestHybridSearchFallback:
 
     def test_hybrid_search_keyword_search_works_without_semantic(self) -> None:
         """Keyword search produces results when semantic deps are absent."""
+        import sys
+        import tempfile
+        from contextlib import ExitStack
+        from datetime import datetime, timezone
+        from pathlib import Path
+        from unittest.mock import patch
+
         from snipcontext.config.settings import Config
-        from snipcontext.core.indexes.keyword_index import KeywordIndex
         from snipcontext.core.models import Language, Snippet
         from snipcontext.core.storage import StorageEngine
-
-        # Force fallback path to avoid dependency on rank_bm25 in CI
-        KeywordIndex.BM25_AVAILABLE = False
 
         tmpdir = Path(tempfile.mkdtemp())
         snippets_dir = tmpdir / "snippets"
         snippets_dir.mkdir(parents=True, exist_ok=True)
+
         real_config = Config(
             storage__data_dir=tmpdir,
             search__top_k=10,
@@ -458,14 +462,24 @@ class TestHybridSearchFallback:
             snippets_per_page=20,
             watchdog_ready=False,
         )
-        with (
-            patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False),
-            patch("snipcontext.core.search_fusion.get_config", return_value=real_config),
-        ):
+
+        # CRITICAL FIX: Force the import to fail so the fallback path is actually tested.
+        # Because rank_bm25 is installed in CI, setting BM25_AVAILABLE=False is not enough.
+        # patch.dict(sys.modules, {"rank_bm25": None}) forces Python to raise ImportError
+        # when `from rank_bm25 import BM25Okapi` is executed inside KeywordIndex.build().
+        with ExitStack() as stack:
+            stack.enter_context(patch.dict(sys.modules, {"rank_bm25": None}))
+
+            stack.enter_context(patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False))
+            stack.enter_context(
+                patch("snipcontext.core.search_fusion.get_config", return_value=real_config)
+            )
+
             from snipcontext.core.search_fusion import HybridSearch
 
             search = HybridSearch()
             storage = StorageEngine(real_config)
+
             now = datetime.now(timezone.utc)
             snippet = Snippet(
                 id="test-1",
@@ -476,8 +490,12 @@ class TestHybridSearchFallback:
                 created_at=now,
             )
             storage.save(snippet)
+
+            # This build() call will now hit the `except ImportError:` block
+            # and use the token-overlap fallback instead of BM25.
             search.rebuild_keyword_index(storage.list_all())
             results = search.search("test snippet", top_k=5, mode="keyword")
+
             assert results is not None
             assert len(results) >= 1, f"Expected at least 1 result, got {len(results)}"
             search.add_snippet(snippet)
