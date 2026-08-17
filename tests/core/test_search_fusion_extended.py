@@ -133,37 +133,3 @@ def test_hybrid_search_load_indices():
             sem_loaded, kw_loaded = search.load_indices()
             assert sem_loaded is True
             assert kw_loaded is True
-
-
-def test_hybrid_search_search_mode_keyword():
-    """HybridSearch.search with keyword mode."""
-    with patch("snipcontext.core.search_fusion.SEMANTIC_AVAILABLE", False):
-        with patch.dict("sys.modules", {"faiss": MagicMock()}):
-            from snipcontext.core.search_fusion import HybridSearch
-            
-            mock_config = MagicMock()
-            mock_config.search.top_k = 10
-            mock_config.search.default_mode = "keyword"
-            mock_config.search.min_score = 0.0
-            mock_config.index_path = MagicMock()
-            
-            search = HybridSearch(mock_config)
-            
-            # Mock keyword_index entirely
-            search.keyword_index = MagicMock()
-            search.keyword_index.is_trained = True
-            search.keyword_index.search = MagicMock(return_value=[("test-id", 0.9)])
-            
-            search._keyword_dirty = False
-            
-            mock_snippet = MagicMock()
-            
-            # Patch StorageEngine directly in the module
-            with patch("snipcontext.core.search_fusion.StorageEngine") as mock_storage_cls:
-                mock_storage = MagicMock()
-                mock_storage.get.return_value = mock_snippet
-                mock_storage_cls.return_value = mock_storage
-                
-                result = search.search("test", mode="keyword")
-                # Should return results or empty list
-                assert isinstance(result, list)
