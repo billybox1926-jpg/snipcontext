@@ -1,10 +1,8 @@
 """Test CLI search output formatting internals."""
 
-import pytest
-from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
 
-from snipcontext.core.models import Language, Snippet, SnippetMetadata, SearchResult
+from snipcontext.core.models import Language, SearchResult, Snippet, SnippetMetadata
 
 
 def test_print_snippet():

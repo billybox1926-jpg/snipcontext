@@ -1,14 +1,15 @@
 """VectorIndex tests with simplified mocking."""
 
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+from unittest.mock import patch
+
 import numpy as np
 import pytest
-from pathlib import Path
-import tempfile
-from unittest.mock import MagicMock, patch, PropertyMock
-from datetime import datetime, timezone
 
-from snipcontext.core.models import Language, Snippet
 from snipcontext.config.settings import Config
+from snipcontext.core.models import Language, Snippet
 
 
 @pytest.fixture
@@ -62,8 +63,6 @@ def test_remove_vector_returns_gracefully(mock_config):
 
 def test_add_vector_raises_when_unavailable(mock_config):
     """add_vector raises ImportError when SEMANTIC_AVAILABLE is False."""
-    from snipcontext.core.models import Language, Snippet
-    from datetime import datetime, timezone
 
     with patch("snipcontext.core.indexes.vector_index.SEMANTIC_AVAILABLE", False):
         from snipcontext.core.indexes.vector_index import VectorIndex
@@ -108,7 +107,7 @@ def test_is_trained_reflects_backend_state(mock_config):
 
 
 def test_count_reflects_backend_state(mock_config):
-    """count property reflects backend vector count."""
+    """Count property reflects backend vector count."""
     with patch("snipcontext.core.indexes.vector_index.SEMANTIC_AVAILABLE", False):
         from snipcontext.core.indexes.vector_index import VectorIndex
 

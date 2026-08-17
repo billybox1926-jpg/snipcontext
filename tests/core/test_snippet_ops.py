@@ -1,6 +1,4 @@
 """Tests for core/snippet_ops.py."""
-import pytest
-from datetime import datetime, timezone
 
 from snipcontext.core.snippet_ops import (
     EXT_LANG_MAP,
@@ -8,7 +6,6 @@ from snipcontext.core.snippet_ops import (
     create_snippet,
     resolve_language,
 )
-from snipcontext.core.models import Language
 
 
 def test_resolve_language_explicit():
@@ -56,7 +53,6 @@ def test_auto_title_empty():
 
 def test_create_snippet():
     """create_snippet creates a valid Snippet."""
-    now = datetime.now(timezone.utc)
     snippet = create_snippet(
         content="print('hello')",
         title="Test",

@@ -1,12 +1,11 @@
 """StorageEngine tests with temporary directories."""
 
 import json
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-import tempfile
 
 import pytest
-from unittest.mock import MagicMock, patch
 
 from snipcontext.config.settings import Config, StorageConfig
 from snipcontext.core.models import Language, Snippet

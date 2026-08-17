@@ -1,9 +1,10 @@
 """CLI snippets edit command tests - cover edit_snippet core logic."""
-import pytest
-from unittest.mock import MagicMock, patch
-from datetime import datetime, timezone
-from pathlib import Path
+
 import tempfile
+from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from snipcontext.config.settings import Config, StorageConfig
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
@@ -32,21 +33,23 @@ def cli_context(tmp_path):
     )
     config.auto_tag.enabled = False
     config.dedup.enabled = False
-    
+
     from snipcontext.core.storage import StorageEngine
+
     storage = StorageEngine(config)
-    
+
     searcher = MagicMock()
     searcher.indices_ready = False
-    
+
     return config, storage, searcher
 
 
 def _invoke_cli(args, context=None, input_data=None):
     """Helper to invoke CLI commands."""
     from typer.testing import CliRunner
+
     from snipcontext.cli.app import app
-    
+
     runner = CliRunner()
     if context:
         with patch("snipcontext.cli.snippets._get_context", return_value=context):
@@ -73,21 +76,34 @@ def test_edit_with_all_options(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
-    result = _invoke_cli([
-        "edit", "edit-all",
-        "--title", "New Title",
-        "--desc", "New description",
-        "--lang", "javascript",
-        "--framework", "new-fw",
-        "--version", "2.0",
-        "--source", "https://new.com",
-        "--tag", "newtag",
-        "--remove-tag", "original",
-        "--custom", "author=test",
-        "--force",
-    ], cli_context)
-    
+
+    result = _invoke_cli(
+        [
+            "edit",
+            "edit-all",
+            "--title",
+            "New Title",
+            "--desc",
+            "New description",
+            "--lang",
+            "javascript",
+            "--framework",
+            "new-fw",
+            "--version",
+            "2.0",
+            "--source",
+            "https://new.com",
+            "--tag",
+            "newtag",
+            "--remove-tag",
+            "original",
+            "--custom",
+            "author=test",
+            "--force",
+        ],
+        cli_context,
+    )
+
     assert result.exit_code == 0
 
 
@@ -102,7 +118,7 @@ def test_edit_no_changes(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["edit", "edit-none"], cli_context)
     assert result.exit_code == 0
     assert "no changes" in result.output.lower()
@@ -119,23 +135,29 @@ def test_edit_from_file(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     # Create a temp file with new content
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
         f.write("new content from file")
         temp_file = f.name
-    
+
     try:
-        result = _invoke_cli([
-            "edit", "edit-file",
-            "--file",
-            "--content", temp_file,
-            "--force",
-        ], cli_context)
+        result = _invoke_cli(
+            [
+                "edit",
+                "edit-file",
+                "--file",
+                "--content",
+                temp_file,
+                "--force",
+            ],
+            cli_context,
+        )
         # May succeed or fail depending on file handling
         assert result.exit_code in (0, 1)
     finally:
         import os
+
         os.unlink(temp_file)
 
 
@@ -150,13 +172,19 @@ def test_add_duplicate_prompt(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     # Try to add the same content again
-    result = _invoke_cli([
-        "add", "duplicate content",
-        "--title", "Duplicate",
-    ], cli_context, input_data="n\n")
-    
+    result = _invoke_cli(
+        [
+            "add",
+            "duplicate content",
+            "--title",
+            "Duplicate",
+        ],
+        cli_context,
+        input_data="n\n",
+    )
+
     # Should prompt for confirmation
     assert result.exit_code in (0, 1)
 

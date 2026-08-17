@@ -1,7 +1,8 @@
 """Tests for plugins/base.py."""
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 from snipcontext.plugins.base import Plugin, PluginManifest
 

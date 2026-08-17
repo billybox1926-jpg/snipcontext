@@ -1,13 +1,12 @@
 """CLI search command tests."""
 
-import pytest
-from unittest.mock import MagicMock, patch
-from pathlib import Path
-import tempfile
 from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from snipcontext.config.settings import Config, StorageConfig
-from snipcontext.core.models import Language, Snippet, SnippetMetadata, SearchResult, SearchMode
+from snipcontext.core.models import Language, SearchResult, Snippet, SnippetMetadata
 
 
 @pytest.fixture
@@ -88,6 +87,7 @@ def isolated_context(tmp_path):
 def test_search_no_args(isolated_context):
     """Search with no arguments should show error."""
     from typer.testing import CliRunner
+
     from snipcontext.cli.app import app
 
     runner = CliRunner()
@@ -104,6 +104,7 @@ def test_search_no_args(isolated_context):
 def test_search_returns_results(isolated_context):
     """Search with valid query should return results."""
     from typer.testing import CliRunner
+
     from snipcontext.cli.app import app
 
     runner = CliRunner()
@@ -117,6 +118,7 @@ def test_search_returns_results(isolated_context):
 def test_search_with_top_k(isolated_context):
     """Search with --top-k flag should limit results."""
     from typer.testing import CliRunner
+
     from snipcontext.cli.app import app
 
     runner = CliRunner()
@@ -129,6 +131,7 @@ def test_search_with_top_k(isolated_context):
 def test_search_with_json_output(isolated_context):
     """Search with --json flag should output JSON."""
     from typer.testing import CliRunner
+
     from snipcontext.cli.app import app
 
     runner = CliRunner()
@@ -149,6 +152,7 @@ def test_search_with_json_output(isolated_context):
 def test_search_no_results(isolated_context):
     """Search with no matches should show message."""
     from typer.testing import CliRunner
+
     from snipcontext.cli.app import app
 
     runner = CliRunner()
@@ -162,6 +166,7 @@ def test_search_no_results(isolated_context):
 def test_index_command(isolated_context):
     """Index command should rebuild the search index."""
     from typer.testing import CliRunner
+
     from snipcontext.cli.app import app
 
     runner = CliRunner()

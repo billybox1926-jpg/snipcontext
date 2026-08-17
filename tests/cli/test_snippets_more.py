@@ -1,10 +1,9 @@
 """CLI snippets command tests - additional edge cases."""
 
-import pytest
-from unittest.mock import MagicMock, patch
-from pathlib import Path
-import tempfile
 from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from snipcontext.config.settings import Config, StorageConfig
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
@@ -47,6 +46,7 @@ def cli_context(tmp_path):
 def _invoke_cli(args, context=None, input_data=None):
     """Helper to invoke CLI commands."""
     from typer.testing import CliRunner
+
     from snipcontext.cli.app import app
 
     runner = CliRunner()

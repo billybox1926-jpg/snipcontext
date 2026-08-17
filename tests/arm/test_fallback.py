@@ -84,9 +84,6 @@ class TestEnvironmentDetection:
 
     def test_detects_semantic_deps_availability(self) -> None:
         """SEMANTIC_AVAILABLE reflects whether both deps are importable."""
-        from snipcontext.core.embeddings import (
-            _SENTENCE_TRANSFORMERS_AVAILABLE,
-        )
 
         expected = _FAISS_AVAILABLE and _SENTENCE_TRANSFORMERS_AVAILABLE
         assert SEMANTIC_AVAILABLE == expected
@@ -102,7 +99,6 @@ class TestEnvironmentDetection:
 
     def test_sentence_transformers_import_detection(self) -> None:
         """_SENTENCE_TRANSFORMERS_AVAILABLE is True when st can be imported."""
-        from snipcontext.core.embeddings import _SENTENCE_TRANSFORMERS_AVAILABLE
 
         assert isinstance(_SENTENCE_TRANSFORMERS_AVAILABLE, bool)
         if _SENTENCE_TRANSFORMERS_AVAILABLE:

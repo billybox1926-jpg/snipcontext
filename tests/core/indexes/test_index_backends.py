@@ -1,10 +1,12 @@
 """Tests for core/index_backends.py."""
-import pytest
-import numpy as np
-from pathlib import Path
-import tempfile
 
-from snipcontext.core.index_backends import KeywordOnlyBackend, IndexBackend
+import tempfile
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from snipcontext.core.index_backends import IndexBackend, KeywordOnlyBackend
 
 
 def test_keyword_only_backend_add():

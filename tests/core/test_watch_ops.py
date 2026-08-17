@@ -1,9 +1,10 @@
 """Tests for watch_ops.py business logic functions."""
 
-import pytest
-from unittest.mock import MagicMock, patch
-from pathlib import Path
 import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock
+
+import pytest
 
 from snipcontext.config.settings import Config, StorageConfig
 from snipcontext.core import watch_ops

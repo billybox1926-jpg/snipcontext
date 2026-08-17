@@ -1,9 +1,8 @@
 """CLI history command tests."""
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch
-from pathlib import Path
-import tempfile
 
 from snipcontext.config.settings import Config, StorageConfig
 
@@ -45,6 +44,7 @@ def cli_context(tmp_path):
 def _invoke_cli(args, context=None):
     """Helper to invoke CLI commands."""
     from typer.testing import CliRunner
+
     from snipcontext.cli.app import app
 
     runner = CliRunner()

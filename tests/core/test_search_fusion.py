@@ -1,13 +1,14 @@
 """HybridSearch tests with proper mocking."""
 
-import pytest
-from unittest.mock import MagicMock, patch
-from pathlib import Path
 import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 from snipcontext.config.settings import Config, StorageConfig
-from snipcontext.core.models import Language, Snippet, SearchMode
+from snipcontext.core.models import Language, SearchMode, Snippet
 from snipcontext.core.storage import StorageEngine
 
 

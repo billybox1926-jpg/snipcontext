@@ -1,12 +1,11 @@
 """Tests for watcher.py - SnippetWatcher and SnippetChangeHandler."""
 
-import threading
-import time
-from pathlib import Path
 import tempfile
+import threading
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
-from unittest.mock import MagicMock, patch
 
 from snipcontext.config.settings import Config, StorageConfig
 from snipcontext.core.watcher import SnippetChangeHandler, SnippetWatcher

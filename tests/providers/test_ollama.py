@@ -1,8 +1,9 @@
 """Tests for providers/ollama.py."""
 
-import pytest
-from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from snipcontext.core.models import Language, Snippet, SnippetMetadata
 from snipcontext.providers.ollama import OllamaProvider

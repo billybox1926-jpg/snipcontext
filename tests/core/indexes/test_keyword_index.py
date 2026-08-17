@@ -1,17 +1,15 @@
 """KeywordIndex tests with proper mocking."""
 
-import json
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-import tempfile
+from unittest.mock import patch
 
-import numpy as np
 import pytest
-from unittest.mock import MagicMock, patch
 
 from snipcontext.config.settings import Config
-from snipcontext.core.models import Language, Snippet
 from snipcontext.core.indexes.keyword_index import KeywordIndex
+from snipcontext.core.models import Language, Snippet
 
 
 @pytest.fixture

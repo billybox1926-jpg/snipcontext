@@ -1,8 +1,6 @@
 """CLI stats demo mode tests."""
+
 import pytest
-from unittest.mock import MagicMock, patch
-from pathlib import Path
-import tempfile
 
 from snipcontext.config.settings import Config, StorageConfig
 
@@ -30,18 +28,20 @@ def cli_context(tmp_path):
     )
     config.auto_tag.enabled = False
     config.dedup.enabled = False
-    
+
     from snipcontext.core.storage import StorageEngine
+
     storage = StorageEngine(config)
-    
+
     return config, storage
 
 
 def _invoke_cli(args):
     """Helper to invoke CLI commands."""
     from typer.testing import CliRunner
+
     from snipcontext.cli.app import app
-    
+
     runner = CliRunner()
     return runner.invoke(app, args)
 
@@ -58,8 +58,9 @@ def test_stats_demo_with_existing(cli_context):
     """Demo mode with existing snippets exits."""
     # Add a snippet first
     from datetime import datetime, timezone
+
     from snipcontext.core.models import Language, Snippet, SnippetMetadata
-    
+
     now = datetime.now(timezone.utc)
     snippet = Snippet(
         id="demo-existing",
@@ -69,7 +70,7 @@ def test_stats_demo_with_existing(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["demo"])
     assert result.exit_code == 0
     assert "existing" in result.output.lower() or "detected" in result.output.lower()

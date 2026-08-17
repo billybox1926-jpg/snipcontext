@@ -1,13 +1,10 @@
 """CLI info command tests."""
 
-import pytest
-from pathlib import Path
-from unittest.mock import MagicMock, patch
-
 
 def _invoke_cli(args):
     """Helper to invoke CLI commands."""
     from typer.testing import CliRunner
+
     from snipcontext.cli.app import app
 
     runner = CliRunner()

@@ -1,11 +1,9 @@
 """CLI init command tests - extended coverage."""
 
-import pytest
-from unittest.mock import MagicMock, patch
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
-from snipcontext.config.settings import Config, StorageConfig
+import pytest
 
 
 @pytest.fixture
@@ -16,6 +14,7 @@ def tmp_dir():
 def _invoke_cli(args, input_data=None):
     """Helper to invoke CLI commands."""
     from typer.testing import CliRunner
+
     from snipcontext.cli.app import app
 
     runner = CliRunner()

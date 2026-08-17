@@ -1,10 +1,12 @@
 """CLI search output formatting tests - target uncovered lines."""
-import pytest
-from unittest.mock import MagicMock, patch
+
 from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from snipcontext.config.settings import Config, StorageConfig
-from snipcontext.core.models import Language, Snippet, SnippetMetadata, SearchResult
+from snipcontext.core.models import Language, SearchResult, Snippet, SnippetMetadata
 
 
 @pytest.fixture
@@ -30,21 +32,23 @@ def cli_context(tmp_path):
     )
     config.auto_tag.enabled = False
     config.dedup.enabled = False
-    
+
     from snipcontext.core.storage import StorageEngine
+
     storage = StorageEngine(config)
-    
+
     searcher = MagicMock()
     searcher.indices_ready = True
-    
+
     return config, storage, searcher
 
 
 def _invoke_cli(args, context=None):
     """Helper to invoke CLI commands."""
     from typer.testing import CliRunner
+
     from snipcontext.cli.app import app
-    
+
     runner = CliRunner()
     if context:
         with patch("snipcontext.cli.search._get_context", return_value=context):
@@ -55,7 +59,7 @@ def _invoke_cli(args, context=None):
 def test_search_with_all_options(cli_context):
     """Search with multiple options to cover output formatting."""
     _, _, mock_search = cli_context
-    
+
     now = datetime.now(timezone.utc)
     snippet = Snippet(
         id="full-test",
@@ -72,26 +76,33 @@ def test_search_with_all_options(cli_context):
         tags=["python", "cli", "test"],
         created_at=now,
     )
-    
+
     result = SearchResult(snippet=snippet, score=0.95, matched_by="keyword")
     mock_search.search.return_value = [result]
-    
-    result = _invoke_cli([
-        "search", "python",
-        "--mode", "keyword",
-        "--limit", "5",
-        "--threshold", "0.3",
-        "--fuzzy",
-        "--explain",
-    ], cli_context)
-    
+
+    result = _invoke_cli(
+        [
+            "search",
+            "python",
+            "--mode",
+            "keyword",
+            "--limit",
+            "5",
+            "--threshold",
+            "0.3",
+            "--fuzzy",
+            "--explain",
+        ],
+        cli_context,
+    )
+
     assert result.exit_code == 0
 
 
 def test_search_with_group_by_tag(cli_context):
     """Search with --group-by tag to cover grouped output."""
     _, _, mock_search = cli_context
-    
+
     now = datetime.now(timezone.utc)
     snippet = Snippet(
         id="tag-test",
@@ -101,11 +112,11 @@ def test_search_with_group_by_tag(cli_context):
         tags=["python"],
         created_at=now,
     )
-    
+
     result = SearchResult(snippet=snippet, score=0.9, matched_by="keyword")
     mock_search.search.return_value = [result]
     mock_search.group_results.return_value = {"python": [result]}
-    
+
     result = _invoke_cli(["search", "python", "--group-by", "tag"], cli_context)
     assert result.exit_code == 0
 
@@ -114,7 +125,7 @@ def test_search_no_results_with_suggestions(cli_context):
     """Search with no results shows suggestions."""
     _, _, mock_search = cli_context
     mock_search.search.return_value = []
-    
+
     result = _invoke_cli(["search", "xyznonexistent"], cli_context)
     assert result.exit_code == 0
     output = result.output.lower()
@@ -124,7 +135,7 @@ def test_search_no_results_with_suggestions(cli_context):
 def test_search_with_hybrid_mode(cli_context):
     """Search with hybrid mode to cover hybrid path."""
     _, _, mock_search = cli_context
-    
+
     now = datetime.now(timezone.utc)
     snippet = Snippet(
         id="hybrid-test",
@@ -133,9 +144,9 @@ def test_search_with_hybrid_mode(cli_context):
         metadata=SnippetMetadata(title="Hybrid Test", language=Language.PYTHON),
         created_at=now,
     )
-    
+
     result = SearchResult(snippet=snippet, score=0.85, matched_by="hybrid")
     mock_search.search.return_value = [result]
-    
+
     result = _invoke_cli(["search", "test", "--mode", "hybrid"], cli_context)
     assert result.exit_code == 0

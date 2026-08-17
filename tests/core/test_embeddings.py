@@ -1,13 +1,13 @@
 """EmbeddingEngine tests with proper mocking."""
 
+import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock, PropertyMock, patch
+
 import numpy as np
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
-from pathlib import Path
-import tempfile
 
 from snipcontext.config.settings import Config
-from snipcontext.core.models import Language, Snippet
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ def test_model_raises_import_when_unavailable(mock_config):
 
 
 def test_dimension_returns_integer(mock_config):
-    """dimension property returns integer dimension."""
+    """Dimension property returns integer dimension."""
     with patch("snipcontext.core.embeddings.SEMANTIC_AVAILABLE", True):
         from snipcontext.core.embeddings import EmbeddingEngine
 
@@ -87,7 +87,7 @@ def test_dimension_returns_integer(mock_config):
 
 
 def test_dimension_raises_on_none(mock_config):
-    """dimension raises RuntimeError when model returns None."""
+    """Dimension raises RuntimeError when model returns None."""
     with patch("snipcontext.core.embeddings.SEMANTIC_AVAILABLE", True):
         from snipcontext.core.embeddings import EmbeddingEngine
 
