@@ -156,11 +156,14 @@ def test_hybrid_search_search_mode_keyword():
             
             search._keyword_dirty = False
             
-            mock_storage = MagicMock()
             mock_snippet = MagicMock()
-            mock_storage.get.return_value = mock_snippet
             
-            with patch("snipcontext.core.search_fusion.StorageEngine", return_value=mock_storage):
+            # Patch StorageEngine directly in the module
+            with patch("snipcontext.core.search_fusion.StorageEngine") as mock_storage_cls:
+                mock_storage = MagicMock()
+                mock_storage.get.return_value = mock_snippet
+                mock_storage_cls.return_value = mock_storage
+                
                 result = search.search("test", mode="keyword")
                 # Should return results or empty list
                 assert isinstance(result, list)
