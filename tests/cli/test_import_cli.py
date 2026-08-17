@@ -1,4 +1,5 @@
 """CLI import command tests."""
+
 import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
@@ -30,13 +31,14 @@ def cli_context(tmp_path):
     )
     config.auto_tag.enabled = False
     config.dedup.enabled = False
-    
+
     from snipcontext.core.storage import StorageEngine
+
     storage = StorageEngine(config)
-    
+
     searcher = MagicMock()
     searcher.indices_ready = False
-    
+
     return config, storage, searcher
 
 
@@ -44,7 +46,7 @@ def _invoke_cli(args, context=None):
     """Helper to invoke CLI commands."""
     from typer.testing import CliRunner
     from snipcontext.cli.app import app
-    
+
     runner = CliRunner()
     if context:
         with patch("snipcontext.cli.import_._get_context", return_value=context):
@@ -76,11 +78,17 @@ def test_import_preview_mode(cli_context):
 def test_import_no_url(cli_context):
     """Import with no URL shows error."""
     result = _invoke_cli(["import"], cli_context)
-    assert result.exit_code != 0 or "required" in result.output.lower() or "error" in result.output.lower()
+    assert (
+        result.exit_code != 0
+        or "required" in result.output.lower()
+        or "error" in result.output.lower()
+    )
 
 
 def test_import_local_file_not_found(cli_context):
     """Import with non-existent local file."""
-    result = _invoke_cli(["import", str(cli_context[0].storage.data_dir / "nonexistent.json")], cli_context)
+    result = _invoke_cli(
+        ["import", str(cli_context[0].storage.data_dir / "nonexistent.json")], cli_context
+    )
     # Should handle gracefully
     assert result.exit_code in (0, 1)

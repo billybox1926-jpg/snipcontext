@@ -1,4 +1,5 @@
 """CLI snippets command tests - additional edge cases."""
+
 import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
@@ -32,13 +33,14 @@ def cli_context(tmp_path):
     )
     config.auto_tag.enabled = False
     config.dedup.enabled = False
-    
+
     from snipcontext.core.storage import StorageEngine
+
     storage = StorageEngine(config)
-    
+
     searcher = MagicMock()
     searcher.indices_ready = False
-    
+
     return config, storage, searcher
 
 
@@ -46,7 +48,7 @@ def _invoke_cli(args, context=None, input_data=None):
     """Helper to invoke CLI commands."""
     from typer.testing import CliRunner
     from snipcontext.cli.app import app
-    
+
     runner = CliRunner()
     if context:
         with patch("snipcontext.cli.snippets._get_context", return_value=context):
@@ -56,19 +58,25 @@ def _invoke_cli(args, context=None, input_data=None):
 
 def test_add_with_custom_metadata(cli_context):
     """Add snippet with custom metadata."""
-    result = _invoke_cli(["add", "print('hi')", "--title", "Custom", "--custom", "author=test"], cli_context)
+    result = _invoke_cli(
+        ["add", "print('hi')", "--title", "Custom", "--custom", "author=test"], cli_context
+    )
     assert result.exit_code == 0
 
 
 def test_add_with_framework(cli_context):
     """Add snippet with framework."""
-    result = _invoke_cli(["add", "print('hi')", "--title", "FastAPI", "--framework", "fastapi"], cli_context)
+    result = _invoke_cli(
+        ["add", "print('hi')", "--title", "FastAPI", "--framework", "fastapi"], cli_context
+    )
     assert result.exit_code == 0
 
 
 def test_add_with_version(cli_context):
     """Add snippet with version."""
-    result = _invoke_cli(["add", "print('hi')", "--title", "Version", "--version", "1.0"], cli_context)
+    result = _invoke_cli(
+        ["add", "print('hi')", "--title", "Version", "--version", "1.0"], cli_context
+    )
     assert result.exit_code == 0
 
 
@@ -83,7 +91,7 @@ def test_edit_with_description(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["edit", "edit-desc", "--desc", "New description", "--force"], cli_context)
     assert result.exit_code == 0
 
@@ -99,7 +107,7 @@ def test_edit_with_language(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["edit", "edit-lang", "--lang", "javascript", "--force"], cli_context)
     assert result.exit_code == 0
 
@@ -115,7 +123,7 @@ def test_edit_with_custom(cli_context):
         created_at=now,
     )
     cli_context[1].save(snippet)
-    
+
     result = _invoke_cli(["edit", "edit-custom", "--custom", "author=test", "--force"], cli_context)
     assert result.exit_code == 0
 

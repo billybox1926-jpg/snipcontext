@@ -1,4 +1,5 @@
 """Tests for providers/ollama.py."""
+
 import pytest
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
@@ -85,7 +86,10 @@ def test_health_check_unavailable(provider):
     # When _discover_models raises ProviderError, available_models returns []
     # and health_check returns "ok (no models discovered)"
     from snipcontext.providers.base import ProviderError
-    with patch.object(provider, "_discover_models", side_effect=ProviderError("Connection refused")):
+
+    with patch.object(
+        provider, "_discover_models", side_effect=ProviderError("Connection refused")
+    ):
         result = provider.health_check()
         # The provider handles errors gracefully
         assert "ok" in result.lower() or "unavailable" in result.lower()
@@ -101,15 +105,15 @@ def test_discover_models_success(provider):
             {"name": "codellama"},
         ]
     }
-    
+
     mock_client = MagicMock()
     mock_client.__enter__ = MagicMock(return_value=mock_client)
     mock_client.__exit__ = MagicMock(return_value=False)
     mock_client.get.return_value = mock_response
-    
+
     with patch.object(provider, "_get_client", return_value=mock_client):
         models = provider._discover_models()
-    
+
     assert "llama3.2" in models
     assert "codellama" in models
 
@@ -118,13 +122,14 @@ def test_discover_models_non_200(provider):
     """_discover_models() raises ProviderError on non-200 status."""
     mock_response = MagicMock()
     mock_response.status_code = 500
-    
+
     mock_client = MagicMock()
     mock_client.__enter__ = MagicMock(return_value=mock_client)
     mock_client.__exit__ = MagicMock(return_value=False)
     mock_client.get.return_value = mock_response
-    
+
     from snipcontext.providers.base import ProviderError
+
     with patch.object(provider, "_get_client", return_value=mock_client):
         with pytest.raises(ProviderError):
             provider._discover_models()
@@ -135,13 +140,14 @@ def test_discover_models_invalid_json(provider):
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.side_effect = ValueError("Invalid JSON")
-    
+
     mock_client = MagicMock()
     mock_client.__enter__ = MagicMock(return_value=mock_client)
     mock_client.__exit__ = MagicMock(return_value=False)
     mock_client.get.return_value = mock_response
-    
+
     from snipcontext.providers.base import ProviderError
+
     with patch.object(provider, "_get_client", return_value=mock_client):
         with pytest.raises(ProviderError):
             provider._discover_models()
@@ -152,13 +158,14 @@ def test_discover_models_unexpected_format(provider):
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = "unexpected string format"
-    
+
     mock_client = MagicMock()
     mock_client.__enter__ = MagicMock(return_value=mock_client)
     mock_client.__exit__ = MagicMock(return_value=False)
     mock_client.get.return_value = mock_response
-    
+
     from snipcontext.providers.base import ProviderError
+
     with patch.object(provider, "_get_client", return_value=mock_client):
         with pytest.raises(ProviderError):
             provider._discover_models()

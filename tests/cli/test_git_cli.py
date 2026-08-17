@@ -1,4 +1,5 @@
 """CLI git command tests."""
+
 import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
@@ -32,13 +33,14 @@ def cli_context(tmp_path):
     )
     config.auto_tag.enabled = False
     config.dedup.enabled = False
-    
+
     from snipcontext.core.storage import StorageEngine
+
     storage = StorageEngine(config)
-    
+
     searcher = MagicMock()
     searcher.indices_ready = False
-    
+
     return config, storage, searcher
 
 
@@ -46,7 +48,7 @@ def _invoke_cli(args, context=None, input_data=None):
     """Helper to invoke CLI commands."""
     from typer.testing import CliRunner
     from snipcontext.cli.app import app
-    
+
     runner = CliRunner()
     if context:
         with patch("snipcontext.cli.git._get_context", return_value=context):
@@ -82,7 +84,7 @@ def test_git_status_initialized(cli_context):
         mock_instance.is_initialized.return_value = True
         mock_instance.status.return_value = "On branch main\nnothing to commit"
         mock_gi.return_value = mock_instance
-        
+
         result = _invoke_cli(["git", "status"], cli_context)
         assert result.exit_code == 0
 
@@ -94,7 +96,7 @@ def test_git_pull_force(cli_context):
         mock_instance.is_initialized.return_value = True
         mock_instance.pull.return_value = "Already up to date."
         mock_gi.return_value = mock_instance
-        
+
         result = _invoke_cli(["git", "pull", "--force"], cli_context)
         assert result.exit_code == 0
         mock_instance.pull.assert_called_once()
@@ -107,7 +109,7 @@ def test_git_push_initialized(cli_context):
         mock_instance.is_initialized.return_value = True
         mock_instance.push.return_value = "Everything up-to-date"
         mock_gi.return_value = mock_instance
-        
+
         result = _invoke_cli(["git", "push"], cli_context)
         assert result.exit_code == 0
         mock_instance.push.assert_called_once()
