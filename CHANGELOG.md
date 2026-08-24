@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+- **BREAKING:** the `sc` console script is no longer installed. It collided with
+  the Windows built-in `sc.exe` (Service Control), and PEP 621
+  `[project.scripts]` has no environment-marker support, so it could not be
+  shipped on POSIX only. Use `snip` (short) or `snipcontext` (full); POSIX users
+  who want the old name can add `alias sc=snipcontext` to their shell profile
+  (closes #209)
+
+### Changed
+- Web UI routes are mounted under `/api`, so they no longer collide with the
+  canonical snippets router and are reachable over HTTP (closes #200)
+- `SnippetMetadata` now validates on assignment, so an invalid value can no
+  longer be silently stored and corrupt the snippet on reload (closes #201)
+- Pre-commit hooks updated to ruff v0.16.4 / mypy v1.20.2, with mypy scoped to
+  `src/snipcontext` to match CI (closes #204)
+- `.nvmrc` added and `make build-frontend` now verifies the node version before
+  running `npm ci` (closes #210)
+- Expanded `SECURITY.md` with a response timeline, supported versions, and an
+  explicit in/out-of-scope boundary (closes #207)
+
+### Fixed
+- `ClaudeProvider` exports route content through `sanitize_code()`, so snippet
+  backticks can no longer break out of `<document_content>` (closes #195)
+- Sanitization strips the full C1 control range (including 8-bit DCS/OSC) and
+  Unicode bidi overrides (closes #196)
+- Invalid languages sent to the web UI update endpoint now return 422 with a
+  logged warning instead of being silently swallowed (closes #198)
+- `gen_report.py` no longer probes a hardcoded per-user Windows path (closes #205)
+- `.github/CODEOWNERS` lists the real maintainer instead of a placeholder org
+  (closes #203)
+- `CONTRIBUTORS.md` links the `saltines321-debug` GitHub handle (closes #208)
+
 ## [0.8.1] - 2026-08-12
 
 ### Added

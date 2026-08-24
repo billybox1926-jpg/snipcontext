@@ -1,4 +1,4 @@
-.PHONY: lint test format mypy all maintenance build-binary build-wheel install-tool clean
+.PHONY: lint test format mypy all maintenance check-node build-frontend build-binary build-wheel install-tool clean
 
 lint:
 	uv run ruff check src/snipcontext tests
@@ -23,7 +23,26 @@ all: lint mypy test
 
 # ── Build ──────────────────────────────────────────────────────────
 
-build-frontend:
+# Minimum node major version for the frontend build. Vite 6 requires node
+# 18+; .nvmrc pins the version this project develops against (`nvm use`).
+NODE_MIN_MAJOR := 18
+
+# Verify the host node is new enough before running npm ci, so a too-old
+# node fails with a clear message instead of an opaque vite/esbuild error.
+check-node:
+	@command -v node >/dev/null 2>&1 || { \
+		echo "error: node not found on PATH. Install node $(NODE_MIN_MAJOR)+ (see .nvmrc)."; \
+		exit 1; \
+	}
+	@major=$$(node -p 'process.versions.node.split(".")[0]'); \
+	if [ "$$major" -lt "$(NODE_MIN_MAJOR)" ]; then \
+		echo "error: node $$(node -v) is too old; need >= $(NODE_MIN_MAJOR) (see .nvmrc)."; \
+		exit 1; \
+	else \
+		echo "node $$(node -v) OK (>= $(NODE_MIN_MAJOR))"; \
+	fi
+
+build-frontend: check-node
 	cd web-ui && npm ci && npm run build
 	mkdir -p src/snipcontext/web/static
 	cp -R web-ui/dist/* src/snipcontext/web/static/
