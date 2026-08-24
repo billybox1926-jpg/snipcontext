@@ -15,6 +15,35 @@ Thanks for your interest in contributing.
 3. Run local validation (`format:check`, `lint`, `test`) before opening your PR.
 4. Open a pull request using the PR template.
 
+## Setting up for tests
+
+The test suite requires the `[dev]` extra, which pulls in the pytest plugins
+the suite depends on (`pytest-mock`, `pytest-snapshot`, `pytest-asyncio`, and
+`hypothesis`). Without them pytest reports confusing "fixture not found"
+errors or fails at collection.
+
+With pip:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+pytest
+```
+
+With uv (faster):
+
+```bash
+uv venv
+uv pip install -e ".[dev]"
+uv run pytest
+```
+
+A clean install plus `pytest` should exit 0 (some tests skip when optional
+extras like `semantic` or `web` are absent — that is expected). If collection
+fails with a missing-plugin message, re-run the install command above; the
+suite fails fast with the exact package names rather than a wall of red.
+
 ## Pull request checklist
 
 - [ ] Scope is focused and understandable

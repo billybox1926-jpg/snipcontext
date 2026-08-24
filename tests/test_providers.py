@@ -118,6 +118,43 @@ class TestClaudeProvider:
         result = provider.export_single(snippet)
         assert "&lt;" in result or "<operators>" not in result
 
+    def test_fence_breakout_prevention(self):
+        """Snippet content containing ``` must not break out of the fenced block.
+
+        Every other provider routes content through sanitize_code() before
+        wrapping in a fenced block. ClaudeProvider must do the same so that
+        inner backtick sequences are ZWSP-escaped and cannot close the fence
+        early (issue #195).
+        """
+        provider = ClaudeProvider()
+        snippet = Snippet(
+            content="```\nEVIL\n```",
+            metadata=SnippetMetadata(
+                title="Fence Breakout",
+                description="Content with backtick fences",
+                language=Language.PYTHON,
+            ),
+            tags=["security"],
+        )
+        result = provider.export_batch([snippet])
+
+        # No line in the export should start with ``` other than the
+        # legitimate opening and closing fence delimiters.
+        lines = result.split("\n")
+        fence_lines = [line for line in lines if line.startswith("```")]
+        assert fence_lines == ["```python", "```"], (
+            f"Unexpected fence lines: {fence_lines}"
+        )
+
+        # The ZWSP-escaped form of the inner fences must be present.
+        assert "`\u200b``" in result, "Inner backticks not ZWSP-escaped"
+
+        # Content must stay inside <document_content>.
+        assert "<document_content>" in result
+        assert "</document_content>" in result
+        doc_content = result.split("<document_content>")[1].split("</document_content>")[0]
+        assert "EVIL" in doc_content
+
     def test_metadata_fields(self):
         provider = ClaudeProvider()
         snippet = Snippet(

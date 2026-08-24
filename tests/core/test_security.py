@@ -6,6 +6,8 @@ Tests each public sanitization function against known attack vectors.
 
 from __future__ import annotations
 
+import pytest
+
 from snipcontext.core.sanitization import (
     sanitize_code,
     sanitize_for_display,
@@ -31,7 +33,7 @@ class TestSanitizeText:
         assert sanitize_text("mixedCase123_!@#") == "mixedCase123_!@#"
 
     def test_control_characters_stripped(self) -> None:
-        r"""Control chars (\x00-\x08, \x0b, \x0c, \x0e-\x1f, \x7f, \x9b) are removed."""
+        r"""Control chars (\x00-\x08, \x0b, \x0c, \x0e-\x1f, \x7f, \x80-\x9f) are removed."""
         # DEL character
         assert "\x7f" not in sanitize_text("hello\x7fworld")
         assert sanitize_text("hello\x7fworld") == "helloworld"
@@ -39,6 +41,12 @@ class TestSanitizeText:
         assert "\x07" not in sanitize_text("alert\x07me")
         # Unit separator
         assert "\x1f" not in sanitize_text("a\x1fb")
+        # C1 DCS (8-bit Device Control String)
+        assert "\x90" not in sanitize_text("a\x90b")
+        # C1 OSC (8-bit Operating System Command)
+        assert "\x9d" not in sanitize_text("a\x9db")
+        # C1 CSI (single-byte 8-bit CSI)
+        assert "\x9b" not in sanitize_text("a\x9bb")
 
     def test_rich_markup_neutralized(self) -> None:
         """[tag] syntax is broken so Rich doesn't interpret it as markup."""
@@ -54,6 +62,41 @@ class TestSanitizeText:
         assert "\x07" not in result
         assert "[bad]" not in result
         assert "[[]" in result
+
+
+class TestSanitizeTextBidi:
+    """Unicode bidi override characters are stripped (issue #196)."""
+
+    @pytest.mark.parametrize("char", [
+        "\u202a",  # LRE
+        "\u202b",  # RLE
+        "\u202c",  # PDF
+        "\u202d",  # LRO
+        "\u202e",  # RLO
+        "\u2066",  # LRI
+        "\u2067",  # RLI
+        "\u2068",  # FSI
+        "\u2069",  # PDI
+    ])
+    def test_bidi_stripped_from_text(self, char: str) -> None:
+        result = sanitize_text(f"title{char}middle")
+        assert char not in result
+
+    @pytest.mark.parametrize("char", [
+        "\u202a", "\u202b", "\u202c", "\u202d", "\u202e",
+        "\u2066", "\u2067", "\u2068", "\u2069",
+    ])
+    def test_bidi_stripped_from_code(self, char: str) -> None:
+        result = sanitize_code(f"code{char}more")
+        assert char not in result
+
+    @pytest.mark.parametrize("char", [
+        "\u202a", "\u202b", "\u202c", "\u202d", "\u202e",
+        "\u2066", "\u2067", "\u2068", "\u2069",
+    ])
+    def test_bidi_stripped_from_display(self, char: str) -> None:
+        result = sanitize_for_display(f"display{char}text")
+        assert char not in result
 
 
 # ── sanitize_html ──────────────────────────────────────────────────────────
@@ -221,10 +264,20 @@ class TestSanitizeForDisplay:
         assert "[31mRED[0m" == result
 
     def test_control_chars_stripped(self) -> None:
-        """All control chars in the regex range removed."""
+        """All control chars in the regex range removed, including C1."""
         assert "\x00" not in sanitize_for_display("a\x00b")
         assert "\x1f" not in sanitize_for_display("a\x1fb")
         assert "\x7f" not in sanitize_for_display("a\x7fb")
+        # C1: DCS, OSC, CSI
+        assert "\x90" not in sanitize_for_display("a\x90b")
+        assert "\x9d" not in sanitize_for_display("a\x9db")
+        assert "\x9b" not in sanitize_for_display("a\x9bb")
+
+    def test_bidi_overrides_stripped(self) -> None:
+        """Unicode bidi override chars are removed (Trojan Source defense)."""
+        for char in ["\u202a", "\u202b", "\u202c", "\u202d", "\u202e",
+                     "\u2066", "\u2067", "\u2068", "\u2069"]:
+            assert char not in sanitize_for_display(f"a{char}b")
 
     def test_plain_text_passthrough(self) -> None:
         """Normal text passes through."""

@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 from typing import TYPE_CHECKING
 
+from snipcontext.core.sanitization import sanitize_code
 from snipcontext.plugins.base import PluginManifest
 from snipcontext.providers.base import EXPORT_VERSION, BaseProvider, ExportFormat
 
@@ -53,7 +54,7 @@ class ClaudeProvider(BaseProvider):
             lines.append("</metadata>")
 
         lang = snippet.metadata.language.value
-        escaped_content = html.escape(snippet.content)
+        escaped_content = sanitize_code(html.escape(snippet.content))
         lines.extend(
             [
                 "<document_content>",

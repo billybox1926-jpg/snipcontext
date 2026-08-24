@@ -14,6 +14,41 @@ import pytest
 from snipcontext.config.settings import Config, StorageConfig, reset_config
 from snipcontext.plugins.base import Plugin, PluginManifest
 
+# ── Required test plugin guard (issue #197) ────────────────────────────────
+# The suite depends on third-party pytest plugins declared in the [dev]
+# extra. When one is missing, pytest reports cryptic "fixture 'mocker' not
+# found" errors (30+ of them) or a bare ModuleNotFoundError at collection
+# time, which looks like broken code rather than an incomplete environment.
+# Fail fast with an actionable message instead.
+_REQUIRED_TEST_PLUGINS: dict[str, str] = {
+    "pytest_mock": "pytest-mock",
+    "pytest_snapshot": "pytest-snapshot",
+    "hypothesis": "hypothesis",
+    "pytest_asyncio": "pytest-asyncio",
+}
+
+
+def _check_required_test_plugins() -> None:
+    """Abort collection with a clear message if a required plugin is absent."""
+    import importlib.util
+
+    missing = [
+        dist
+        for module, dist in _REQUIRED_TEST_PLUGINS.items()
+        if importlib.util.find_spec(module) is None
+    ]
+    if missing:
+        raise pytest.UsageError(
+            "Missing required test plugin(s): "
+            + ", ".join(sorted(missing))
+            + "\n\nThe SnipContext test suite needs these to collect. Install the "
+            'dev extra:\n\n    pip install -e ".[dev]"\n\nor, with uv:\n\n'
+            '    uv pip install -e ".[dev]"\n'
+        )
+
+
+_check_required_test_plugins()
+
 
 @pytest.fixture(autouse=True)
 def reset_config_cache():
