@@ -8,6 +8,7 @@ index management.
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 
 from fastapi import (
@@ -21,7 +22,7 @@ from fastapi import (
 )
 
 from snipcontext.config.settings import get_config
-from snipcontext.core.models import Snippet
+from snipcontext.core.models import Language, Snippet
 from snipcontext.core.search import HybridSearch
 from snipcontext.core.search_ops import (
     export_snippets as core_export_snippets,
@@ -33,6 +34,8 @@ from snipcontext.core.storage import StorageEngine
 from snipcontext.web.dependencies import get_storage
 from snipcontext.web.schemas import ExportRequest
 from snipcontext.web.websocket import manager
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["web-ui"])
 
@@ -144,10 +147,23 @@ async def update_snippet(
     if content is not None:
         snippet.content = content
     if language is not None:
+        # SnippetMetadata does not set validate_assignment, so assigning a raw
+        # string here neither raises nor coerces to the Language enum: an invalid
+        # value would be persisted and then break every subsequent load, and even
+        # a VALID string would stay a plain str and serialize as "" in the
+        # response (the serializer reads ``.value``). Validate explicitly and
+        # assign the enum member. See issue #198.
         try:
-            snippet.metadata.language = language
-        except Exception:
-            pass
+            snippet.metadata.language = Language(language)
+        except ValueError as exc:
+            valid = ", ".join(sorted(member.value for member in Language))
+            logger.warning(
+                "Rejected invalid language %r for snippet %s: %s", language, snippet_id, exc
+            )
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid language {language!r}. Valid values: {valid}",
+            ) from exc
     if tags is not None:
         snippet.tags = list(tags)
 
