@@ -1,2 +1,10 @@
-# Replace with actual owners
-* @your-org/maintainers
+# Code owners for snipcontext.
+#
+# Owners listed here are automatically requested for review on any pull
+# request touching the matching paths. The last matching pattern wins, so
+# keep the catch-all first and add narrower rules below it.
+#
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repository.
+* @billybox1926-jpg
