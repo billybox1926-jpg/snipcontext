@@ -215,7 +215,13 @@ provider_name = sampled_from(["openai", "claude", "cursor", "generic"])
 
 
 @given(provider_name, snippet_lists)
-@settings(suppress_health_check=[HealthCheck.too_slow], max_examples=50)
+@settings(
+    suppress_health_check=[HealthCheck.too_slow],
+    max_examples=50,
+    # load_builtin_providers() does entry-point discovery per example; its latency
+    # is filesystem-bound, so a per-example deadline only adds flakiness here.
+    deadline=None,
+)
 def test_provider_export_batch_returns_string(provider_name: str, snippets: list[Snippet]) -> None:
     """Each built-in provider should return a non-empty string for any snippet list."""
     registry = PluginRegistry()

@@ -37,7 +37,14 @@ provider_name = sampled_from(["openai", "claude", "cursor", "generic"])
 
 
 @given(provider_name, snippet_lists)
-@settings(suppress_health_check=[HealthCheck.too_slow], max_examples=50)
+@settings(
+    suppress_health_check=[HealthCheck.too_slow],
+    max_examples=50,
+    # Entry-point discovery in load_builtin_providers() runs per example and its
+    # latency depends on the filesystem (slow on Windows/networked drives), so a
+    # per-example deadline makes this test flaky without testing anything real.
+    deadline=None,
+)
 def test_provider_export_batch_schema(provider_name: str, snippets: list[Snippet]) -> None:
     """Each built-in provider should return a string and not crash on any snippet list."""
     registry = PluginRegistry()
@@ -94,7 +101,12 @@ def test_provider_export_batch_schema(provider_name: str, snippets: list[Snippet
 
 
 @given(st.lists(st.text(min_size=0, max_size=20), min_size=0, max_size=4))
-@settings(suppress_health_check=[HealthCheck.too_slow], max_examples=25)
+@settings(
+    suppress_health_check=[HealthCheck.too_slow],
+    max_examples=25,
+    # See note above: load_builtin_providers() latency is filesystem-bound.
+    deadline=None,
+)
 def test_plugin_registry_load_plugin_does_not_crash_on_random_names(
     plugin_names: list[str],
 ) -> None:

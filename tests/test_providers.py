@@ -142,9 +142,7 @@ class TestClaudeProvider:
         # legitimate opening and closing fence delimiters.
         lines = result.split("\n")
         fence_lines = [line for line in lines if line.startswith("```")]
-        assert fence_lines == ["```python", "```"], (
-            f"Unexpected fence lines: {fence_lines}"
-        )
+        assert fence_lines == ["```python", "```"], f"Unexpected fence lines: {fence_lines}"
 
         # The ZWSP-escaped form of the inner fences must be present.
         assert "`\u200b``" in result, "Inner backticks not ZWSP-escaped"
