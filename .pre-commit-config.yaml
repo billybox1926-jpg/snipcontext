@@ -1,12 +1,24 @@
 repos:
+  # Keep these revs aligned with the versions the [dev] extra resolves, since
+  # CI runs ruff/mypy from the installed env (uv run ruff check / uv run mypy)
+  # rather than through pre-commit. Diverging here means contributors running
+  # `pre-commit run --all-files` get different results than CI. See issue #204.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.10
+    rev: v0.16.4
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.10.0
+    # Held at the newest 1.x tag on purpose: pyproject.toml pins mypy>=1.10,<2.0,
+    # so CI can never install 2.x. Bump this only together with that constraint.
+    rev: v1.20.2
     hooks:
       - id: mypy
+        # Scoped to src/ to match CI, which runs `mypy src/snipcontext`. The hook
+        # otherwise type-checks tests/, audit/ and gen_report.py too, where 60
+        # pre-existing errors (test doubles passed to typed params, method
+        # monkeypatching) make it fail on a clean checkout. src/snipcontext
+        # itself is clean: 71 files, no issues.
+        files: ^src/snipcontext/
         args: [--ignore-missing-imports, --no-site-packages]
