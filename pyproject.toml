@@ -101,8 +101,12 @@ dev = [
     "pygount>=1.0.0",
 ]
 [project.scripts]
+# Canonical command plus one short alias. `sc` is deliberately NOT installed:
+# on Windows it collides with the built-in sc.exe (Service Control), and PEP 621
+# [project.scripts] has no environment-marker support, so it cannot be shipped
+# on POSIX only. Users who want it can alias it themselves — see README.
+# (issue #209)
 snipcontext = "snipcontext.cli.app:app"
-sc = "snipcontext.cli.app:app"
 snip = "snipcontext.cli.app:app"
 [project.entry-points."snipcontext.plugins"]
 # Built-in plugins register here
@@ -160,19 +164,24 @@ quote-style = "double"
 convention = "google"
 [tool.mypy]
 python_version = "3.10"
+# NOTE: strict = true is the starting point, but the codes listed in
+# disable_error_code below are still switched off, so this is "strict minus
+# those" — not full strict mode. Each was measured against src/snipcontext by
+# re-enabling it alone; the error counts are recorded inline so the remaining
+# work is visible instead of implied. Re-enable a code once its count is 0.
+# The README badge says "types: mypy (relaxed)" to match. See issue #206.
 strict = true
 warn_return_any = true
 warn_unused_ignores = false
 show_error_codes = true
 ignore_missing_imports = true
 disable_error_code = [
-    "import-untyped",
-    "no-untyped-def",
-    "misc",
-    "no-any-return",
-    "type-arg",
-    "no-untyped-call",
-    "untyped-decorator",
+    "import-untyped",   # 4  — needs types-PyYAML
+    "no-untyped-def",   # 25 — needs parameter/return annotations
+    "misc",             # 27 — mostly untyped pydantic/typer decorator bases
+    "no-any-return",    # 8
+    "type-arg",         # 18 — bare generics (dict, list, Callable)
+    "no-untyped-call",  # 14
 ]
 [[tool.mypy.overrides]]
 module = "torch.*"

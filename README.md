@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Ruff](https://img.shields.io/badge/lint-ruff-261230?logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff)
-[![Mypy](https://img.shields.io/badge/types-mypy-2C3E50?logo=python&logoColor=white)](https://mypy-lang.org/)
+[![Mypy](https://img.shields.io/badge/types-mypy%20(relaxed)-2C3E50?logo=python&logoColor=white)](https://mypy-lang.org/)
 [![CI](https://github.com/billybox1926-jpg/snipcontext/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 [![Contributors](https://img.shields.io/github/contributors/billybox1926-jpg/snipcontext)](../../graphs/contributors)
 [![Last Commit](https://img.shields.io/github/last-commit/billybox1926-jpg/snipcontext)](../../commits/master)
@@ -177,9 +177,9 @@ sc search "create a web API"
 >
 > **ARM / Android / Termux:** The `semantic` extra requires Rust to build native wheels. On platforms without pre-built wheels (ARM64, Android/Termux), install the core package only and use keyword search + export features. Semantic search gracefully degrades with clear error messages when its dependencies are missing.
 
-> **Windows Users:** The short alias `sc` is shadowed by the Windows built-in `sc.exe` (Service Control). Use the new `snip` command for a collision-free experience:
+> **Windows Users:** The short alias `sc` is **no longer installed**, because it collides with the Windows built-in `sc.exe` (Service Control). Two commands ship:
 >
-> 1. **Preferred alias** — available after install/upgrade:
+> 1. **Short alias** — `snip`, collision-free:
 >    ```powershell
 >    snip add "print('hello')" --title "Hello" --tag python
 >    ```
@@ -191,6 +191,13 @@ sc search "create a web API"
 >    ```powershell
 >    snipcontext.cmd search "hello world"
 >    ```
+>
+> If you relied on `sc` and are not on Windows, add it back yourself:
+>
+> ```bash
+> # bash/zsh — append to ~/.bashrc or ~/.zshrc
+> alias sc=snipcontext
+> ```
 >
 ## Works with Hermes Agent
 

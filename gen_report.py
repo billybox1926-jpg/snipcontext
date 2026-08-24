@@ -13,14 +13,20 @@ def find_exe(name: str) -> str:
     path = shutil.which(name)
     if path:
         return path
+    # Fall back to the per-user pip/pipx install location. Both suffixed and
+    # bare names are probed so this works on Windows and POSIX alike; no
+    # machine-specific paths belong here.
+    local_bin = Path.home() / ".local" / "bin"
     candidates = [
-        Path.home() / ".local/bin" / f"{name}.exe",
-        Path(f"C:/Users/Billy/.local/bin/{name}.exe"),
+        local_bin / f"{name}.exe",
+        local_bin / name,
     ]
     for c in candidates:
         if c.exists():
             return str(c)
-    raise FileNotFoundError(f"Cannot find {name}")
+    raise FileNotFoundError(
+        f"Cannot find {name}. Install the dev extra: pip install -e \".[dev]\""
+    )
 
 
 PYGOUNT = find_exe("pygount")

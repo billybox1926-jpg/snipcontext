@@ -44,6 +44,21 @@ extras like `semantic` or `web` are absent — that is expected). If collection
 fails with a missing-plugin message, re-run the install command above; the
 suite fails fast with the exact package names rather than a wall of red.
 
+## Building the web UI
+
+The frontend needs **node 18 or newer** (Vite 6's minimum). `.nvmrc` pins the
+version this project develops against:
+
+```bash
+nvm use            # picks up .nvmrc
+make build-frontend
+```
+
+`make build-frontend` runs a `check-node` prerequisite that fails with a clear
+message if node is missing or too old, rather than surfacing an opaque
+vite/esbuild error. `npm ci` installs exact package versions from
+`package-lock.json`, so pinning node is what makes the build reproducible.
+
 ## Pull request checklist
 
 - [ ] Scope is focused and understandable
