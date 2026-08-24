@@ -98,7 +98,12 @@ class SnippetMetadata(BaseModel):  # type: ignore[misc]
     providing first-class fields for common attributes.
     """
 
-    model_config = ConfigDict(extra="allow")
+    # validate_assignment mirrors Snippet's config: without it, assigning an
+    # invalid value (e.g. metadata.language = "not-a-language") silently stored
+    # the raw value, which then persisted to disk and made every subsequent load
+    # of that snippet raise ValidationError — a corrupted, unopenable record.
+    # See issue #201.
+    model_config = ConfigDict(validate_assignment=True, extra="allow")
 
     title: str = Field(..., min_length=1, max_length=200, description="Human-readable title")
     description: str = Field(default="", description="What this snippet does and when to use it")
