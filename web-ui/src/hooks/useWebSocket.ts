@@ -4,7 +4,7 @@ import { ws } from '../api/client'
 
 type EventHandler = (data: Record<string, unknown>) => void
 
-export function useWebSocket(url = '/ws') {
+export function useWebSocket(url = '/api/ws') {
   const qc = useQueryClient()
   const wsRef = useRef<WebSocket | null>(null)
   const handlersRef = useRef<Map<string, EventHandler>>(new Map())

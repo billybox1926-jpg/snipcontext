@@ -1,4 +1,7 @@
-const BASE = import.meta.env.VITE_API_BASE || '/api'
+// Every call site already includes the full "/api/..." path, so BASE must stay
+// empty by default: setting it to "/api" produced "/api/api/snippets" and every
+// request 404'd. Override VITE_API_BASE only to point at a different origin.
+const BASE = import.meta.env.VITE_API_BASE || ''
 const WS_BASE = import.meta.env.VITE_WS_BASE || ''
 
 function buildUrl(path: string) {

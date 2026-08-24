@@ -53,7 +53,13 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(snippets.router)
     app.include_router(agent.router)
-    app.include_router(web_ui.router)
+    # The web UI router is mounted under /api to keep it distinct from the
+    # canonical snippets router: both define /snippets/{snippet_id} (and
+    # /snippets), so without a prefix whichever is included first wins and the
+    # other's handlers become unreachable dead code. /api is also the base the
+    # frontend already requests (web-ui/src/api/client.ts) and the namespace
+    # serve_frontend() below reserves. See issue #200.
+    app.include_router(web_ui.router, prefix="/api")
 
     dist_dir = _web_dist_dir()
     if dist_dir is not None:
