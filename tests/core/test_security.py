@@ -67,33 +67,56 @@ class TestSanitizeText:
 class TestSanitizeTextBidi:
     """Unicode bidi override characters are stripped (issue #196)."""
 
-    @pytest.mark.parametrize("char", [
-        "\u202a",  # LRE
-        "\u202b",  # RLE
-        "\u202c",  # PDF
-        "\u202d",  # LRO
-        "\u202e",  # RLO
-        "\u2066",  # LRI
-        "\u2067",  # RLI
-        "\u2068",  # FSI
-        "\u2069",  # PDI
-    ])
+    @pytest.mark.parametrize(
+        "char",
+        [
+            "\u202a",  # LRE
+            "\u202b",  # RLE
+            "\u202c",  # PDF
+            "\u202d",  # LRO
+            "\u202e",  # RLO
+            "\u2066",  # LRI
+            "\u2067",  # RLI
+            "\u2068",  # FSI
+            "\u2069",  # PDI
+        ],
+    )
     def test_bidi_stripped_from_text(self, char: str) -> None:
         result = sanitize_text(f"title{char}middle")
         assert char not in result
 
-    @pytest.mark.parametrize("char", [
-        "\u202a", "\u202b", "\u202c", "\u202d", "\u202e",
-        "\u2066", "\u2067", "\u2068", "\u2069",
-    ])
+    @pytest.mark.parametrize(
+        "char",
+        [
+            "\u202a",
+            "\u202b",
+            "\u202c",
+            "\u202d",
+            "\u202e",
+            "\u2066",
+            "\u2067",
+            "\u2068",
+            "\u2069",
+        ],
+    )
     def test_bidi_stripped_from_code(self, char: str) -> None:
         result = sanitize_code(f"code{char}more")
         assert char not in result
 
-    @pytest.mark.parametrize("char", [
-        "\u202a", "\u202b", "\u202c", "\u202d", "\u202e",
-        "\u2066", "\u2067", "\u2068", "\u2069",
-    ])
+    @pytest.mark.parametrize(
+        "char",
+        [
+            "\u202a",
+            "\u202b",
+            "\u202c",
+            "\u202d",
+            "\u202e",
+            "\u2066",
+            "\u2067",
+            "\u2068",
+            "\u2069",
+        ],
+    )
     def test_bidi_stripped_from_display(self, char: str) -> None:
         result = sanitize_for_display(f"display{char}text")
         assert char not in result
@@ -275,8 +298,17 @@ class TestSanitizeForDisplay:
 
     def test_bidi_overrides_stripped(self) -> None:
         """Unicode bidi override chars are removed (Trojan Source defense)."""
-        for char in ["\u202a", "\u202b", "\u202c", "\u202d", "\u202e",
-                     "\u2066", "\u2067", "\u2068", "\u2069"]:
+        for char in [
+            "\u202a",
+            "\u202b",
+            "\u202c",
+            "\u202d",
+            "\u202e",
+            "\u2066",
+            "\u2067",
+            "\u2068",
+            "\u2069",
+        ]:
             assert char not in sanitize_for_display(f"a{char}b")
 
     def test_plain_text_passthrough(self) -> None:

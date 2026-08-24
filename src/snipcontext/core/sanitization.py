@@ -51,11 +51,7 @@ def sanitize_text(text: str) -> str:
         return text
 
     # Fast path: no control chars, no Rich markup brackets, no bidi overrides
-    if (
-        not _CONTROL_CHAR_RE.search(text)
-        and not _BIDI_CHAR_RE.search(text)
-        and "[" not in text
-    ):
+    if not _CONTROL_CHAR_RE.search(text) and not _BIDI_CHAR_RE.search(text) and "[" not in text:
         return text
 
     # Remove control characters first
