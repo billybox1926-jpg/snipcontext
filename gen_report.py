@@ -1,11 +1,32 @@
 """Generate complexity report for snipcontext — radon + pygount."""
 
+import argparse
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-OUT = Path("docs/complexity_report.md")
+DEFAULT_OUT = Path("docs/complexity_report.md")
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Generate the SnipContext complexity report (radon + pygount)."
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        default=DEFAULT_OUT,
+        help=f"Where to write the report (default: {DEFAULT_OUT}).",
+    )
+    return parser.parse_args()
+
+
+# --output is honoured here; .github/workflows/complexity.yml passes it
+# explicitly. Previously the flag was accepted by the workflow invocation but
+# ignored by this script, which always wrote to the hardcoded default.
+OUT = _parse_args().output
 OUT.parent.mkdir(parents=True, exist_ok=True)
 
 
@@ -24,9 +45,7 @@ def find_exe(name: str) -> str:
     for c in candidates:
         if c.exists():
             return str(c)
-    raise FileNotFoundError(
-        f"Cannot find {name}. Install the dev extra: pip install -e \".[dev]\""
-    )
+    raise FileNotFoundError(f'Cannot find {name}. Install the dev extra: pip install -e ".[dev]"')
 
 
 PYGOUNT = find_exe("pygount")
