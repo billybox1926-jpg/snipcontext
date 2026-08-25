@@ -125,6 +125,14 @@ Changelog = "https://github.com/billybox1926-jpg/snipcontext/blob/main/CHANGELOG
 [tool.hatch.version]
 path = "src/snipcontext/__init__.py"
 [tool.hatch.build.targets.sdist]
+# The sdist is a developable source distribution, not a lean end-user artifact:
+# it carries scripts/ (bootstrap.sh and the CLI wrappers) so `pip install` from
+# a source tarball still gets the helper scripts.
+#
+# NOTE on /tests: it is listed here but the global [tool.hatch.build] exclude
+# below wins, so the built sdist contains NO tests (verified: 0 tests entries in
+# snipcontext-0.8.1.tar.gz). The entry is kept as a no-op record of intent —
+# removing the exclude is what would actually ship them. See issue #216.
 include = [
     "/src/snipcontext",
     "/tests",
@@ -138,6 +146,8 @@ packages = ["src/snipcontext"]
 artifacts = ["scripts/snipcontext.cmd"]
 include = ["src/snipcontext/web/static"]
 [tool.hatch.build]
+# Applies to every target, including the sdist — this is what actually keeps
+# tests out of both artifacts.
 exclude = [
     "/tests",
     "/.github",
