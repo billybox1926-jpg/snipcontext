@@ -45,7 +45,9 @@ def find_exe(name: str) -> str:
     for c in candidates:
         if c.exists():
             return str(c)
-    raise FileNotFoundError(f'Cannot find {name}. Install the dev extra: pip install -e ".[dev]"')
+    raise FileNotFoundError(
+        f"Cannot find {name}. Install the dev extra: pip install -e \".[dev]\""
+    )
 
 
 PYGOUNT = find_exe("pygount")
